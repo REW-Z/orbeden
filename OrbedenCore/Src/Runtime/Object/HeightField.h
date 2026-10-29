@@ -52,7 +52,6 @@ public:
     ORBEDEN_BIND_CHANGED(Regenerate)
     float32 flattenBlendDistance = 24.0f;
     ORBEDEN_BIND_CHANGED(Regenerate)
-    uint32 collisionLayer = 1u;
     ORBEDEN_BIND_CHANGED(Regenerate)
     Ref<Material> material;
     ORBEDEN_BIND_CHANGED(Regenerate)

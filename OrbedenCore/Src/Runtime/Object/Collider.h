@@ -26,7 +26,6 @@ public:
     float32 staticFriction = 0.5f;
     float32 dynamicFriction = 0.5f;
     float32 restitution = 0.0f;
-    uint32 collisionLayer = 1u;
     uint32 collisionMask = 0xFFFFFFFFu;
 
     //获取具体几何类型。

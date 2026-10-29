@@ -455,7 +455,6 @@ internal sealed class ParticleSystemEditor : ComponentEditor
                 DrawProperty("materials");
             }
 
-            DrawProperty("drawLayer");
             DrawProperty("receiveShadows");
             if (rendering.mode == ParticleRenderMode.Mesh) DrawProperty("castShadows");
 

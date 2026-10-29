@@ -18,7 +18,7 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         if (!state.mesh || !state.worldBounds.valid) continue;
-        if ((renderer->drawLayer & layerMask) == 0) continue;
+        if ((state.drawLayer & layerMask) == 0) continue;
         if (!RenderMath::Intersects(camera.viewFrustum, state.worldBounds)) continue;
 
         //计算相机距离平方

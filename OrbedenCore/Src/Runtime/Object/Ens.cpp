@@ -1,6 +1,8 @@
 #include "Runtime/Object/Ens.h"
 
 #include "Runtime/Object/Transform.h"
+#include "Runtime/Object/StaticMeshRenderer.h"
+#include "Log/Log.h"
 #include "Runtime/World.h"
 #include "Runtime/Object/Script.h"
 #include "Scripting/ScriptInterop.h"
@@ -10,6 +12,51 @@
 #include <cassert>
 
 OBJECT_TYPE_IMPLEMENT(Ens, Object)
+
+//设置场景拾取并刷新子树状态
+void Ens::SetEditorSelectable(bool value)
+{
+    if (editorSelectable == value)
+    {
+        return;
+    }
+
+    editorSelectable = value;
+    if (World* world = GetWorld())
+    {
+        world->RefreshEnsEditorSelectable(ens);
+        world->SetDirty();
+    }
+    else
+    {
+        worldEditorSelectable = value;
+    }
+}
+
+//设置所属层并同步渲染快照
+void Ens::SetLayer(uint32 value)
+{
+    if (value >= 32)
+    {
+        Log::Error("Ens layer must be in the range [0, 31].");
+        return;
+    }
+    if (layer == value)
+    {
+        return;
+    }
+
+    //更新层归属和渲染缓存
+    layer = value;
+    if (StaticMeshRenderer* renderer = GetComponent<StaticMeshRenderer>())
+    {
+        renderer->renderState.drawLayer = GetLayerMask();
+    }
+    if (World* world = GetWorld())
+    {
+        world->SetDirty();
+    }
+}
 
 //记录组件类型
 void Ens::AddComponentType(Type* type)

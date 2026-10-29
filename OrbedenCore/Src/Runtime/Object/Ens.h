@@ -23,6 +23,9 @@ private:
     bool localActive = true;
     bool worldActive = true;
     bool isStatic = false;
+    uint32 layer = 0;
+    bool editorSelectable = true;
+    bool worldEditorSelectable = true;
     //运行时临时对象标志：只影响序列化枚举，不从场景文件恢复。
     bool dontSave = false;
     std::string name;
@@ -68,6 +71,30 @@ public:
 
     //获取底层ID
     EnsId GetId() const;
+
+    //获取所属层索引
+    ORBEDEN_BIND_IGNORE
+    uint32 GetLayer() const { return layer; }
+
+    //获取所属层的位掩码
+    ORBEDEN_BIND_IGNORE
+    uint32 GetLayerMask() const { return 1u << layer; }
+
+    //设置所属层并同步渲染快照
+    ORBEDEN_BIND_IGNORE
+    void SetLayer(uint32 value);
+
+    //获取当前节点的场景拾取设置
+    ORBEDEN_BIND_IGNORE
+    bool GetEditorSelectable() const { return editorSelectable; }
+
+    //获取层级生效后的场景拾取状态
+    ORBEDEN_BIND_IGNORE
+    bool GetWorldEditorSelectable() const { return worldEditorSelectable; }
+
+    //设置场景拾取并刷新子树状态
+    ORBEDEN_BIND_IGNORE
+    void SetEditorSelectable(bool value);
 
     //获取变换组件
     ORBEDEN_BIND_IGNORE

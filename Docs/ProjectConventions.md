@@ -185,6 +185,21 @@ OBJECT_TYPE_IMPLEMENT(Transform, Component)
 - 一个实体只允许存在一个实例的组件（如 `Transform`）标注 `ORBEDEN_COMPONENT_UNIQUE`。
 - 字段默认对外公开并被反射、序列化收集；Core 类型同时生成 Binding，不需要向托管 API 暴露的 Core 成员用 `ORBEDEN_BIND_IGNORE`。游戏原生模块生成反射元数据及原生调用 thunk，不生成 C# 绑定。
 
+## Layer 归属
+
+- Ens 是层归属的唯一持有者：保存 `uint32 layer` 索引 `0～31`，默认 `0`；层名称由项目全局设置提供，不参与运行时判断。
+- C++ 通过 `GetLayer()` / `SetLayer()` 访问索引，通过 `GetLayerMask()` 取得 `1u << layer`；C# 使用 `Ens.Layer`。一次 setter 只修改当前节点，递归应用是编辑器显式批量操作，子节点不自动继承。
+- Collider、CharacterController、HeightField、StaticMeshRenderer、ParticleSystem 和 Canvas 不持有可编辑的独立 Layer；相机、碰撞和查询保留各自的 Mask。
+- 渲染剔除、批处理与阴影读取运行时快照，物理过滤读取 PhysX 数据；层变更通过同步路径更新这些缓存，不在 Component 基类复制 Layer 或缓存 Ens 指针。
+- `.world` 和 `.prefab` 将层保存为 `<Ens layer="索引">`；缺少时默认 `0`。临时绘制和调试线等没有所属 Ens 的提交接口仍接收独立位掩码。
+
+## SceneView 拾取设置
+
+- Ens 的 `editorSelectable` 是当前节点的持久化拾取开关，默认 `true`；仅供编辑器 SceneView 的网格、Gizmo 和 UI 拾取使用，不控制运行时输入、渲染、物理或脚本。
+- 生效状态为自身与全部祖先设置的交集，缓存在 `worldEditorSelectable`。切换父级设置不改写后代自身的值；设置或父子关系变化时刷新子树，拾取路径直接读取缓存。
+- C++ 使用 `GetEditorSelectable()` / `SetEditorSelectable(bool)` 和 `GetWorldEditorSelectable()`，C# 使用 `Ens.EditorSelectable` 和只读 `Ens.WorldEditorSelectable`。
+- `.world` 和 `.prefab` 保存 `<Ens editorSelectable="true/false">`，缺失时默认 `true`；层级缓存不保存。复制、撤销和预制体实例根属性覆盖使用相同规则。
+
 ## 元数据注解
 
 MetaGen 扫描头文件宏与注解，不解析实现。Core 生成 C# 绑定；Core 与游戏均生成反射元数据和原生调用 thunk：

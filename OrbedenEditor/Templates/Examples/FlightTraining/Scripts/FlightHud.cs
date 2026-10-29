@@ -20,6 +20,8 @@ public sealed class FlightHud : Script
     private NativeMethod<float> liftMethod = null!;
     private NativeMethod<float> thrustMethod = null!;
     private NativeMethod<float> weightMethod = null!;
+    private NativeMethod<float> flapMethod = null!;
+    private NativeMethod<float> windmillDragMethod = null!;
 
     private const float WindowHeight = 232.0f;
     private const float PixelsPerDegree = 3.0f;
@@ -54,7 +56,9 @@ public sealed class FlightHud : Script
             || controller.TryBindMethod("GetDragNewtons", out dragMethod) != InteropStatus.Ok
             || controller.TryBindMethod("GetLiftNewtons", out liftMethod) != InteropStatus.Ok
             || engine.TryBindMethod("GetThrustNewtons", out thrustMethod) != InteropStatus.Ok
-            || controller.TryBindMethod("GetWeightNewtons", out weightMethod) != InteropStatus.Ok)
+            || controller.TryBindMethod("GetWeightNewtons", out weightMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetFlapPosition", out flapMethod) != InteropStatus.Ok
+            || engine.TryBindMethod("GetWindmillDragNewtons", out windmillDragMethod) != InteropStatus.Ok)
         {
             controller = null;
             engine = null;
@@ -94,14 +98,16 @@ public sealed class FlightHud : Script
             float lift = liftMethod();
             float thrust = thrustMethod();
             float weight = weightMethod();
+            float flaps = flapMethod();
+            float windmillDrag = windmillDragMethod();
 
-            DrawStatusLine(climbRate, sideslip, crashCount);
+            DrawStatusLine(climbRate, sideslip, crashCount, flaps);
             DrawAirspeedDial(airspeed);
             DrawThrottleDial(width, throttle);
             DrawPfd(width, airspeed, altitude, heading, pitch, roll);
 
             //四色数值与世界空间箭头对应，单位为 kN。
-            GUI.Text($"DRAG {drag / 1000:F1} kN", 12, 202, ColorRed, 0.7f);
+            GUI.Text($"DRAG {(drag + windmillDrag) / 1000:F1} kN", 12, 202, ColorRed, 0.7f);
             GUI.Text($"LIFT {lift / 1000:F1} kN", width * 0.25f, 202, GUI.Rgba(60, 130, 255), 0.7f);
             GUI.Text($"THRUST {thrust / 1000:F1} kN", width * 0.5f, 202, ColorYellow, 0.7f);
             GUI.RectFilled(width * 0.75f - 4, 199, width - 8, 222, GUI.Rgba(205, 205, 205), 3);
@@ -115,11 +121,11 @@ public sealed class FlightHud : Script
     }
 
     /// <summary>顶部状态与按键提示行。</summary>
-    private void DrawStatusLine(float climbRate, float sideslip, int crashCount)
+    private void DrawStatusLine(float climbRate, float sideslip, int crashCount, float flaps)
     {
-        GUI.Text($"FREE FLIGHT   V/S {climbRate:+0.0;-0.0;0.0} m/s   SLIP {sideslip:F1} deg   CRASHES {crashCount}",
+        GUI.Text($"FREE FLIGHT   V/S {climbRate:+0.0;-0.0;0.0} m/s   SLIP {sideslip:F1} deg   FLAPS {flaps * 100.0f:F0}%   CRASHES {crashCount}",
             12, 6, ColorWhite, 0.75f);
-        GUI.Text("W/S PITCH   A/D ROLL   Q/E YAW   SHIFT/CTRL THROTTLE   R RESET   F FORCES   RMB ORBIT   C VIEW", 12, 26, ColorGrey, 0.6f);
+        GUI.Text("W/S PITCH   A/D ROLL   Q/E YAW   Z/X FLAPS   SHIFT/CTRL THROTTLE   R RESET   F FORCES   RMB ORBIT   C VIEW", 12, 26, ColorGrey, 0.6f);
     }
 
     /// <summary>空速表盘。</summary>

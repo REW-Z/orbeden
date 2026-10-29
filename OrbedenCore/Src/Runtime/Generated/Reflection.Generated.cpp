@@ -1447,62 +1447,6 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
-    //读取 CharacterController.collisionLayer 字段
-    static std::string Get_CharacterController_collisionLayer(Object* object)
-    {
-        CharacterController* instance = static_cast<CharacterController*>(object);
-        return Reflection::ToXmlValue(instance->collisionLayer);
-    }
-
-    //直接读取 CharacterController.collisionLayer 字段
-    static Reflection::Value GetValue_CharacterController_collisionLayer(Object* object)
-    {
-        CharacterController* instance = static_cast<CharacterController*>(object);
-        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
-    }
-
-    //写入 CharacterController.collisionLayer 字段
-    static bool Set_CharacterController_collisionLayer(Object* object, const std::string& value)
-    {
-        CharacterController* instance = static_cast<CharacterController*>(object);
-        return Reflection::SetFromXmlValue(instance->collisionLayer, value);
-    }
-
-    //直接写入 CharacterController.collisionLayer 字段
-    static bool SetValue_CharacterController_collisionLayer(Object* object, const Reflection::Value& value)
-    {
-        CharacterController* instance = static_cast<CharacterController*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->collisionLayer, value);
-    }
-
-    //按具体类型读取 CharacterController.collisionLayer
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_collisionLayer(Object* object, uint32* output)
-    {
-        try
-        {
-            auto* instance = static_cast<CharacterController*>(object);
-            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-            *output = instance->collisionLayer;
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 CharacterController.collisionLayer，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_collisionLayer(Object* object, uint32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<CharacterController*>(object);
-            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->collisionLayer = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
     //读取 CharacterController.collisionMask 字段
     static std::string Get_CharacterController_collisionMask(Object* object)
     {
@@ -1889,62 +1833,6 @@ public:
             auto* instance = static_cast<Collider*>(object);
             if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
             instance->restitution = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //读取 Collider.collisionLayer 字段
-    static std::string Get_Collider_collisionLayer(Object* object)
-    {
-        Collider* instance = static_cast<Collider*>(object);
-        return Reflection::ToXmlValue(instance->collisionLayer);
-    }
-
-    //直接读取 Collider.collisionLayer 字段
-    static Reflection::Value GetValue_Collider_collisionLayer(Object* object)
-    {
-        Collider* instance = static_cast<Collider*>(object);
-        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
-    }
-
-    //写入 Collider.collisionLayer 字段
-    static bool Set_Collider_collisionLayer(Object* object, const std::string& value)
-    {
-        Collider* instance = static_cast<Collider*>(object);
-        return Reflection::SetFromXmlValue(instance->collisionLayer, value);
-    }
-
-    //直接写入 Collider.collisionLayer 字段
-    static bool SetValue_Collider_collisionLayer(Object* object, const Reflection::Value& value)
-    {
-        Collider* instance = static_cast<Collider*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->collisionLayer, value);
-    }
-
-    //按具体类型读取 Collider.collisionLayer
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_collisionLayer(Object* object, uint32* output)
-    {
-        try
-        {
-            auto* instance = static_cast<Collider*>(object);
-            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-            *output = instance->collisionLayer;
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 Collider.collisionLayer，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_collisionLayer(Object* object, uint32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<Collider*>(object);
-            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->collisionLayer = value;
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -4446,67 +4334,6 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
-    //读取 HeightField.collisionLayer 字段
-    static std::string Get_HeightField_collisionLayer(Object* object)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return Reflection::ToXmlValue(instance->collisionLayer);
-    }
-
-    //直接读取 HeightField.collisionLayer 字段
-    static Reflection::Value GetValue_HeightField_collisionLayer(Object* object)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
-    }
-
-    //写入 HeightField.collisionLayer 字段
-    static bool Set_HeightField_collisionLayer(Object* object, const std::string& value)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        if (!Reflection::SetFromXmlValue(instance->collisionLayer, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightField.collisionLayer 字段
-    static bool SetValue_HeightField_collisionLayer(Object* object, const Reflection::Value& value)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->collisionLayer, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //按具体类型读取 HeightField.collisionLayer
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_collisionLayer(Object* object, uint32* output)
-    {
-        try
-        {
-            auto* instance = static_cast<HeightField*>(object);
-            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-            *output = instance->collisionLayer;
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 HeightField.collisionLayer，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_collisionLayer(Object* object, uint32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<HeightField*>(object);
-            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->collisionLayer = value;
-            instance->Regenerate();
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
     //读取 HeightField.material 字段
     static std::string Get_HeightField_material(Object* object)
     {
@@ -6221,67 +6048,6 @@ public:
         if (!Reflection::ResizeArray(instance->subEmitterTargets, count)) return false;
         instance->OnConfigurationChanged();
         return true;
-    }
-
-    //读取 ParticleSystem.drawLayer 字段
-    static std::string Get_ParticleSystem_drawLayer(Object* object)
-    {
-        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
-        return Reflection::ToXmlValue(instance->drawLayer);
-    }
-
-    //直接读取 ParticleSystem.drawLayer 字段
-    static Reflection::Value GetValue_ParticleSystem_drawLayer(Object* object)
-    {
-        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
-        return instance ? Reflection::ToValue(instance->drawLayer) : Reflection::Value();
-    }
-
-    //写入 ParticleSystem.drawLayer 字段
-    static bool Set_ParticleSystem_drawLayer(Object* object, const std::string& value)
-    {
-        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
-        if (!Reflection::SetFromXmlValue(instance->drawLayer, value)) return false;
-        instance->OnConfigurationChanged();
-        return true;
-    }
-
-    //直接写入 ParticleSystem.drawLayer 字段
-    static bool SetValue_ParticleSystem_drawLayer(Object* object, const Reflection::Value& value)
-    {
-        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->drawLayer, value)) return false;
-        instance->OnConfigurationChanged();
-        return true;
-    }
-
-    //按具体类型读取 ParticleSystem.drawLayer
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_ParticleSystem_drawLayer(Object* object, uint32* output)
-    {
-        try
-        {
-            auto* instance = static_cast<ParticleSystem*>(object);
-            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-            *output = instance->drawLayer;
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 ParticleSystem.drawLayer，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_ParticleSystem_drawLayer(Object* object, uint32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<ParticleSystem*>(object);
-            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->drawLayer = value;
-            instance->OnConfigurationChanged();
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 ParticleSystem.castShadows 字段
@@ -8355,62 +8121,6 @@ public:
         if (!instance || count < 0) return false;
         if (!Reflection::ResizeArray(instance->materials, count)) return false;
         return true;
-    }
-
-    //读取 StaticMeshRenderer.drawLayer 字段
-    static std::string Get_StaticMeshRenderer_drawLayer(Object* object)
-    {
-        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        return Reflection::ToXmlValue(instance->drawLayer);
-    }
-
-    //直接读取 StaticMeshRenderer.drawLayer 字段
-    static Reflection::Value GetValue_StaticMeshRenderer_drawLayer(Object* object)
-    {
-        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        return instance ? Reflection::ToValue(instance->drawLayer) : Reflection::Value();
-    }
-
-    //写入 StaticMeshRenderer.drawLayer 字段
-    static bool Set_StaticMeshRenderer_drawLayer(Object* object, const std::string& value)
-    {
-        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        return Reflection::SetFromXmlValue(instance->drawLayer, value);
-    }
-
-    //直接写入 StaticMeshRenderer.drawLayer 字段
-    static bool SetValue_StaticMeshRenderer_drawLayer(Object* object, const Reflection::Value& value)
-    {
-        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->drawLayer, value);
-    }
-
-    //按具体类型读取 StaticMeshRenderer.drawLayer
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_StaticMeshRenderer_drawLayer(Object* object, uint32* output)
-    {
-        try
-        {
-            auto* instance = static_cast<StaticMeshRenderer*>(object);
-            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-            *output = instance->drawLayer;
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 StaticMeshRenderer.drawLayer，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_StaticMeshRenderer_drawLayer(Object* object, uint32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<StaticMeshRenderer*>(object);
-            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->drawLayer = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 StaticMeshRenderer.castShadows 字段
@@ -11164,7 +10874,6 @@ namespace Reflection
                 FieldInfo("contactOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_contactOffset, ReflectionGeneratedAccess::Set_CharacterController_contactOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_contactOffset, ReflectionGeneratedAccess::SetValue_CharacterController_contactOffset, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_contactOffset), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_contactOffset)),
                 FieldInfo("slopeLimit", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_slopeLimit, ReflectionGeneratedAccess::Set_CharacterController_slopeLimit, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_slopeLimit, ReflectionGeneratedAccess::SetValue_CharacterController_slopeLimit, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_slopeLimit), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_slopeLimit)),
                 FieldInfo("minMoveDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_minMoveDistance, ReflectionGeneratedAccess::Set_CharacterController_minMoveDistance, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_minMoveDistance, ReflectionGeneratedAccess::SetValue_CharacterController_minMoveDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_minMoveDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_minMoveDistance)),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionLayer, ReflectionGeneratedAccess::Set_CharacterController_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionLayer, ReflectionGeneratedAccess::SetValue_CharacterController_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_collisionLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_collisionLayer)),
                 FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionMask, ReflectionGeneratedAccess::Set_CharacterController_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionMask, ReflectionGeneratedAccess::SetValue_CharacterController_collisionMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_collisionMask), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_collisionMask)),
             });
 
@@ -11180,7 +10889,6 @@ namespace Reflection
                 FieldInfo("staticFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_staticFriction, ReflectionGeneratedAccess::Set_Collider_staticFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_staticFriction, ReflectionGeneratedAccess::SetValue_Collider_staticFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_staticFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_staticFriction)),
                 FieldInfo("dynamicFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_dynamicFriction, ReflectionGeneratedAccess::Set_Collider_dynamicFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_dynamicFriction, ReflectionGeneratedAccess::SetValue_Collider_dynamicFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_dynamicFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_dynamicFriction)),
                 FieldInfo("restitution", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_restitution, ReflectionGeneratedAccess::Set_Collider_restitution, nullptr, ReflectionGeneratedAccess::GetValue_Collider_restitution, ReflectionGeneratedAccess::SetValue_Collider_restitution, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_restitution), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_restitution)),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionLayer, ReflectionGeneratedAccess::Set_Collider_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionLayer, ReflectionGeneratedAccess::SetValue_Collider_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_collisionLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_collisionLayer)),
                 FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionMask, ReflectionGeneratedAccess::Set_Collider_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionMask, ReflectionGeneratedAccess::SetValue_Collider_collisionMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_collisionMask), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_collisionMask)),
             });
 
@@ -11322,7 +11030,6 @@ namespace Reflection
                 FieldInfo("flattenMaxZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMaxZ, ReflectionGeneratedAccess::Set_HeightField_flattenMaxZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMaxZ, ReflectionGeneratedAccess::SetValue_HeightField_flattenMaxZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenMaxZ), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenMaxZ)),
                 FieldInfo("flattenHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenHeight, ReflectionGeneratedAccess::Set_HeightField_flattenHeight, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenHeight, ReflectionGeneratedAccess::SetValue_HeightField_flattenHeight, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenHeight), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenHeight)),
                 FieldInfo("flattenBlendDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenBlendDistance, ReflectionGeneratedAccess::Set_HeightField_flattenBlendDistance, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenBlendDistance, ReflectionGeneratedAccess::SetValue_HeightField_flattenBlendDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenBlendDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenBlendDistance)),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_HeightField_collisionLayer, ReflectionGeneratedAccess::Set_HeightField_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_collisionLayer, ReflectionGeneratedAccess::SetValue_HeightField_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_collisionLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_collisionLayer)),
                 FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_HeightField_material, ReflectionGeneratedAccess::Set_HeightField_material, "Material", ReflectionGeneratedAccess::GetValue_HeightField_material, ReflectionGeneratedAccess::SetValue_HeightField_material, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
                 FieldInfo("generateNoiseTexture", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_generateNoiseTexture, ReflectionGeneratedAccess::Set_HeightField_generateNoiseTexture, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_generateNoiseTexture, ReflectionGeneratedAccess::SetValue_HeightField_generateNoiseTexture, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_generateNoiseTexture), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_generateNoiseTexture)),
                 FieldInfo("noiseTextureSize", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_noiseTextureSize, ReflectionGeneratedAccess::Set_HeightField_noiseTextureSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseTextureSize, ReflectionGeneratedAccess::SetValue_HeightField_noiseTextureSize, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_noiseTextureSize), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_noiseTextureSize)),
@@ -11438,7 +11145,6 @@ namespace Reflection
                 FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_ParticleSystem_materials, ReflectionGeneratedAccess::Set_ParticleSystem_materials, "Material", ReflectionGeneratedAccess::GetValue_ParticleSystem_materials, ReflectionGeneratedAccess::SetValue_ParticleSystem_materials, ReflectionGeneratedAccess::Size_ParticleSystem_materials, ReflectionGeneratedAccess::Resize_ParticleSystem_materials, Reflection::FieldKind::ObjectRef, false, Reflection::ValueKind::Empty, nullptr, nullptr),
                 FieldInfo("trailMaterial", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ParticleSystem_trailMaterial, ReflectionGeneratedAccess::Set_ParticleSystem_trailMaterial, "Material", ReflectionGeneratedAccess::GetValue_ParticleSystem_trailMaterial, ReflectionGeneratedAccess::SetValue_ParticleSystem_trailMaterial, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
                 FieldInfo("subEmitterTargets", "std::array<EnsId,16>", Reflection::FieldKind::Array, true, ReflectionGeneratedAccess::Get_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Set_ParticleSystem_subEmitterTargets, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::SetValue_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Size_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Resize_ParticleSystem_subEmitterTargets, Reflection::FieldKind::EnsId, true, Reflection::ValueKind::Empty, nullptr, nullptr),
-                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_ParticleSystem_drawLayer, ReflectionGeneratedAccess::Set_ParticleSystem_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_drawLayer, ReflectionGeneratedAccess::SetValue_ParticleSystem_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_ParticleSystem_drawLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_ParticleSystem_drawLayer)),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ParticleSystem_castShadows, ReflectionGeneratedAccess::Set_ParticleSystem_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_castShadows, ReflectionGeneratedAccess::SetValue_ParticleSystem_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_ParticleSystem_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_ParticleSystem_castShadows)),
                 FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ParticleSystem_receiveShadows, ReflectionGeneratedAccess::Set_ParticleSystem_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_receiveShadows, ReflectionGeneratedAccess::SetValue_ParticleSystem_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_ParticleSystem_receiveShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_ParticleSystem_receiveShadows)),
             });
@@ -11534,7 +11240,6 @@ namespace Reflection
                 FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
                 FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
                 FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Set_StaticMeshRenderer_materials, "Material", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Size_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Resize_StaticMeshRenderer_materials, Reflection::FieldKind::ObjectRef, false, Reflection::ValueKind::Empty, nullptr, nullptr),
-                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_drawLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_drawLayer)),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_castShadows)),
                 FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_receiveShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_receiveShadows)),
                 FieldInfo("drawStrategy", "DrawStrategy", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawStrategy, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawStrategy, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawStrategy, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawStrategy, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),

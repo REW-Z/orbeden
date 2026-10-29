@@ -158,7 +158,7 @@ namespace
         uint32 parsed = 0;
         if (!Reflection::SetFromXmlValue(parsed, text) || parsed > maximum)
         {
-            Log::Error(("World load failed: the RenderSettings attribute '" + name + "' is out of range.").c_str());
+            Log::Error(("World load failed: the " + token.name + " attribute '" + name + "' is out of range.").c_str());
             return false;
         }
 
@@ -463,7 +463,8 @@ namespace
         output << "<Ens stableId=\"" << EscapeXml(ens.GetInstanceId().GetPath()) << "\" name=\""
             << EscapeXml(ens.GetName()) << "\" localActive=\""
             << (ens.GetLocalActive() ? "true" : "false") << "\" static=\""
-            << (ens.GetStatic() ? "true" : "false") << "\">\n";
+            << (ens.GetStatic() ? "true" : "false") << "\" layer=\"" << ens.GetLayer()
+            << "\" editorSelectable=\"" << (ens.GetEditorSelectable() ? "true" : "false") << "\">\n";
 
         for (Component* component : ens.GetComponents())
         {
@@ -638,6 +639,19 @@ namespace
         {
             ens->SetStatic(true);
         }
+
+        //恢复当前节点的层索引
+        uint32 layer = 0;
+        if (!ReadEnumAttribute(startToken, "layer", 31u, layer))
+        {
+            LogSerializerError("World XML Ens layer must be in the range [0, 31].");
+            return false;
+        }
+        ens->SetLayer(layer);
+
+        //恢复当前节点的场景拾取设置
+        const std::string& selectable = GetAttribute(startToken, "editorSelectable");
+        ens->SetEditorSelectable(selectable != "false" && selectable != "0");
 
         if (startToken.emptyElement) return true;
 

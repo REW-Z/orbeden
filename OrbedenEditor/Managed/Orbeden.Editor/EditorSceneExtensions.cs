@@ -21,7 +21,7 @@ public interface IEditorSceneExtension
 {
     /// <summary>绘制无需选择对象的场景辅助内容。</summary>
     void DrawOverlay();
-    /// <summary>按场景射线选择可见对象。</summary>
+    /// <summary>按场景射线选择可见对象，枚举候选时跳过 Ens.WorldEditorSelectable 为 false 的节点。</summary>
     bool TryPick(in EditorScenePickRay ray, out EditorScenePickHit hit);
 }
 
@@ -66,6 +66,10 @@ public static class EditorSceneExtensions
             try
             {
                 if (!registration.Extension.TryPick(ray, out EditorScenePickHit candidate) || candidate.Ens.IsNull) continue;
+                if (!Ens.FromId(candidate.Ens).WorldEditorSelectable)
+                {
+                    continue;
+                }
                 vector3 p = candidate.Position;
                 float distance = (p.x - ray.Origin.x) * ray.Direction.x
                     + (p.y - ray.Origin.y) * ray.Direction.y + (p.z - ray.Origin.z) * ray.Direction.z;

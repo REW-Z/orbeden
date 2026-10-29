@@ -17,6 +17,7 @@ struct StaticMeshRendererRenderState
     bounds3 localBounds;
     bounds3 worldBounds;
     vector3 worldPosition;
+    uint32 drawLayer = 1u;
 };
 
 //静态网格渲染组件
@@ -26,6 +27,7 @@ class StaticMeshRenderer : public Component
     ORBEDEN_COMPONENT_UNIQUE
 
 private:
+    friend class Ens;
     friend class RenderScene;
     friend class SceneCuller;
     friend class ForwardPipeline;
@@ -47,7 +49,6 @@ public:
     Ref<Mesh> mesh;
     //按子网格槽位给出的材质；槽位为空或超出数组长度的子网格不绘制。
     List<Ref<Material>> materials;
-    uint32 drawLayer = 1u;
     bool castShadows = true;
     bool receiveShadows = true;
     //这个渲染器允许的绘制策略；Individual 表示始终单绘制并作为排序屏障

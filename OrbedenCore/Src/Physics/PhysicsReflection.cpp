@@ -47,7 +47,6 @@ namespace
     PHYSICS_FIELD(TYPE, staticFriction, "float32", Float32), \
     PHYSICS_FIELD(TYPE, dynamicFriction, "float32", Float32), \
     PHYSICS_FIELD(TYPE, restitution, "float32", Float32), \
-    PHYSICS_FIELD(TYPE, collisionLayer, "uint32", UInt32), \
     PHYSICS_FIELD(TYPE, collisionMask, "uint32", UInt32)
 }
 
@@ -79,7 +78,6 @@ namespace PhysicsReflection
             HEIGHT_FIELD(flattenMaxZ, "float32", Float32),
             HEIGHT_FIELD(flattenHeight, "float32", Float32),
             HEIGHT_FIELD(flattenBlendDistance, "float32", Float32),
-            HEIGHT_FIELD(collisionLayer, "uint32", UInt32),
             HEIGHT_FIELD(generateNoiseTexture, "bool", Bool),
             HEIGHT_FIELD(noiseTextureSize, "int32", Int32),
             HEIGHT_FIELD(noiseLowColor, "color", Color),
@@ -163,7 +161,6 @@ namespace PhysicsReflection
             PHYSICS_FIELD(CharacterController, contactOffset, "float32", Float32),
             PHYSICS_FIELD(CharacterController, slopeLimit, "float32", Float32),
             PHYSICS_FIELD(CharacterController, minMoveDistance, "float32", Float32),
-            PHYSICS_FIELD(CharacterController, collisionLayer, "uint32", UInt32),
             PHYSICS_FIELD(CharacterController, collisionMask, "uint32", UInt32),
         });
     }

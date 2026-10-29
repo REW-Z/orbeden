@@ -10,6 +10,6 @@ public:
     //内容根或配置文件变化时重新读取矩阵。
     static void Refresh();
 
-    //合并所属层允许碰撞的目标层，兼容历史多位 Layer。
-    static uint32 GetCollisionMask(uint32 layers);
+    //按 Ens 层索引获取允许碰撞的目标层
+    static uint32 GetCollisionMask(uint32 layer);
 };

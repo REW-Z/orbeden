@@ -53,7 +53,6 @@ public class Canvas : UIElement
     [SerializeField] private float scaleFactor = 1.0f;
     [SerializeField] private vector2 outputSize = new(512.0f, 512.0f);
     [SerializeField] private int sortOrder;
-    [SerializeField] private int drawLayer = 1;
 
     //离屏输出纹理是运行期资源，不参与持久化；画布销毁后若无人持有由资源回收处理。
     private Texture2D? outputTexture;
@@ -143,17 +142,6 @@ public class Canvas : UIElement
     {
         if (sortOrder == value) return;
         sortOrder = value;
-        MarkCanvasDirty();
-    }
-
-    /// <summary>绘制层位掩码，与相机 drawLayerMask 匹配；0 不绘制，1 为默认层。</summary>
-    public int GetDrawLayer() => drawLayer;
-
-    /// <summary>设置绘制层。</summary>
-    public void SetDrawLayer(int value)
-    {
-        if (drawLayer == value) return;
-        drawLayer = value;
         MarkCanvasDirty();
     }
 

@@ -256,10 +256,10 @@ public sealed class PropertyDocument
             "Ens" => ["LocalActive", "Name"],
             "Transform" => ["localPosition", "localRotation", "localScale"],
             //这些类型的 enabled 已经搬到卡片标题行，正文顺序表里不再列它
-            "StaticMeshRenderer" => ["mesh", "materials", "drawQueue", "drawLayer", "castShadows", "receiveShadows"],
+            "StaticMeshRenderer" => ["mesh", "materials", "drawQueue", "castShadows", "receiveShadows"],
             "RigidBody" => ["bodyType", "mass", "useGravity", "linearDamping", "angularDamping", "linearVelocity", "angularVelocity", "continuousCollisionDetection", "lockFlags"],
             "CharacterController" => ["shape", "radius", "height", "halfExtents", "stepOffset", "contactOffset", "slopeLimit"],
-            _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
+            _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionMask"],
             _ => [],
         };
         //把事件编辑区排在普通属性之后

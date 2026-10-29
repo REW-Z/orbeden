@@ -108,7 +108,7 @@ void FlightTerrainStreamer::StreamChunks(int32 budget)
                 terrain->flattenMaxZ = source->flattenMaxZ;
                 terrain->flattenHeight = source->flattenHeight;
                 terrain->flattenBlendDistance = source->flattenBlendDistance;
-                terrain->collisionLayer = source->collisionLayer;
+                ens->SetLayer(source->GetEns()->GetLayer());
                 terrain->tileSize = source->tileSize;
                 terrain->generateNoiseTexture = false;
                 terrain->material.Set(surface);

@@ -80,6 +80,23 @@ public sealed partial class Ens : Object, IEquatable<Ens>
     /// <summary>Ens 经父子层级计算后的实际激活状态。</summary>
     public bool WorldActive => GetWorldActive(Id);
 
+    /// <summary>所属层的整数索引，范围为 0 到 31，仅修改当前节点。</summary>
+    public uint Layer
+    {
+        get => GetLayer(Id);
+        set => SetLayer(Id, value);
+    }
+
+    /// <summary>当前节点的 SceneView 拾取开关，随场景保存，关闭时限制整棵子树。</summary>
+    public bool EditorSelectable
+    {
+        get => GetEditorSelectable(Id);
+        set => SetEditorSelectable(Id, value);
+    }
+
+    /// <summary>结合祖先设置后的 SceneView 拾取状态，不影响层级面板选择及游戏输入。</summary>
+    public bool WorldEditorSelectable => GetWorldEditorSelectable(Id);
+
     /// <summary>Ens 名称。</summary>
     public string Name
     {
@@ -331,6 +348,11 @@ internal unsafe struct EnsBindApi
     public delegate* unmanaged[Cdecl]<EnsId, byte, byte> SetStatic;
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetDontSave;
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetDontSave;
+    public delegate* unmanaged[Cdecl]<EnsId, uint> GetLayer;
+    public delegate* unmanaged[Cdecl]<EnsId, uint, void> SetLayer;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetEditorSelectable;
+    public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetEditorSelectable;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetWorldEditorSelectable;
 }
 #pragma warning restore CS0649
 
@@ -364,6 +386,42 @@ public sealed unsafe partial class Ens
     internal static bool IsEnsAlive(EnsId ens)
     {
         return ensApiInitialized && ensApi.IsAlive != null && ensApi.IsAlive(ens) != 0;
+    }
+
+    //读取 Ens 的层索引
+    internal static uint GetLayer(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetLayer != null ? ensApi.GetLayer(ens) : 0;
+    }
+
+    //设置 Ens 的层索引
+    internal static void SetLayer(EnsId ens, uint layer)
+    {
+        if (ensApiInitialized && ensApi.SetLayer != null)
+        {
+            ensApi.SetLayer(ens, layer);
+        }
+    }
+
+    //读取 Ens 自身的场景拾取设置
+    internal static bool GetEditorSelectable(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetEditorSelectable != null && ensApi.GetEditorSelectable(ens) != 0;
+    }
+
+    //设置 Ens 的场景拾取状态
+    internal static void SetEditorSelectable(EnsId ens, bool selectable)
+    {
+        if (ensApiInitialized && ensApi.SetEditorSelectable != null)
+        {
+            ensApi.SetEditorSelectable(ens, selectable ? (byte)1 : (byte)0);
+        }
+    }
+
+    //读取 Ens 层级生效后的场景拾取状态
+    internal static bool GetWorldEditorSelectable(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetWorldEditorSelectable != null && ensApi.GetWorldEditorSelectable(ens) != 0;
     }
 
     //读取 Ens 的临时对象标志

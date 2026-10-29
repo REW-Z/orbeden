@@ -123,6 +123,8 @@ internal static class EditorPrefabDocuments
             replacement.SetAttributeValue("name", (string?)instance.Attribute("name") ?? string.Empty);
             replacement.SetAttributeValue("localActive", (string?)instance.Attribute("localActive") ?? "true");
             replacement.SetAttributeValue("static", (string?)instance.Attribute("static") ?? "false");
+            replacement.SetAttributeValue("layer", (string?)instance.Attribute("layer") ?? "0");
+            replacement.SetAttributeValue("editorSelectable", (string?)instance.Attribute("editorSelectable") ?? "true");
 
             //保留实例根节点局部变换
             XElement? oldTransform = instance.Elements("Component").FirstOrDefault(e => (string?)e.Attribute("type") == "Transform");

@@ -114,10 +114,9 @@ internal static class EditorLayerSettings
     {
         bool? selection = (type, name) switch
         {
-            ("StaticMeshRenderer" or "ParticleSystem", "drawLayer") => false,
-            ("Camera", "drawLayerMask") or ("WheelCollider", "groundQueryLayer") or ("Orbeden.Canvas", "drawLayer") => true,
+            ("Camera", "drawLayerMask") or ("WheelCollider", "groundQueryLayer") => true,
             _ when (type.EndsWith("Collider", StringComparison.Ordinal) || type is "HeightField" or "CharacterController")
-                && name is "collisionLayer" or "collisionMask" => name == "collisionMask",
+                && name == "collisionMask" => true,
             _ => null,
         };
         mask = selection ?? false;

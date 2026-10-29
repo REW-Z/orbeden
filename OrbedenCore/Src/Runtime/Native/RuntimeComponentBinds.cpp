@@ -193,6 +193,45 @@ namespace
         if (target) target->SetDontSave(value != 0);
     }
 
+    //读取 Ens 的层索引
+    uint32 ORBEDEN_NATIVE_CALL NativeEnsGetLayer(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value ? value->GetLayer() : 0;
+    }
+
+    //设置 Ens 的层索引
+    void ORBEDEN_NATIVE_CALL NativeEnsSetLayer(EnsId ens, uint32 layer)
+    {
+        if (Ens* value = GetNativeEns(ens))
+        {
+            value->SetLayer(layer);
+        }
+    }
+
+    //读取 Ens 自身的场景拾取设置
+    uint8 ORBEDEN_NATIVE_CALL NativeEnsGetEditorSelectable(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value && value->GetEditorSelectable() ? 1 : 0;
+    }
+
+    //设置 Ens 的场景拾取状态
+    void ORBEDEN_NATIVE_CALL NativeEnsSetEditorSelectable(EnsId ens, uint8 selectable)
+    {
+        if (Ens* value = GetNativeEns(ens))
+        {
+            value->SetEditorSelectable(selectable != 0);
+        }
+    }
+
+    //读取 Ens 层级生效后的场景拾取状态
+    uint8 ORBEDEN_NATIVE_CALL NativeEnsGetWorldEditorSelectable(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value && value->GetWorldEditorSelectable() ? 1 : 0;
+    }
+
     //读取 Ens 名称到 UTF-8 缓冲区。
     int32 ORBEDEN_NATIVE_CALL NativeEnsGetName(EnsId ens, uint8* buffer, int32 bufferSize)
     {
@@ -254,6 +293,11 @@ EnsBind EnsBind::Create()
     bind.SetStatic = reinterpret_cast<void*>(&NativeEnsSetStatic);
     bind.GetDontSave = reinterpret_cast<void*>(&NativeEnsGetDontSave);
     bind.SetDontSave = reinterpret_cast<void*>(&NativeEnsSetDontSave);
+    bind.GetLayer = reinterpret_cast<void*>(&NativeEnsGetLayer);
+    bind.SetLayer = reinterpret_cast<void*>(&NativeEnsSetLayer);
+    bind.GetEditorSelectable = reinterpret_cast<void*>(&NativeEnsGetEditorSelectable);
+    bind.SetEditorSelectable = reinterpret_cast<void*>(&NativeEnsSetEditorSelectable);
+    bind.GetWorldEditorSelectable = reinterpret_cast<void*>(&NativeEnsGetWorldEditorSelectable);
     return bind;
 }
 

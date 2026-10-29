@@ -1388,11 +1388,14 @@ bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPo
     {
         Mesh* mesh = renderer ? renderer->mesh.Get() : nullptr;
         if (!renderer || !renderer->IsRenderSceneEligible() || !mesh) continue;
-        if ((renderer->drawLayer & camera->drawLayerMask) == 0) continue;
-
         EnsId rendererEns = renderer->GetEnsId();
         Ens* currentEns = app.GetWorld().GetEns(rendererEns);
-        StaticMeshRenderer* currentRenderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
+        if (!currentEns || !currentEns->GetWorldEditorSelectable()
+            || (currentEns->GetLayerMask() & camera->drawLayerMask) == 0)
+        {
+            continue;
+        }
+        StaticMeshRenderer* currentRenderer = currentEns->GetComponent<StaticMeshRenderer>();
         Transform* transform = app.GetWorld().GetTransform(rendererEns);
         if (currentRenderer != renderer || !transform) continue;
 

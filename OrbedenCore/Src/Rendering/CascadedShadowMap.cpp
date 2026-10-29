@@ -212,7 +212,7 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
         if (!renderer || !renderer->IsRenderSceneEligible() || !renderer->castShadows ||
-            !(renderer->drawLayer & camera.drawLayerMask) ||
+            !(renderer->renderState.drawLayer & camera.drawLayerMask) ||
             !renderer->renderState.mesh) continue;
         //筛选包含不透明子网格材质的投影对象
         bool hasOpaqueMaterial = false;

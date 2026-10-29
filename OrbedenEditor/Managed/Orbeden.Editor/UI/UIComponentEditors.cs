@@ -53,9 +53,6 @@ public sealed class CanvasEditor : ComponentEditor
         }
 
         DrawProperty("sortOrder");
-        DrawProperty("drawLayer");
-        if (canvas.GetRenderMode() == CanvasRenderMode.WorldSpace && canvas.GetDrawLayer() == 0)
-            EditorGUI.Warning("Draw Layer 0 excludes this Canvas from every camera. Use 1 for the default layer.");
     }
 }
 

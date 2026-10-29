@@ -276,6 +276,8 @@ public:
         NativeBinding binding;
         PxRigidActor* actor = nullptr;
         uint64 configurationHash = 0;
+        uint32 layerMask = 1u;
+        uint32 collisionMask = 0xFFFFFFFFu;
         PhysicsBodyType bodyType = PhysicsBodyType::Static;
         List<Mesh*> sourceMeshes;
         bool sourceMeshInvalidated = false;
@@ -291,6 +293,8 @@ public:
         PxRigidActor* actor = nullptr;
         PxHeightField* heightField = nullptr;
         uint64 configurationHash = 0;
+        uint32 layerMask = 1u;
+        uint32 collisionMask = 0xFFFFFFFFu;
         uint32 generation = 0;
     };
 
@@ -299,6 +303,7 @@ public:
         NativeBinding binding;
         PxController* controller = nullptr;
         uint64 configurationHash = 0;
+        PxFilterData filter;
         vector3 lastFootPosition;
         bool lastPoseValid = false;
     };
@@ -580,8 +585,7 @@ public:
         hash = MixFloat(hash, collider.staticFriction);
         hash = MixFloat(hash, collider.dynamicFriction);
         hash = MixFloat(hash, collider.restitution);
-        hash = MixHash(hash, collider.collisionLayer);
-        hash = MixHash(hash, (collider.collisionMask & LayerSettings::GetCollisionMask(collider.collisionLayer)));
+        hash = MixHash(hash, collider.collisionMask);
 
         if (const BoxCollider* box = collider.Cast<BoxCollider>())
         {
@@ -708,7 +712,8 @@ public:
         }
     }
 
-    PxShape* CreateShape(const Collider& collider, PhysicsBodyType bodyType, const vector3& scale)
+    PxShape* CreateShape(const Collider& collider, PhysicsBodyType bodyType, const vector3& scale,
+        uint32 layerMask, uint32 collisionMask)
     {
         PxMaterial* material = physics->createMaterial(
             std::max(0.0f, collider.staticFriction),
@@ -776,7 +781,8 @@ public:
         material->release();
         if (!shape) return nullptr;
 
-        PxFilterData filter(collider.collisionLayer, collider.collisionMask & LayerSettings::GetCollisionMask(collider.collisionLayer), 0, 0);
+        //缓存所属层、有效掩码和组件原始掩码
+        PxFilterData filter(layerMask, collider.collisionMask & collisionMask, collider.collisionMask, 0);
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
         PxVec3 center(collider.center.x * scale.x, collider.center.y * scale.y, collider.center.z * scale.z);
@@ -792,7 +798,8 @@ public:
         RigidBody* body,
         Transform& transform,
         uint64 configurationHash,
-        const List<Mesh*>& sourceMeshes)
+        const List<Mesh*>& sourceMeshes,
+        uint32 layerMask, uint32 collisionMask)
     {
         if (colliders.empty()) return nullptr;
 
@@ -817,6 +824,8 @@ public:
         record->binding.ens = colliders.front()->GetEnsId();
         record->binding.owner = this;
         record->configurationHash = configurationHash;
+        record->layerMask = layerMask;
+        record->collisionMask = collisionMask;
         record->bodyType = bodyType;
         record->sourceMeshes = sourceMeshes;
 
@@ -833,7 +842,7 @@ public:
         {
             if (!collider) continue;
 
-            PxShape* shape = CreateShape(*collider, bodyType, scale);
+            PxShape* shape = CreateShape(*collider, bodyType, scale, layerMask, collisionMask);
             if (!shape)
             {
                 Log::Warning("PhysX collider geometry creation failed; the shape was skipped.");
@@ -922,11 +931,12 @@ public:
         hash = MixFloat(hash, component.flattenMinZ);
         hash = MixFloat(hash, component.flattenMaxZ);
         hash = MixFloat(hash, component.flattenHeight);
-        return MixHash(MixHash(hash, component.collisionLayer), LayerSettings::GetCollisionMask(component.collisionLayer));
+        return hash;
     }
 
     //创建 HeightField 静态碰撞体。
-    std::unique_ptr<HeightFieldRecord> CreateHeightField(HeightField& component, Transform& transform, uint64 configurationHash)
+    std::unique_ptr<HeightFieldRecord> CreateHeightField(HeightField& component, Transform& transform,
+        uint64 configurationHash, uint32 layerMask, uint32 collisionMask)
     {
         int32 rows = std::max(component.rowCount, 2);
         int32 columns = std::max(component.columnCount, 2);
@@ -984,7 +994,7 @@ public:
         //PhysX 高度场从角落开始采样，渲染网格以中心为原点。
         shape->setLocalPose(PxTransform(PxVec3(-component.sizeX * 0.5f, 0.0f, -component.sizeZ * 0.5f)));
 
-        PxFilterData filter(component.collisionLayer, LayerSettings::GetCollisionMask(component.collisionLayer), 0, 0);
+        PxFilterData filter(layerMask, collisionMask, 0xFFFFFFFFu, 0);
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
 
@@ -1004,6 +1014,8 @@ public:
         record->binding.owner = this;
         record->actor = actor;
         record->heightField = heightField;
+        record->layerMask = layerMask;
+        record->collisionMask = collisionMask;
         record->configurationHash = configurationHash;
         record->generation = component.GetGeneration();
         actor->userData = &record->binding;
@@ -1012,7 +1024,8 @@ public:
     }
 
     //同步 HeightField 静态体。
-    void SyncHeightField(HeightField& component, Transform& transform, uint64 key)
+    void SyncHeightField(HeightField& component, Transform& transform, uint64 key,
+        uint32 layerMask, uint32 collisionMask)
     {
         component.SyncPendingGeneration();
 
@@ -1027,17 +1040,55 @@ public:
         }
         if (found == heightFields.end())
         {
-            std::unique_ptr<HeightFieldRecord> created = CreateHeightField(component, transform, hash);
+            std::unique_ptr<HeightFieldRecord> created = CreateHeightField(component, transform, hash, layerMask, collisionMask);
             if (created) heightFields.emplace(key, std::move(created));
             return;
         }
 
+        HeightFieldRecord& record = *found->second;
+        if (record.layerMask != layerMask || record.collisionMask != collisionMask)
+        {
+            PxShape* shape = nullptr;
+            if (record.actor->getShapes(&shape, 1) == 1)
+            {
+                PxFilterData filter(layerMask, collisionMask, 0xFFFFFFFFu, 0);
+                shape->setSimulationFilterData(filter);
+                shape->setQueryFilterData(filter);
+                scene->resetFiltering(*record.actor);
+            }
+            record.layerMask = layerMask;
+            record.collisionMask = collisionMask;
+        }
+
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
-        if (found->second->actor) found->second->actor->setGlobalPose(pose);
+        if (record.actor) record.actor->setGlobalPose(pose);
     }
 
-    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform, bool queryOnly = false)
+    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform,
+        uint32 layerMask, uint32 collisionMask, bool queryOnly = false)
     {
+        //更新层过滤缓存
+        if (record.layerMask != layerMask || record.collisionMask != collisionMask)
+        {
+            PxShape* shapes[32];
+            for (PxU32 offset = 0; offset < record.actor->getNbShapes();)
+            {
+                PxU32 count = record.actor->getShapes(shapes, 32, offset);
+                for (PxU32 index = 0; index < count; ++index)
+                {
+                    PxFilterData filter = shapes[index]->getSimulationFilterData();
+                    filter.word0 = layerMask;
+                    filter.word1 = filter.word2 & collisionMask;
+                    shapes[index]->setSimulationFilterData(filter);
+                    shapes[index]->setQueryFilterData(filter);
+                }
+                offset += count;
+            }
+            scene->resetFiltering(*record.actor);
+            record.layerMask = layerMask;
+            record.collisionMask = collisionMask;
+        }
+
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
         //查询模式只把位姿写进场景，不设 kinematicTarget、不写速度、不施力也不清累积力
         if (queryOnly)
@@ -1102,6 +1153,9 @@ public:
             //未激活的 Ens 不建体：key 不进 seen，紧随其后的剪枝会把已有体一起销毁
             if (!transform || !ens.GetWorldActive() || (body && !body->enabled)) return;
 
+            uint32 layerMask = ens.GetLayerMask();
+            uint32 collisionMask = LayerSettings::GetCollisionMask(ens.GetLayer());
+
             //HeightField 地形使用独立静态体，与普通 collider body 分开管理。
             HeightField* heightField = ens.GetComponent<HeightField>();
             if (heightField && heightField->enabled
@@ -1109,7 +1163,7 @@ public:
             {
                 uint64 key = EnsKey(ens.GetId());
                 heightFieldSeen.insert(key);
-                SyncHeightField(*heightField, *transform, key);
+                SyncHeightField(*heightField, *transform, key, layerMask, collisionMask);
             }
 
             List<Collider*> colliders;
@@ -1152,16 +1206,16 @@ public:
             }
             if (found == bodies.end())
             {
-                std::unique_ptr<BodyRecord> created = CreateBody(colliders, body, *transform, hash, sourceMeshes);
+                std::unique_ptr<BodyRecord> created = CreateBody(colliders, body, *transform, hash, sourceMeshes, layerMask, collisionMask);
                 if (created)
                 {
                     //新建或重建的刚体也必须在本步施加并清空待施加力，避免跨步累积爆发。
-                    SyncBodyPoseAndVelocity(*created, body, *transform, queryOnly);
+                    SyncBodyPoseAndVelocity(*created, body, *transform, layerMask, collisionMask, queryOnly);
                     bodies.emplace(key, std::move(created));
                 }
                 return;
             }
-            SyncBodyPoseAndVelocity(*found->second, body, *transform, queryOnly);
+            SyncBodyPoseAndVelocity(*found->second, body, *transform, layerMask, collisionMask, queryOnly);
         });
 
         for (auto it = bodies.begin(); it != bodies.end();)
@@ -1202,11 +1256,11 @@ public:
         hash = MixFloat(hash, component.stepOffset);
         hash = MixFloat(hash, component.contactOffset);
         hash = MixFloat(hash, component.slopeLimit);
-        hash = MixHash(hash, component.collisionLayer);
-        return MixHash(hash, (component.collisionMask & LayerSettings::GetCollisionMask(component.collisionLayer)));
+        return hash;
     }
 
-    std::unique_ptr<ControllerRecord> CreateController(CharacterController& component, Transform& transform, uint64 configurationHash)
+    std::unique_ptr<ControllerRecord> CreateController(CharacterController& component, Transform& transform,
+        uint64 configurationHash, const PxFilterData& filter)
     {
         //static 的 Ens 不允许被角色控制器驱动
         if (world && world->GetEnsStatic(component.GetEnsId()))
@@ -1223,6 +1277,7 @@ public:
 
         std::unique_ptr<ControllerRecord> record = std::make_unique<ControllerRecord>();
         record->binding.kind = BindingKind::Controller;
+        record->filter = filter;
         record->binding.ens = component.GetEnsId();
         record->binding.owner = this;
         record->configurationHash = configurationHash;
@@ -1270,7 +1325,6 @@ public:
         PxShape* controllerShape = nullptr;
         if (actor->getShapes(&controllerShape, 1) == 1 && controllerShape)
         {
-            PxFilterData filter(component.collisionLayer, component.collisionMask & LayerSettings::GetCollisionMask(component.collisionLayer), 0, 0);
             controllerShape->setSimulationFilterData(filter);
             controllerShape->setQueryFilterData(filter);
         }
@@ -1300,6 +1354,8 @@ public:
             if (!transform) return;
 
             uint64 key = EnsKey(component->GetEnsId());
+            PxFilterData filter(ens->GetLayerMask(),
+                component->collisionMask & LayerSettings::GetCollisionMask(ens->GetLayer()), 0, 0);
             seen.insert(key);
             uint64 hash = CalculateControllerHash(*component);
             auto found = controllers.find(key);
@@ -1311,12 +1367,25 @@ public:
             }
             if (found == controllers.end())
             {
-                std::unique_ptr<ControllerRecord> created = CreateController(*component, *transform, hash);
+                std::unique_ptr<ControllerRecord> created = CreateController(*component, *transform, hash, filter);
                 if (created) controllers.emplace(key, std::move(created));
                 return;
             }
 
             ControllerRecord& record = *found->second;
+            if (record.filter != filter)
+            {
+                PxShape* shape = nullptr;
+                PxRigidDynamic* actor = record.controller->getActor();
+                if (actor->getShapes(&shape, 1) == 1)
+                {
+                    shape->setSimulationFilterData(filter);
+                    shape->setQueryFilterData(filter);
+                    scene->resetFiltering(*actor);
+                }
+                record.controller->invalidateCache();
+                record.filter = filter;
+            }
             if (!record.lastPoseValid || !NearlyEqual(record.lastFootPosition, transform->worldPosition))
             {
                 record.controller->setFootPosition(PxExtendedVec3(transform->worldPosition.x, transform->worldPosition.y, transform->worldPosition.z));
@@ -1677,9 +1746,10 @@ uint32 PhysicsSystem::MoveCharacter(EnsId ens, const vector3& displacement, floa
     CharacterController* component = entity ? entity->GetComponent<CharacterController>() : nullptr;
     if (!component) return CharacterCollisionNone;
 
-    LayerQueryFilter callback(component->collisionMask & LayerSettings::GetCollisionMask(component->collisionLayer), false, component->collisionLayer);
+    const PxFilterData& cachedFilter = found->second->filter;
+    LayerQueryFilter callback(cachedFilter.word1, false, cachedFilter.word0);
     ControllerPairFilter controllerPairFilter;
-    PxFilterData filterData(component->collisionMask & LayerSettings::GetCollisionMask(component->collisionLayer), 0, 0, 0);
+    PxFilterData filterData(cachedFilter.word1, 0, 0, 0);
     PxControllerFilters filters(&filterData, &callback, &controllerPairFilter);
     PxControllerCollisionFlags nativeFlags = found->second->controller->move(
         ToPx(displacement), std::max(0.0f, component->minMoveDistance), deltaTime, filters);

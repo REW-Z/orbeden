@@ -34,6 +34,10 @@ internal sealed class UISceneExtension : IEditorSceneExtension
             UIVisual? visual = node.Visual;
             if (!node.IsRenderable || node.Layout == null || visual == null || visual.RebuildFailed
                 || !visual.IsUIActive() || visual.IsRuntimeHidden || visual.GetComposedTint().a <= 0) continue;
+            if (!visual.Ens.WorldEditorSelectable)
+            {
+                continue;
+            }
             if (visual.GetCanvas()?.GetRenderMode() == CanvasRenderMode.Offscreen) continue;
             if (!UILayoutGizmos.TryGetSceneMatrix(node, out matrix4x4 matrix)) continue;
 

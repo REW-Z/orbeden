@@ -19,6 +19,5 @@ public:
     float32 contactOffset = 0.05f;
     float32 slopeLimit = 0.707f;
     float32 minMoveDistance = 0.001f;
-    uint32 collisionLayer = 1u;
     uint32 collisionMask = 0xFFFFFFFFu;
 };

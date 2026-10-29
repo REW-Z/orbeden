@@ -574,6 +574,24 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+#### 版本 113：持久化 SceneView 拾取开关
+
+EnsView 右侧新增 `Pick` 勾选列，控制 SceneView 的网格、组件 Gizmo 和 UI 拾取；关闭后跳过该节点及其子树，可继续拾取后面的对象。EnsView 中的选择、现有选择的编辑、游戏画面、运行时 UI 输入、物理与脚本均不受该标志控制。父级限制只改变生效状态，子级自身设置保留；父级关闭时子级勾选框灰显，恢复后按各节点保存的设置生效。修改支持撤销／重做，沿用现有预制体 Header 编辑权限，Play 期间勾选框只读。
+
+Ens 保存 `editorSelectable`，默认 `true`，`.world`、预制体和复制快照写在 `<Ens editorSelectable="true/false">`；旧文件缺少时默认允许拾取，无需批量迁移。绑定预制体实例保留根节点的该属性覆盖。`worldEditorSelectable` 仅是运行时层级缓存，在设置、重挂、父级销毁和世界替换时刷新；拾取读取缓存，不逐次遍历祖先。C++ 提供 `GetEditorSelectable()`、`SetEditorSelectable(bool)`、`GetWorldEditorSelectable()`；C# 对应 `Ens.EditorSelectable` 和只读 `Ens.WorldEditorSelectable`。场景拾取扩展应在候选枚举期间跳过层级生效值为 false 的节点，注册表也会拒绝此类返回结果。
+
+需重建 Core、原生和托管 Editor，通过 Update Project 同步 SDK 后重建游戏原生模块、C# 脚本及编辑器扩展；Engine Native API ABI 为 7，完整 Native API ABI 为 9，Ens 表共 16 个指针槽。重新启动 Editor 后可见 Pick 列，运行中的旧程序不会因源代码修改直接出现该入口。无需同步模板文件，无需重置 Builtin／Examples，已有场景无需手工编辑；重新发布时执行 Build Player。本次按要求只做静态核对，不运行编译、单元测试、冒烟、回归或性能测试。
+
+#### 版本 112：Ens 统一持有 Layer
+
+Ens 保存 0～31 的层索引，默认 0；C++ 使用 `GetLayer()`、`SetLayer()` 和 `GetLayerMask()`，C# 使用 `Ens.Layer`。删除 Collider、CharacterController、HeightField 的 `collisionLayer`，以及 StaticMeshRenderer、ParticleSystem、Canvas 的 `drawLayer`；相机、碰撞和查询的过滤 Mask 保留。Inspector 的 Ens Header 提供 Layer、Include Children 与 Apply Layer to Children，多选和递归修改合并为一次撤销，预制体内部节点仍遵循原有编辑权限。场景、预制体、复制和实例同步在 `<Ens layer="索引">` 保存层归属，实例根节点保留自己的 Layer 覆盖。
+
+渲染器在挂载和 Ens 层变更时更新私有渲染快照，剔除、静态批处理和阴影直接读取快照；粒子在每个发射器构建快照时读取一次。物理同步复用已有 Ens，按整数索引直接读取碰撞矩阵，只有过滤值变化时更新 PhysX 形状；单纯修改 Layer 不重建刚体、高度场或角色控制器。
+
+需重建 Core、原生与托管 Editor、游戏原生模块、C# 脚本和编辑器扩展，并通过 Update Project 同步 SDK；Engine Native API ABI 为 6，完整 Native API ABI 为 8，Ens 函数表追加两个槽位。发布包重新 Build Player。无需重置 Builtin；模板 `Examples/FlightTraining/main.world` 及 `Native/FlightTerrainStreamer.cpp` 已更新，已有项目需同步对应示例源码。旧组件层字段不保留兼容接口，也不在打开项目时自动迁移；旧位掩码 `1` 对应 Ens 索引 `0`，`2` 对应索引 `1`。本次已迁移 AviatorSage 的全部三个 `.world` 和 `Content/Aircraft.prefab`，飞机根节点两碰撞体统一为索引 `1`；地形分块复制源 Ens 的层。缺少 Ens layer 属性时使用默认层 0。
+
+本次按要求不运行编译、单元测试、冒烟、回归或性能测试；生成绑定使用已有 MetaGen 直接刷新，性能未实测。
+
 #### 版本 111：打开项目时自动同步 SDK
 
 打开、新建和更新后重新加载项目时，Debug 与 Release Editor 都验证当前 Editor 的 SDK，并同步 `Lib/OrbedenSdk.path`、Core C# 运行库、共享构建入口及 VSCode 配置。移除 Release 跳过同步及按 C# 引用文本跳过同步的限制，SDK 缺失或文件操作异常按同步失败报告；原生 SDK 的头文件目录与共享构建属性表也纳入检查。Dev 面板 `Update SDK` 复用同一入口。

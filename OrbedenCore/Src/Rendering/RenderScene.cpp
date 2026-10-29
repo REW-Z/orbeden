@@ -312,7 +312,7 @@ void RenderScene::BuildRenderItems(VisibleSet& visibleSet) const
             item.subMeshIndex = index;
             item.indexStart = subMesh.indexStart;
             item.indexCount = subMesh.indexCount;
-            item.drawLayer = renderer->drawLayer;
+            item.drawLayer = state.drawLayer;
             item.drawQueue = material->GetDrawQueue();
             item.cameraDistance = visible.cameraDistance;
             item.localToWorld = state.localToWorld;
@@ -409,6 +409,7 @@ void RenderScene::AddRenderer(StaticMeshRenderer* renderer)
 
     //重建渲染器运行时快照
     renderer->renderState = StaticMeshRendererRenderState();
+    renderer->renderState.drawLayer = renderer->GetEns()->GetLayerMask();
     renderers.push_back(renderer);
     UpdateRenderer(renderer, true);
 }

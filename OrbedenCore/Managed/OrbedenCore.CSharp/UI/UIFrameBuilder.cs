@@ -114,7 +114,7 @@ public sealed class UIFrameBuilder
             outputTextureObjectId = output?.InstanceId ?? 0,
             renderMode = (uint)canvas.GetRenderMode(),
             sortOrder = canvas.GetSortOrder(),
-            drawLayer = unchecked((uint)canvas.GetDrawLayer()),
+            drawLayer = 1u << (int)canvas.Ens.Layer,
             width = (int)logicalSize.x,
             height = (int)logicalSize.y,
             viewProjection = viewProjection,

@@ -78,6 +78,9 @@ private:
     //刷新指定 Ens 子树的 worldActive
     void RefreshEnsWorldActive(EnsId ens);
 
+    //刷新指定子树的场景拾取状态
+    void RefreshEnsEditorSelectable(EnsId ens);
+
     //把 Ens 从当前父级摘下来，只动层级数据；销毁等内部操作走这里，不受 static 移动限制
     void UnlinkEns(EnsId child);
 

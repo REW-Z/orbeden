@@ -65,7 +65,8 @@ internal static class EditorModelImport
     {
         string key = "world://ens/imported/" + identity;
         return new XElement("Ens", new XAttribute("stableId", key), new XAttribute("name", name),
-            new XAttribute("localActive", "true"), new XAttribute("static", "false"),
+            new XAttribute("localActive", "true"), new XAttribute("static", "false"), new XAttribute("layer", "0"),
+            new XAttribute("editorSelectable", "true"),
             new XElement("Component", new XAttribute("type", "Transform"), new XAttribute("stableId", key + "/Transform"),
                 CreateField("localPosition", "vector3", FormattableString.Invariant($"{position.X:R} {position.Y:R} {position.Z:R}")),
                 CreateField("localRotation", "quaternion", FormattableString.Invariant($"{rotation.X:R} {rotation.Y:R} {rotation.Z:R} {rotation.W:R}")),

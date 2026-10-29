@@ -2477,18 +2477,6 @@
       "Doc": "PhysX CCT \u89D2\u8272\u63A7\u5236\u5668\u7EC4\u4EF6\uFF0C\u4F4D\u7F6E\u4F7F\u7528\u5B9E\u4F53\u53D8\u6362\u7684\u811A\u5E95\u5750\u6807",
       "Members": [
         {
-          "Name": "collisionLayer",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "uint32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
           "Name": "collisionMask",
           "Doc": "",
           "IsMethod": false,
@@ -2643,18 +2631,6 @@
           "IsStatic": false,
           "Property": "getset",
           "Type": "vector3",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "collisionLayer",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "uint32",
           "Serialize": false,
           "Changed": "",
           "Parameters": [],
@@ -3082,18 +3058,6 @@
           "IsStatic": false,
           "Property": "getset",
           "Type": "float32",
-          "Serialize": false,
-          "Changed": "Regenerate",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "collisionLayer",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "uint32",
           "Serialize": false,
           "Changed": "Regenerate",
           "Parameters": [],
@@ -3644,18 +3608,6 @@
           "Arities": []
         },
         {
-          "Name": "drawLayer",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "uint32",
-          "Serialize": false,
-          "Changed": "OnConfigurationChanged",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
           "Name": "materials",
           "Doc": "",
           "IsMethod": false,
@@ -4106,18 +4058,6 @@
           "IsStatic": false,
           "Property": "getset",
           "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "drawLayer",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "uint32",
           "Serialize": false,
           "Changed": "",
           "Parameters": [],

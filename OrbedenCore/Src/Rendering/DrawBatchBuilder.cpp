@@ -533,7 +533,7 @@ void DrawBatchBuilder::CollectShadowCandidates(const RenderScene& scene, const L
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
         if (!renderer || !renderer->IsRenderSceneEligible() || !renderer->castShadows) continue;
-        if (!(renderer->drawLayer & camera.drawLayerMask)) continue;
+        if (!(renderer->renderState.drawLayer & camera.drawLayerMask)) continue;
         //进了持久静态批的渲染器由缓存的投影项提交，这里不再逐对象生成
         if (staticBatches && staticBatches->ContainsRenderer(renderer->GetObjectId())) continue;
 
@@ -559,7 +559,7 @@ void DrawBatchBuilder::CollectShadowCandidates(const RenderScene& scene, const L
             item.subMeshIndex = static_cast<uint32>(subIndex);
             item.indexStart = subMesh.indexStart;
             item.indexCount = subMesh.indexCount;
-            item.drawLayer = renderer->drawLayer;
+            item.drawLayer = renderer->renderState.drawLayer;
             item.mesh = state.mesh;
             item.queue = DrawQueue::Opaque;
             item.mode = GeometryMode::Uniform;

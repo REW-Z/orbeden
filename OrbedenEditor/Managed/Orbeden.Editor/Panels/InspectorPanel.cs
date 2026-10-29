@@ -88,6 +88,7 @@ internal sealed class InspectorPanel : EditorPanel
     private readonly List<int> staleDocuments = [];
     private EnsId[] cachedSelection = [];
     private PropertyDocument? headerDocument;
+    private bool includeLayerChildren;
     private readonly List<ComponentAddChoice> addChoices = [];
     private uint addChoicesGeneration;
     private bool addChoicesDirty = true;
@@ -533,6 +534,7 @@ internal sealed class InspectorPanel : EditorPanel
                 {
                     DrawPropertyDocument(headerDocument, "Ens", "",
                         hasLocalActive && !readOnly ? LocalActiveProperty : string.Empty, additionalSkipProperty: StaticProperty);
+                    DrawEnsLayer(selection, readOnly);
                     //Id 用只读输入框显示：与上面的字段同一套行布局，读数比裸标签整齐
                     string runtimeId = $"{active.Id.id}:{active.Id.version}";
                     EditorGUI.InputText("Runtime Id", ref runtimeId, readOnly: true);
@@ -573,6 +575,111 @@ internal sealed class InspectorPanel : EditorPanel
         //Static 同理：写进去由原生校验层级，失败会被属性文档回滚
         if (toggledStatic)
             ApplyPropertyToggle(headerDocument, StaticProperty, "Selected Ens", pendingStatic);
+    }
+
+    //绘制 Ens 层选择和递归应用入口
+    private void DrawEnsLayer(IReadOnlyList<EnsId> selection, bool readOnly)
+    {
+        Ens first = Ens.FromId(selection[0]);
+        uint layer = first.Layer;
+        bool mixed = selection.Skip(1).Any(id => Ens.FromId(id).Layer != layer);
+        uint layerMask = 1u << (int)layer;
+
+        EditorGUI.Checkbox("Include Children", ref includeLayerChildren);
+        if (EditorLayerSettings.Draw("Layer", ref layerMask, mask: false, mixed: mixed) && !readOnly)
+        {
+            layer = (uint)System.Numerics.BitOperations.TrailingZeroCount(layerMask);
+            ApplyEnsLayer(selection, layer, includeLayerChildren);
+            layer = first.Layer;
+            mixed = selection.Skip(1).Any(id => Ens.FromId(id).Layer != layer);
+        }
+
+        //支持把当前层再次应用到子树
+        if (includeLayerChildren)
+        {
+            EditorGUI.BeginDisabled(mixed || readOnly);
+            try
+            {
+                if (EditorGUI.Button("Apply Layer to Children"))
+                {
+                    ApplyEnsLayer(selection, layer, true);
+                }
+            }
+            finally
+            {
+                EditorGUI.EndDisabled();
+            }
+        }
+    }
+
+    //批量修改 Ens 层并记录整次撤销
+    private void ApplyEnsLayer(IReadOnlyList<EnsId> selection, uint layer, bool includeChildren)
+    {
+        //收集去重节点和原始层
+        HashSet<EnsId> visited = [];
+        Stack<Ens> pending = new(selection.Select(Ens.FromId));
+        List<(string StableId, uint Layer)> previous = [];
+        while (pending.TryPop(out Ens? ens))
+        {
+            if (!ens.IsValid || !visited.Add(ens.Id))
+            {
+                continue;
+            }
+            if (ens.Layer != layer)
+            {
+                if (!EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header))
+                {
+                    status = "Open the prefab to change layers on its internal nodes.";
+                    return;
+                }
+                previous.Add((ens.ResourceKey, ens.Layer));
+            }
+            if (includeChildren)
+            {
+                for (Ens child = Ens.FromId(ens.Transform.firstChild); child.IsValid;
+                    child = Ens.FromId(child.Transform.nextSibling))
+                {
+                    pending.Push(child);
+                }
+            }
+        }
+        if (previous.Count == 0)
+        {
+            return;
+        }
+
+        //提交全部节点并保存稳定身份
+        foreach ((string stableId, uint _) in previous)
+        {
+            Ens.Find(stableId).Layer = layer;
+        }
+        TouchWorld();
+        EditorPropertyHistory.PushAction(
+            "Change Ens Layer",
+            () =>
+            {
+                foreach ((string stableId, uint oldLayer) in previous)
+                {
+                    Ens ens = Ens.Find(stableId);
+                    if (ens.IsValid)
+                    {
+                        ens.Layer = oldLayer;
+                    }
+                }
+                TouchWorld();
+            },
+            () =>
+            {
+                foreach ((string stableId, uint _) in previous)
+                {
+                    Ens ens = Ens.Find(stableId);
+                    if (ens.IsValid)
+                    {
+                        ens.Layer = layer;
+                    }
+                }
+                TouchWorld();
+            });
     }
 
     //按活动对象挂载顺序绘制所有选择对象共同拥有的组件。

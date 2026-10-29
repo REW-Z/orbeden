@@ -73,7 +73,7 @@ public static unsafe class OrbedenCoreRuntime
             return;
         }
 
-        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi), 7);
+        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi), 9);
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
         RetainedGuiApi = api.GetRetainedGuiApi;
         //原生表已就位，UI 才能接入并登记帧系统；早于世界附着。
@@ -140,7 +140,7 @@ public static unsafe class OrbedenCoreRuntime
     }
 
     /// <summary>读取函数表前拒绝旧 ABI 或不同尺寸的引擎模块。</summary>
-    private static void ValidateNativeApiHeader(IntPtr pointer, int expectedSize, uint expectedVersion = 5)
+    private static void ValidateNativeApiHeader(IntPtr pointer, int expectedSize, uint expectedVersion = 7)
     {
         uint* header = (uint*)pointer;
         if (header[0] != expectedVersion || header[1] != expectedSize)
@@ -165,7 +165,7 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<WorldBindApi>(nameof(WorldBindApi), 7);
         ValidateFunctionTable<PathDefinesBindApi>(nameof(PathDefinesBindApi), 2);
         ValidateFunctionTable<FileSystemBindApi>(nameof(FileSystemBindApi), 1);
-        ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 11);
+        ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 16);
         ValidateFunctionTable<ObjectBindApi>(nameof(ObjectBindApi), 7);
         ValidateFunctionTable<NativeBindingsApi>(nameof(NativeBindingsApi), 10);
         ValidateFunctionTable<ObjectExtensionBindApi>(nameof(ObjectExtensionBindApi), 1);
@@ -179,8 +179,8 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
         ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 17);
-        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 74 * IntPtr.Size);
-        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 117 * IntPtr.Size);
+        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 79 * IntPtr.Size);
+        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 122 * IntPtr.Size);
 
         nativeAbiValidated = true;
     }

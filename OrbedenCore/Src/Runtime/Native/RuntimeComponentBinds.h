@@ -57,6 +57,11 @@ public:
     void* SetStatic = nullptr;
     void* GetDontSave = nullptr;
     void* SetDontSave = nullptr;
+    void* GetLayer = nullptr;
+    void* SetLayer = nullptr;
+    void* GetEditorSelectable = nullptr;
+    void* SetEditorSelectable = nullptr;
+    void* GetWorldEditorSelectable = nullptr;
 
     //创建 Ens 函数表。
     static EnsBind Create();
@@ -67,4 +72,4 @@ public:
 ORBEDEN_ASSERT_NATIVE_API_TABLE(WorldBind, 7);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(PathDefinesBind, 2);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(FileSystemBind, 1);
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EnsBind, 11);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EnsBind, 16);

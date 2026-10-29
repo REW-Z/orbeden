@@ -219,6 +219,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
         const ParticleSettings& settings = state.validatedSettings;
         if (state.particles.empty() && state.trails.empty()) continue;
 
+        uint32 drawLayer = ens->GetLayerMask();
         bool local = settings.main.simulationSpace == ParticleSimulationSpace::Local;
         matrix4x4 emitterWorld = transformCache.GetWorldMatrix(source->GetEnsId());
         quaternion emitterRotation = GetRotation(emitterWorld);
@@ -261,7 +262,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
                 { size, size, size });
             record.mesh = source->mesh;
             record.materials = source->materials;
-            record.drawLayer = source->drawLayer;
+            record.drawLayer = drawLayer;
             record.castShadows = source->castShadows;
             record.receiveShadows = source->receiveShadows;
             record.renderPath = settings.rendering.path;
@@ -301,7 +302,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
             record.material = source->trailMaterial;
             record.renderPath = settings.rendering.path;
             record.blendMode = settings.rendering.blendMode;
-            record.drawLayer = source->drawLayer;
+            record.drawLayer = drawLayer;
             record.textureTileLength = settings.trails.textureTileLength;
             record.points.resize(trail.count);
             uint32 capacity = settings.trails.maxPointsPerTrail;

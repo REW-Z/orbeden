@@ -20,6 +20,7 @@ namespace
     constexpr float32 AirDensity = 1.225f;
     constexpr float32 ClMax = 1.6f;
     constexpr float32 TorqueScale = 350.0f;
+    constexpr float32 FlapStep = 0.5f;
 
     /// <summary>相加向量。</summary>
     vector3 Add(const vector3& a, const vector3& b)
@@ -76,18 +77,23 @@ void FlightController::OnUpdate(float32 deltaTime)
     (void)deltaTime;
     if (Input::KeyDown(KeyEnum::R)) ResetFlight();
     if (Input::KeyDown(KeyEnum::F)) showForces = !showForces;
+    //襟翼按键调整目标档位
+    if (Input::KeyDown(KeyEnum::Z)) flapTarget = std::max(flapTarget - FlapStep, 0.0f);
+    if (Input::KeyDown(KeyEnum::X)) flapTarget = std::min(flapTarget + FlapStep, 1.0f);
 }
 
 /// <summary>计算并施加机翼、垂尾和舵面作用。</summary>
 void FlightController::OnFixedUpdate(float32 deltaTime)
 {
-    (void)deltaTime;
     Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
     if (!transform || !body || !body->enabled) return;
-    float32 pitchInput = (Input::Key(KeyEnum::S) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::W) ? 1.0f : 0.0f);
-    float32 rollInput = (Input::Key(KeyEnum::D) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::A) ? 1.0f : 0.0f);
-    float32 yawInput = (Input::Key(KeyEnum::Q) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::E) ? 1.0f : 0.0f);
+    //襟翼按收放速度靠近目标档位
+    float32 flapStep = std::max(flapDeployRate, 0.0f) * std::max(deltaTime, 0.0f);
+    flapPosition = std::clamp(flapPosition + std::clamp(flapTarget - flapPosition, -flapStep, flapStep), 0.0f, 1.0f);
+    float32 pitchInput = GetPitchInput();
+    float32 rollInput = GetRollInput();
+    float32 yawInput = GetYawInput();
 
     quaternion rotation = transform->GetLocalRotation();
     EvaluateForces(*body, rotation);
@@ -157,16 +163,17 @@ void FlightController::EvaluateForces(const RigidBody& body, const quaternion& r
     }
     float32 wingSpeedSquared = forwardSpeed > 0.5f ? forwardSpeed * forwardSpeed + velocityBody.y * velocityBody.y : 0.0f;
     float32 wingPressure = 0.5f * AirDensity * wingSpeedSquared;
-    float32 effectiveCl = cl * std::max(liftMultiplier, 0.0f);
+    float32 effectiveCl = cl * std::max(liftMultiplier, 0.0f) + std::max(flapLiftCoefficient, 0.0f) * flapPosition;
     vector3 liftDirection = Cross(right, velocity);
     float32 liftDirectionLength = Length(liftDirection);
     liftForce = liftDirectionLength > 0.01f
         ? Scale(liftDirection, wingPressure * wingArea * effectiveCl / liftDirectionLength) : vector3();
 
-    //阻力采用 Cd0 + k*Cl²，避免拉杆时旧公式过大的诱导阻力耗尽空速。
+    //阻力采用 Cd0 + k*Cl²，襟翼额外增加寄生阻力
     float32 dynamicPressure = 0.5f * AirDensity * speed * speed;
     float32 drag = dynamicPressure * wingArea * (std::max(dragCoefficient, 0.0f)
-        + std::max(inducedDragCoefficient, 0.0f) * effectiveCl * effectiveCl);
+        + std::max(inducedDragCoefficient, 0.0f) * effectiveCl * effectiveCl
+        + std::max(flapDragCoefficient, 0.0f) * flapPosition);
     dragForce = speed > 0.01f ? Scale(velocity, -drag / speed) : vector3();
 
     //垂尾位于质心后方；侧向气流产生回正力矩，并通过局部角速度阻尼偏航。
@@ -196,8 +203,9 @@ void FlightController::OnLateUpdate(float32 deltaTime)
     EvaluateForces(*body, GetEns()->Transform()->GetLocalRotation());
     if (!showForces || !renderer) return;
     Engine* engine = GetEns()->GetComponent<Engine>();
+    vector3 totalDrag = engine ? Add(dragForce, engine->GetWindmillDragForce()) : dragForce;
     vector3 origin = GetEns()->Transform()->GetLocalPosition();
-    const vector3 forces[] = { dragForce, liftForce, engine ? engine->GetThrustForce() : vector3(), gravityForce };
+    const vector3 forces[] = { totalDrag, liftForce, engine ? engine->GetThrustForce() : vector3(), gravityForce };
     const color colors[] = { { 1, 0, 0, 1 }, { 0, 0, 1, 1 }, { 1, 1, 0, 1 }, { 0, 0, 0, 1 } };
     for (int i = 0; i < 4; ++i)
     {
@@ -221,6 +229,27 @@ float32 FlightController::GetAirspeed()
 {
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
     return body ? Length(body->linearVelocity) : 0.0f;
+}
+
+/// <summary>读取襟翼位置，0 收起，1 全放。</summary>
+float32 FlightController::GetFlapPosition() { return flapPosition; }
+
+/// <summary>读取俯仰输入，抬头为正。</summary>
+float32 FlightController::GetPitchInput()
+{
+    return (Input::Key(KeyEnum::S) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::W) ? 1.0f : 0.0f);
+}
+
+/// <summary>读取滚转输入，右滚为正。</summary>
+float32 FlightController::GetRollInput()
+{
+    return (Input::Key(KeyEnum::D) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::A) ? 1.0f : 0.0f);
+}
+
+/// <summary>读取偏航输入，左偏航为正。</summary>
+float32 FlightController::GetYawInput()
+{
+    return (Input::Key(KeyEnum::Q) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::E) ? 1.0f : 0.0f);
 }
 
 /// <summary>读取坠毁次数。</summary>
@@ -286,6 +315,8 @@ void FlightController::ResetFlight()
     sideslipDegrees = 0;
     liftForce = dragForce = gravityForce = finTorque = vector3();
     alphaDegrees = 0;
+    flapPosition = 0.0f;
+    flapTarget = 0.0f;
     transform->SetLocalPosition(spawnPosition);
     transform->SetLocalRotation(spawnRotation);
     if (RigidBody* body = GetEns()->GetComponent<RigidBody>())

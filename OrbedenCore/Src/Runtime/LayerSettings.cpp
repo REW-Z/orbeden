@@ -103,11 +103,8 @@ void LayerSettings::Refresh()
     else Log::Error("Invalid Layers section in GameSettings.ini; using the default collision matrix.");
 }
 
-//旧场景可能保存多个位，按这些层允许的目标取并集。
-uint32 LayerSettings::GetCollisionMask(uint32 layers)
+//按 Ens 层索引读取碰撞矩阵行
+uint32 LayerSettings::GetCollisionMask(uint32 layer)
 {
-    uint32 result = 0;
-    for (uint32 index = 0; index < 32; ++index)
-        if ((layers & (1u << index)) != 0) result |= masks[index];
-    return result;
+    return masks[layer];
 }

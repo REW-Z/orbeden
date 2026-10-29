@@ -138,6 +138,10 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
     world.ForEachEns([&](Ens& ens)
     {
         if (scene.IsTemporaryEns(ens.GetId())) return;
+        if (sink.picked && !ens.GetWorldEditorSelectable())
+        {
+            return;
+        }
         Transform* transform = world.GetTransform(ens.GetId());
         if (!transform) return;
         bool selected = scene.IsSelected(ens.GetId());

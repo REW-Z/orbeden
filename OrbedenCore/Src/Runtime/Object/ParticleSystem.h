@@ -47,7 +47,6 @@ public:
     ORBEDEN_BIND_CHANGED(OnConfigurationChanged)
     std::array<EnsId, 16> subEmitterTargets{};
     ORBEDEN_BIND_CHANGED(OnConfigurationChanged)
-    uint32 drawLayer = 1u;
     ORBEDEN_BIND_CHANGED(OnConfigurationChanged)
     bool castShadows = false;
     ORBEDEN_BIND_CHANGED(OnConfigurationChanged)

@@ -146,7 +146,7 @@ void StaticBatchCache::Refresh(World& world, GpuResourceManager& resources)
             group.cull = static_cast<uint32>(pass.state.cull == CullMode::Auto ? CullMode::None : pass.state.cull);
             group.receiveShadows = renderer->receiveShadows;
             group.castShadows = renderer->castShadows;
-            group.drawLayer = renderer->drawLayer;
+            group.drawLayer = state.drawLayer;
             group.material.Set(material);
             group.firstMesh.Set(state.mesh);
             keys.push_back(group);

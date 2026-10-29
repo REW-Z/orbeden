@@ -170,6 +170,30 @@ void World::RefreshEnsWorldActive(EnsId ens)
     }
 }
 
+//刷新指定子树的场景拾取状态
+void World::RefreshEnsEditorSelectable(EnsId ens)
+{
+    Ens* value = GetEns(ens);
+    Transform* transform = GetTransform(ens);
+    if (!value || !transform)
+    {
+        return;
+    }
+
+    //合并当前节点和父级设置
+    Ens* parent = GetEns(transform->parent);
+    value->worldEditorSelectable = value->editorSelectable && (!parent || parent->worldEditorSelectable);
+
+    //递归刷新子节点缓存
+    for (EnsId child = transform->firstChild; !child.IsNull();)
+    {
+        Transform* childTransform = GetTransform(child);
+        EnsId next = childTransform ? childTransform->next : EnsId();
+        RefreshEnsEditorSelectable(child);
+        child = next;
+    }
+}
+
 //注册 Ens 生命周期监听器
 void World::AddLifecycleListener(IWorldLifecycleListener* listener)
 {
@@ -369,9 +393,14 @@ void World::CommitReplacement(World& prepared)
     for (Ens* ens : liveEns)
     {
         bool active = ens->localActive;
+        bool selectable = ens->editorSelectable;
         for (Ens* parent = GetParent(ens->ens); parent; parent = GetParent(parent->ens))
+        {
             active = active && parent->localActive;
+            selectable = selectable && parent->editorSelectable;
+        }
         ens->worldActive = active;
+        ens->worldEditorSelectable = selectable;
     }
     List<int32> components;
     for (Ens* ens : liveEns)
@@ -511,6 +540,7 @@ bool World::DestroyEns(EnsId ens)
         UnlinkEns(child);
         NotifyTransformChanged(child);
         RefreshEnsWorldActive(child);
+        RefreshEnsEditorSelectable(child);
         child = nextChild;
     }
 
@@ -793,6 +823,7 @@ void World::SetParent(EnsId child, EnsId parent)
     {
         NotifyTransformChanged(child);
         RefreshEnsWorldActive(child);
+        RefreshEnsEditorSelectable(child);
         NotifyEnsReparented(child, EnsId());
         return;
     }
@@ -822,6 +853,7 @@ void World::SetParent(EnsId child, EnsId parent)
     parentTransform->lastChild = child;
     NotifyTransformChanged(child);
     RefreshEnsWorldActive(child);
+    RefreshEnsEditorSelectable(child);
     NotifyEnsReparented(child, parent);
 }
 

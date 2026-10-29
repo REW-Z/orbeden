@@ -210,13 +210,19 @@ Project 面板的 `.obj`、`.gltf`、`.glb` 源文件可投放到 ScenePanel。�
 
 统一面板采用 `ProjectSettingsPanel`，标题 **Project Settings**，通过既有面板发现机制注册。只加入 Layers 和 Physics。
 
-Layers 提供 32 个共享名称，默认 Layer 0 为 Default。Renderer 下拉写入 `1u << index`，而不是下拉索引；Camera mask 提供 Nothing、Everything 和逐层勾选。原有零值或多位单层值显示 Custom/十六进制，直到用户明确选择才改变。Collider、HeightField、CharacterController 的相关字段使用同一套命名控件。提交仍走 PropertyDocument，保留多选和撤销。
+Layers 提供 32 个共享名称，默认 Layer 0 为 Default。Ens Header 的 Layer 保存整数索引 `0～31`；碰撞体、网格渲染器、粒子和画布读取所属 Ens 的层，组件不再配置独立层归属。Include Children 默认关闭，开启后修改 Layer 会同时更新所选节点和全部后代；Apply Layer to Children 可以把当前层再次应用到子树，多选重叠节点去重，整次操作支持撤销与重做。绑定预制体内部节点只允许在预制体编辑模式中修改；递归目标存在不可编辑且需要改层的节点时整次操作取消。Camera 和碰撞／查询 Mask 提供 Nothing、Everything 和逐层勾选，继续使用 PropertyDocument 提交。
 
 Physics 按选中层显示碰撞矩阵的一行，改变一格同时更新对称列，包含自身碰撞。Apply 原子保存、Revert 放弃草稿、Restore Defaults 修改草稿；Play 期间禁用修改。配置为项目根 `GameSettings.ini` 的 `[Layers]` 分块，随 Player 镜像到包根：32 行，每行 `<序号>TAB<层名>TAB<八位十六进制允许掩码>`；文件在但缺这一段时按默认值补写。层名与碰撞矩阵是项目级设置，因此不放在会被 cook 的内容根里。
 
-PhysX 有效 mask 为组件原 collisionMask 与矩阵允许行的交集；Collider、HeightField、CharacterController、Trigger 和 CCT 配对遵循矩阵。普通 Raycast/Sweep/Overlap 没有源层，仍按传入 layerMask 查询。旧多位层取所属行并集。配置参与形状 hash，变化后在物理同步时生效。缺少分块时按默认值补写并保持全允许矩阵；非法或非对称配置报错并使用默认值。
+PhysX 有效 mask 为组件 collisionMask 与所属 Ens 对应矩阵行的交集；HeightField 直接使用该矩阵行。Collider、HeightField、CharacterController、Trigger 和 CCT 配对遵循矩阵。普通 Raycast/Sweep/Overlap 没有源层，仍按传入 layerMask 查询。物理同步复用已有 Ens 引用，按索引读取矩阵，层或矩阵行变化时原地更新过滤数据，不重建形状几何或 Actor。缺少分块时按默认值补写并保持全允许矩阵；非法或非对称配置报错并使用默认值。
 
-项目版本递增至 11，需更新 SDK、重建模块和重新打包；已有组件位值不迁移。
+版本 112 将层归属统一到 Ens，需更新 SDK、重建模块和重新打包；旧组件位掩码迁移为 Ens 整数索引，详见构建与打包文档的版本记录。
+
+## EnsView 场景拾取开关
+
+EnsView 使用两列表格，左列保持层级选择、展开、重命名、拖放和右键菜单，右侧 `Pick` 列绘制当前节点的 SceneView 可选中开关。关闭父级后，子树的生效值变为 false，子级勾选框灰显；恢复父级后，各子节点按各自保存的值恢复。勾选不改变当前选择，EnsView 仍可选择被锁定的对象。操作以节点稳定 ID 记录撤销／重做，并标记世界修改；Play 期间和不允许编辑的预制体内部节点只读。
+
+`editorSelectable` 保存到 Ens 的场景属性，缺少时为 true，绑定实例的根属性覆盖在同步时保留。网格、Gizmo 和 UI 在场景拾取候选阶段读取层级缓存并跳过锁定对象，后面的可选中对象继续参与；扩展注册表也会拒绝锁定节点的命中结果。该设置不改变游戏渲染、物理、脚本或运行时 UI 输入。
 
 ## TODO
 

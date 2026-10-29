@@ -10,6 +10,8 @@ OBJECT_TYPE_IMPLEMENT(Engine, Script)
 
 namespace
 {
+    constexpr float32 AirDensity = 1.225f;
+
     /// <summary>相加向量。</summary>
     vector3 Add(const vector3& a, const vector3& b)
     {
@@ -67,6 +69,13 @@ void Engine::OnFixedUpdate(float32 deltaTime)
     float32 thrust = maxThrust * throttle * std::clamp(1.0f - std::max(forwardSpeed, 0.0f) / std::max(thrustFadeSpeed, 1.0f), 0.0f, 1.0f);
     thrustForce = Scale(forward, thrust);
     body->AddForce(thrustForce);
+
+    //风车状态螺旋桨沿桨轴产生阻力
+    float32 windmillDrag = 0.5f * AirDensity * forwardSpeed * forwardSpeed
+        * std::max(windmillDragArea, 0.0f) * (1.0f - throttle);
+    windmillDragForce = std::abs(forwardSpeed) > 0.01f
+        ? Scale(forward, -std::copysign(windmillDrag, forwardSpeed)) : vector3();
+    body->AddForce(windmillDragForce);
 }
 
 /// <summary>读取油门。</summary>
@@ -78,9 +87,16 @@ float32 Engine::GetThrustNewtons() { return Length(thrustForce); }
 /// <summary>读取推力向量。</summary>
 vector3 Engine::GetThrustForce() { return thrustForce; }
 
+/// <summary>读取风车阻力牛顿数。</summary>
+float32 Engine::GetWindmillDragNewtons() { return Length(windmillDragForce); }
+
+/// <summary>读取风车阻力向量。</summary>
+vector3 Engine::GetWindmillDragForce() { return windmillDragForce; }
+
 /// <summary>清空油门和推力。</summary>
 void Engine::ResetThrottle()
 {
     throttle = 0.0f;
     thrustForce = {};
+    windmillDragForce = {};
 }

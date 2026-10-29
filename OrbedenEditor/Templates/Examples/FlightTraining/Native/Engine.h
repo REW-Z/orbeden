@@ -12,10 +12,14 @@ public:
     float32 throttleRate = 1.0f;
     float32 maxThrust = 15000.0f;
     float32 thrustFadeSpeed = 90.0f;
+    //风车状态螺旋桨的等效阻力面积，平方米
+    float32 windmillDragArea = 0.6f;
 
     float32 GetThrottle();
     float32 GetThrustNewtons();
     vector3 GetThrustForce();
+    float32 GetWindmillDragNewtons();
+    vector3 GetWindmillDragForce();
     void ResetThrottle();
 
 protected:
@@ -24,4 +28,5 @@ protected:
 private:
     float32 throttle = 0.0f;
     vector3 thrustForce;
+    vector3 windmillDragForce;
 };

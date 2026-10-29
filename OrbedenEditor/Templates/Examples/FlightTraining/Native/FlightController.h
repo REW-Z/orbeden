@@ -19,6 +19,10 @@ public:
     float32 postStallCl = 0.45f;
     float32 dragCoefficient = 0.028f;
     float32 inducedDragCoefficient = 0.045f;
+    //满襟翼增加的升力与寄生阻力系数，收放速度按满行程每秒计
+    float32 flapLiftCoefficient = 0.6f;
+    float32 flapDragCoefficient = 0.06f;
+    float32 flapDeployRate = 0.4f;
     float32 elevatorAuthority = 6.0f;
     float32 aileronAuthority = 7.0f;
     float32 rudderAuthority = 5.0f;
@@ -47,12 +51,18 @@ public:
     float32 GetLiftNewtons();
     float32 GetDragNewtons();
     float32 GetWeightNewtons();
+    float32 GetFlapPosition();
+    float32 GetPitchInput();
+    float32 GetRollInput();
+    float32 GetYawInput();
     void ResetFlight();
 
 private:
     vector3 spawnPosition;
     quaternion spawnRotation;
     float32 sideslipDegrees = 0.0f;
+    float32 flapPosition = 0.0f;
+    float32 flapTarget = 0.0f;
     int32 crashCount = 0;
     vector3 liftForce;
     vector3 dragForce;
