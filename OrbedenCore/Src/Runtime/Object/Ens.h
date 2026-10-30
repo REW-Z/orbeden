@@ -29,6 +29,7 @@ private:
     //运行时临时对象标志：只影响序列化枚举，不从场景文件恢复。
     bool dontSave = false;
     std::string name;
+    uint64 nameRevision = 1;//名称缓存变更序号
     //最近一次 static 设置的失败原因
     std::string staticError;
     uint64 componentMask = 0;
@@ -103,6 +104,10 @@ public:
     //获取名称
     ORBEDEN_BIND_IGNORE
     const std::string& GetName() const;
+
+    //读取名称缓存变更序号
+    ORBEDEN_BIND_IGNORE
+    uint64 GetNameRevision() const { return nameRevision; }
 
     //设置名称
     ORBEDEN_BIND_IGNORE

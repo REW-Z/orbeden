@@ -44,6 +44,7 @@ enum class PhysicsEventType : uint32
 struct PhysicsQueryHit
 {
 public:
+    //实际命中的碰撞体节点，复合刚体可返回子节点
     EnsId ens;
     vector3 position;
     vector3 normal;
@@ -55,7 +56,7 @@ struct PhysicsQueryFilter
 {
 public:
     uint32 layerMask = 0xFFFFFFFFu;
-    //命中这个 Ens 的几何时跳过，用于排除发射器自身
+    //排除此碰撞体节点；传入刚体节点时排除整个复合刚体
     EnsId ignoredEns;
     //默认排除触发器，粒子只与实体几何碰撞
     bool includeTriggers = false;
@@ -66,6 +67,7 @@ struct PhysicsEvent
 {
 public:
     PhysicsEventType type = PhysicsEventType::ContactEnter;
+    //双方所属刚体节点，独立静态碰撞体使用自身节点
     EnsId first;
     EnsId second;
     vector3 position;

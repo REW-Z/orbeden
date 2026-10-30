@@ -92,6 +92,30 @@ internal static class EditorPrefabSession
         return true;
     }
 
+    //复制绑定根节点供层级面板复用
+    internal static bool CopyBindingRoots(HashSet<string> roots)
+    {
+        bool changed = roots.Count != bindings.Count;
+        foreach (EditorPrefabBinding binding in bindings)
+        {
+            if (!roots.Contains(binding.RootKey))
+            {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed)
+        {
+            return false;
+        }
+        roots.Clear();
+        foreach (EditorPrefabBinding binding in bindings)
+        {
+            roots.Add(binding.RootKey);
+        }
+        return true;
+    }
+
     //查找节点所属的绑定实例
     internal static EditorPrefabBinding? FindBinding(Ens ens)
     {

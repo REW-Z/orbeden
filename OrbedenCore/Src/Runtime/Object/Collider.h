@@ -14,7 +14,7 @@ enum class ColliderGeometryType : uint32
     TriangleMesh = 4,
 };
 
-//所有物理碰撞体的抽象基类；没有刚体组件时作为静态碰撞体。
+//物理碰撞体基类；归属自身或最近祖先的刚体，未找到时作为独立静态碰撞体
 class Collider : public Component
 {
     OBJECT_TYPE_DECLARE_ABSTRACT(Collider)

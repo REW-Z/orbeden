@@ -7,8 +7,9 @@ class PhysicsSystem;
 
 //射线悬挂机轮组件：由 PhysicsSystem 在每次物理模拟前驱动。
 //通过向下射线检测地面，施加弹簧阻尼悬挂力、地面摩擦与转向侧向力，
-//力作用到同 Ens 的 RigidBody 上（当前物理步生效）。
-//需要挂载在根节点 Dynamic 刚体所在的 Ens 上。
+//力作用到自身或最近祖先的 Dynamic RigidBody 上（当前物理步生效）
+//刚体保持在根节点，车轮可挂载到任意深度的子节点
+//子节点只提供层级位置，机轮方向、偏移和尺寸换算使用所属刚体坐标系
 class WheelCollider final : public Component
 {
     OBJECT_TYPE_DECLARE(WheelCollider)
@@ -16,7 +17,7 @@ class WheelCollider final : public Component
 public:
     bool enabled = true;
 
-    //悬挂安装点相对 Ens 原点的局部偏移。
+    //相对车轮 Ens 位置的安装点偏移，方向和缩放取所属刚体
     vector3 wheelOffset = { 0.0f, -0.5f, 0.0f };
 
     //机轮半径，参与接地几何计算。
@@ -36,7 +37,7 @@ public:
     float32 rollingFriction = 0.02f;
     float32 lateralFriction = 0.8f;
 
-    //向下探测距离。
+    //沿所属刚体局部 -Y 探测的距离，与悬挂长度一起按刚体 Y 轴的世界缩放换算
     float32 raycastDistance = 1.2f;
 
     //只探测指定碰撞层的地面。

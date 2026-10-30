@@ -293,6 +293,8 @@ namespace
         void* getMeshDynamicBatching = nullptr;
         void* setMeshDynamicBatching = nullptr;
         void* copyProfilerGpuEvents = nullptr;
+        void* getWorldEnsState = nullptr;
+        void* readEnsHeader = nullptr;
     };
 
     #pragma pack(pop)
@@ -308,26 +310,28 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 188);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 194);
     static_assert(sizeof(EditorProfileScopeAbi) == 16);
     static_assert(sizeof(ProfileFrameSummary) == 104);
     static_assert(sizeof(ProfileGpuEvent) == 24);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 92);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 108);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 117);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 119);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 140);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 165);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 170);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 178);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 180);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 182);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 183);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 184);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 185);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 186);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 187);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 96);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 112);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 121);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 123);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 144);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 169);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 174);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 182);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 184);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 186);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 187);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 188);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 189);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 190);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 191);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getWorldEnsState, 192);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, readEnsHeader, 193);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -1777,6 +1781,42 @@ namespace
         return CopyUtf8(component->GetEns()->GetName(), buffer, capacity);
     }
 
+    //读取层级缓存的内容与结构序号
+    void ORBEDEN_NATIVE_CALL GetManagedWorldEnsState(void* context, uint64* content, uint64* hierarchy)
+    {
+        World& world = static_cast<EditorSystem*>(context)->GetWorld();
+        *content = world.GetContentRevision();
+        *hierarchy = world.GetHierarchyRevision();
+    }
+
+    //读取视口节点状态，仅在改名后复制名称
+    int32 ORBEDEN_NATIVE_CALL ReadManagedEnsHeader(void* context, EnsId id, uint64* revision,
+        uint8* state, uint8* buffer, int32 capacity)
+    {
+        World& world = static_cast<EditorSystem*>(context)->GetWorld();
+        Ens* ens = world.GetEns(id);
+        *state = 0;
+        if (!ens)
+        {
+            return -1;
+        }
+
+        Ens* parent = world.GetParent(id);
+        *state = static_cast<uint8>(8 | (ens->GetWorldActive() ? 1 : 0) | (ens->GetEditorSelectable() ? 2 : 0)
+            | (!parent || parent->GetWorldEditorSelectable() ? 4 : 0));
+        if (*revision == ens->GetNameRevision())
+        {
+            return -1;
+        }
+
+        int32 length = CopyUtf8(ens->GetName(), buffer, capacity);
+        if (length <= capacity)
+        {
+            *revision = ens->GetNameRevision();
+        }
+        return length;
+    }
+
     //枚举当前 World 中可编辑的 Ens
     int32 ORBEDEN_NATIVE_CALL GetManagedWorldEns(void* context, EnsId* buffer, int32 capacity)
     {
@@ -1785,15 +1825,24 @@ namespace
         World& world = editor->GetWorld();
         editor->GetEditorScene().PruneSelection(world);
         int32 count = 0;
-        auto visit = [&](auto&& self, Ens& ens) -> void
+        List<EnsId> pending;
+        world.ForEachEns([&](Ens& ens)
         {
-            if (editor->GetEditorScene().IsTemporaryEns(ens.GetId())) return;
-            if (buffer && count < capacity) buffer[count] = ens.GetId();
+            if (!ens.GetParent()) pending.push_back(ens.GetId());
+        });
+        std::reverse(pending.begin(), pending.end());
+        while (!pending.empty())
+        {
+            EnsId id = pending.back();
+            pending.pop_back();
+            if (editor->GetEditorScene().IsTemporaryEns(id)) continue;
+            if (buffer && count < capacity) buffer[count] = id;
             ++count;
-            for (EnsId child = ens.Transform()->firstChild; !child.IsNull(); child = world.GetTransform(child)->next)
-                self(self, *world.GetEns(child));
-        };
-        world.ForEachEns([&](Ens& ens) { if (!ens.GetParent()) visit(visit, ens); });
+            for (EnsId child = world.GetTransform(id)->lastChild; !child.IsNull(); child = world.GetTransform(child)->prev)
+            {
+                pending.push_back(child);
+            }
+        }
         return count;
     }
 
@@ -2340,6 +2389,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.beginProfileSample = reinterpret_cast<void*>(&EditorProfilerBeginSample);
     editorApi.endProfileSample = reinterpret_cast<void*>(&EditorProfilerEndSample);
     editorApi.copyProfilerGpuEvents = reinterpret_cast<void*>(&EditorProfilerCopyGpuEvents);
+    editorApi.getWorldEnsState = reinterpret_cast<void*>(&GetManagedWorldEnsState);
+    editorApi.readEnsHeader = reinterpret_cast<void*>(&ReadManagedEnsHeader);
     editorApi.getMeshDynamicBatching = reinterpret_cast<void*>(&GetManagedMeshDynamicBatching);
     editorApi.setMeshDynamicBatching = reinterpret_cast<void*>(&SetManagedMeshDynamicBatching);
     editorApi.input.isKeyDown = reinterpret_cast<void*>(&EditorInputIsKeyDown);

@@ -36,6 +36,8 @@ public static class EditorRuntime
         public delegate* unmanaged[Cdecl]<byte> GetMeshDynamicBatching;
         public delegate* unmanaged[Cdecl]<byte, void> SetMeshDynamicBatching;
         public delegate* unmanaged[Cdecl]<long, ProfileGpuEvent*, int, int> CopyProfilerGpuEvents;
+        public delegate* unmanaged[Cdecl]<IntPtr, ulong*, ulong*, void> GetWorldEnsState;
+        public delegate* unmanaged[Cdecl]<IntPtr, EnsId, ulong*, byte*, byte*, int, int> ReadEnsHeader;
     }
 
     //初始化失败原因的非托管副本，供原生侧读取。
@@ -85,7 +87,7 @@ public static class EditorRuntime
             EditorAssetsNative.Initialize(api.Assets);
             EditorAssetReimportNative.Initialize(api.Reimport);
             EditorInput.Initialize(api.Input);
-            EditorNativeComponents.Initialize(api.Components);
+            EditorNativeComponents.Initialize(api.Components, api.GetWorldEnsState, api.ReadEnsHeader);
             EditorAssetCatalog.Instance.Refresh();
             EditorGUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
             //内置组件编辑器在初始化成功后就可用，不依赖游戏程序集
@@ -565,7 +567,7 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 91);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 95);
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 16);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 9);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
@@ -575,13 +577,16 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
         ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
         ValidateFunctionTable<EditorInputNativeApi>(nameof(EditorInputNativeApi), 2);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 188);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 194);
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetWorldEnsState)).ToInt32() != 192 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.ReadEnsHeader)).ToInt32() != 193 * IntPtr.Size)
+            throw new TypeLoadException("Editor Ens hierarchy ABI layout mismatch.");
         ValidateSize<EditorProfileScope>(nameof(EditorProfileScope), 16);
-        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.BeginProfileSample)).ToInt32() != 183 * IntPtr.Size
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.EndProfileSample)).ToInt32() != 184 * IntPtr.Size)
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.BeginProfileSample)).ToInt32() != 187 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.EndProfileSample)).ToInt32() != 188 * IntPtr.Size)
             throw new TypeLoadException("Editor profiler sampling ABI layout mismatch.");
-        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetMeshDynamicBatching)).ToInt32() != 185 * IntPtr.Size
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.SetMeshDynamicBatching)).ToInt32() != 186 * IntPtr.Size)
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetMeshDynamicBatching)).ToInt32() != 189 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.SetMeshDynamicBatching)).ToInt32() != 190 * IntPtr.Size)
             throw new TypeLoadException("Editor mesh batching ABI layout mismatch.");
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
@@ -598,7 +603,7 @@ public static class EditorRuntime
         ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 104);
         if (Marshal.OffsetOf<ProfileFrameSummary>(nameof(ProfileFrameSummary.GpuEventCount)).ToInt32() != 88
             || Marshal.OffsetOf<ProfileGpuEvent>(nameof(ProfileGpuEvent.StartMicroseconds)).ToInt32() != 8
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.CopyProfilerGpuEvents)).ToInt32() != 187 * IntPtr.Size)
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.CopyProfilerGpuEvents)).ToInt32() != 191 * IntPtr.Size)
             throw new TypeLoadException("Editor GPU profiler ABI layout mismatch.");
     }
 

@@ -147,11 +147,51 @@ internal static unsafe class EditorNativeComponents
     }
 
     private static EditorComponentNativeApi api;
+    private static delegate* unmanaged[Cdecl]<IntPtr, ulong*, ulong*, void> getWorldEnsState;
+    private static delegate* unmanaged[Cdecl]<IntPtr, EnsId, ulong*, byte*, byte*, int, int> readEnsHeader;
 
     /// <summary>保存原生组件检查 API。</summary>
-    internal static void Initialize(EditorComponentNativeApi value)
+    internal static void Initialize(EditorComponentNativeApi value,
+        delegate* unmanaged[Cdecl]<IntPtr, ulong*, ulong*, void> worldEnsState = null,
+        delegate* unmanaged[Cdecl]<IntPtr, EnsId, ulong*, byte*, byte*, int, int> ensHeader = null)
     {
         api = value;
+        getWorldEnsState = worldEnsState;
+        readEnsHeader = ensHeader;
+    }
+
+    //读取层级缓存的内容与结构序号
+    internal static (ulong Content, ulong Hierarchy) GetWorldEnsState()
+    {
+        ulong content = 0;
+        ulong hierarchy = 0;
+        getWorldEnsState(api.Context, &content, &hierarchy);
+        return (content, hierarchy);
+    }
+
+    //读取视口节点状态与变化后的名称
+    //state：1 层级激活、2 自身拾取、4 父级拾取、8 存活；名称未变返回 null
+    internal static string? ReadEnsHeader(EnsId id, ref ulong revision, out byte state)
+    {
+        Span<byte> buffer = stackalloc byte[512];
+        byte current = 0;
+        fixed (ulong* version = &revision)
+        fixed (byte* pointer = buffer)
+        {
+            int length = readEnsHeader(api.Context, id, version, &current, pointer, buffer.Length);
+            if (length > buffer.Length)
+            {
+                byte[] text = new byte[length];
+                fixed (byte* output = text)
+                {
+                    length = readEnsHeader(api.Context, id, version, &current, output, text.Length);
+                }
+                state = current;
+                return InteropText.DecodeUtf8(text, 0, length);
+            }
+            state = current;
+            return length < 0 ? null : InteropText.DecodeUtf8(buffer[..length]);
+        }
     }
 
     /// <summary>按组件挂载顺序枚举指定 Ens 的原生组件实例。</summary>

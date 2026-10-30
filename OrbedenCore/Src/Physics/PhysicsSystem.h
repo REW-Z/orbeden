@@ -99,7 +99,7 @@ public:
     //获取原生 CCT 管理器
     physx::PxControllerManager* GetControllerManager() const;
 
-    //查找实体对应的原生刚体 Actor
+    //查找自身或最近祖先刚体的 Actor，独立静态碰撞体返回自身 Actor
     physx::PxRigidActor* GetRigidActor(EnsId ens) const;
 
     //查找实体对应的原生角色控制器

@@ -120,8 +120,16 @@ const std::string& Ens::GetName() const
 //设置名称
 void Ens::SetName(const std::string& name)
 {
+    if (this->name == name)
+    {
+        return;
+    }
     this->name = name;
-    if (World* world = GetWorld()) world->SetDirty();
+    ++nameRevision;
+    if (World* world = GetWorld())
+    {
+        world->SetDirty();
+    }
 }
 
 //记录一个已挂载组件实例

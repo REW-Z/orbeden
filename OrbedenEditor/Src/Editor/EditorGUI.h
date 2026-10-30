@@ -113,11 +113,15 @@ public:
     void* beginSearchableCombo = nullptr;
     void* searchableComboItem = nullptr;
     void* getSelectionModifiers = nullptr;
+    void* beginTreeRows = nullptr;
+    void* stepTreeRows = nullptr;
+    void* endTreeRows = nullptr;
+    void* treeRow = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 91);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 95);
 
 //Editor ImGui 绑定层
 class EditorGUI

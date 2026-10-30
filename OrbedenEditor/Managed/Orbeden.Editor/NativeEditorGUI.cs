@@ -102,6 +102,10 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, int> BeginSearchableCombo;
     public delegate* unmanaged[Cdecl]<byte*, int, int, byte, byte, byte> SearchableComboItem;
     public delegate* unmanaged[Cdecl]<byte> GetSelectionModifiers;
+    public delegate* unmanaged[Cdecl]<int, int, int, int, int, byte, void> BeginTreeRows;
+    public delegate* unmanaged[Cdecl]<int*, int*, byte> StepTreeRows;
+    public delegate* unmanaged[Cdecl]<void> EndTreeRows;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, byte*, int, int, int> TreeRow;
 }
 #pragma warning restore CS0649
 
@@ -242,7 +246,7 @@ internal static unsafe class NativeEditorGUI
     //结束滚动区域
     internal static void EndChild() => api.EndChild();
 
-    //绘制目录节点。返回值：1 展开、2 按下点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换、64 松开点击
+    //绘制目录节点。返回值：1 展开、2 按下点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换、64 松开点击、128 切换拾取、256 屏幕外
     internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false,
         bool forceOpen = false, bool forceCollapse = false, string? icon = null, bool dimmed = false, bool prefabBound = false)
     {
@@ -252,8 +256,41 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* pointer = bytes)
         {
             return api.TreeNode(pointer, bytes.Length, (byte)((selected ? 1 : 0) | (leaf ? 2 : 0)
-                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0) | (forceCollapse ? 16 : 0) | (dimmed ? 32 : 0) | (prefabBound ? 64 : 0)),
+                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0) | (forceCollapse ? 16 : 0) | (dimmed ? 32 : 0)
+                | (prefabBound ? 64 : 0)),
                 iconPointer, iconBytes.Length);
+        }
+    }
+
+    //开始裁剪层级行并保留定位、编辑和交互节点
+    internal static void BeginTreeRows(int count, int reveal, int rename, int active, int menu, bool resetScroll) =>
+        api.BeginTreeRows(count, reveal, rename, active, menu, resetScroll ? (byte)1 : (byte)0);
+
+    //取得下一段需要提交的行范围
+    internal static bool StepTreeRows(out int first, out int last)
+    {
+        int start = 0, end = 0;
+        bool result = api.StepTreeRows(&start, &end) != 0;
+        first = start;
+        last = end;
+        return result;
+    }
+
+    //结束行裁剪并补齐滚动范围
+    internal static void EndTreeRows() => api.EndTreeRows();
+
+    //复用已编码的文本绘制独立树行；512 表示当前活动行
+    internal static int TreeRow(GuiContent label, int depth, bool selected, bool leaf, bool expanded,
+        GuiContent icon, bool dimmed, bool prefabBound, bool pickToggle)
+    {
+        ReadOnlySpan<byte> bytes = label.Utf8;
+        ReadOnlySpan<byte> iconBytes = icon.Utf8;
+        fixed (byte* iconPointer = iconBytes)
+        fixed (byte* pointer = bytes)
+        {
+            return api.TreeRow(pointer, bytes.Length, (byte)((selected ? 1 : 0) | (leaf ? 2 : 0)
+                | (expanded ? 8 : 16) | (dimmed ? 32 : 0)
+                | (prefabBound ? 64 : 0) | (pickToggle ? 128 : 0)), iconPointer, iconBytes.Length, depth);
         }
     }
 

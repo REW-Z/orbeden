@@ -1,7 +1,9 @@
 #include "Runtime/Object/RigidBody.h"
+#include "Physics/PhysicsSystem.h"
 
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
+#include "PxRigidBody.h"
 
 OBJECT_TYPE_IMPLEMENT(RigidBody, Component)
 
@@ -42,6 +44,16 @@ void RigidBody::AddForceAtPosition(const vector3& force, const vector3& worldPos
 
     Ens* ens = GetEns();
     vector3 center = ens && ens->Transform() ? ens->Transform()->worldPosition : vector3();
+    if (PhysicsSystem* physics = PhysicsSystem::Current())
+    {
+        physx::PxRigidActor* actor = physics->GetRigidActor(GetEnsId());
+        physx::PxRigidBody* body = actor ? actor->is<physx::PxRigidBody>() : nullptr;
+        if (body)
+        {
+            physx::PxVec3 position = body->getGlobalPose().transform(body->getCMassLocalPose().p);
+            center = { position.x, position.y, position.z };
+        }
+    }
     vector3 offset = { worldPosition.x - center.x, worldPosition.y - center.y, worldPosition.z - center.z };
     vector3 torque = Cross(offset, force);
     AddTorque(torque);

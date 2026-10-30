@@ -10,6 +10,7 @@
 #include "Runtime/Object/RigidBody.h"
 #include "Runtime/Object/WheelCollider.h"
 #include "Rendering/TransformCache.h"
+#include "Rendering/RenderMath.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Transform.h"
@@ -30,6 +31,7 @@
 #include <cmath>
 #include <memory>
 #include <thread>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -206,16 +208,19 @@ namespace
         //额外的过滤条件：排除指定 Ens 与触发器
         EnsId ignoredEns;
         bool includeTriggers = true;
-        //把 Actor 解析回 Ens 的入口，为空时跳过 ignoredEns 判定
-        std::function<EnsId(const PxActor*)> resolveEns;
+        //将形状或 Actor 解析回 Ens，为空时跳过 ignoredEns 判定
+        std::function<EnsId(const PxShape*, const PxActor*)> resolveEns;
+        const PxRigidActor* ignoredActor = nullptr;
 
     public:
-        LayerQueryFilter(uint32 mask, bool touch, uint32 layer = 0)
-            : layerMask(mask), queryLayer(layer), returnTouch(touch)
+        LayerQueryFilter(uint32 mask, bool touch, uint32 layer = 0,
+            const PxRigidActor* ignored = nullptr, bool triggers = true)
+            : layerMask(mask), queryLayer(layer), returnTouch(touch), includeTriggers(triggers), ignoredActor(ignored)
         {
         }
 
-        LayerQueryFilter(uint32 mask, bool touch, const PhysicsQueryFilter& extra, std::function<EnsId(const PxActor*)> resolver)
+        LayerQueryFilter(uint32 mask, bool touch, const PhysicsQueryFilter& extra,
+            std::function<EnsId(const PxShape*, const PxActor*)> resolver)
             : layerMask(mask), queryLayer(0), returnTouch(touch), ignoredEns(extra.ignoredEns),
             includeTriggers(extra.includeTriggers), resolveEns(std::move(resolver))
         {
@@ -224,9 +229,11 @@ namespace
         PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor* actor, PxHitFlags&) override
         {
             if (!shape) return PxQueryHitType::eNONE;
+            if (ignoredActor && actor == ignoredActor) return PxQueryHitType::eNONE;
             //触发器默认不参与实体碰撞
             if (!includeTriggers && (shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE)) return PxQueryHitType::eNONE;
-            if (!ignoredEns.IsNull() && resolveEns && actor && resolveEns(actor) == ignoredEns) return PxQueryHitType::eNONE;
+            if (!ignoredEns.IsNull() && resolveEns
+                && (resolveEns(shape, actor) == ignoredEns || resolveEns(nullptr, actor) == ignoredEns)) return PxQueryHitType::eNONE;
             PxFilterData shapeFilter = shape->getQueryFilterData();
             if ((shapeFilter.word0 & layerMask) == 0) return PxQueryHitType::eNONE;
             if (queryLayer != 0 && (shapeFilter.word1 & queryLayer) == 0) return PxQueryHitType::eNONE;
@@ -271,20 +278,37 @@ public:
         Impl* owner = nullptr;
     };
 
+    struct ShapeRecord
+    {
+        NativeBinding binding;
+        PxShape* shape = nullptr;
+        Mesh* sourceMesh = nullptr;
+        bool sourceMeshInvalidated = false;
+        bool seen = false;
+        uint64 configurationHash = 0;
+        uint64 poseHash = 0;
+        vector3 scale;
+        PxTransform localPose = PxTransform(PxIdentity);
+        PxFilterData filter;
+    };
+
     struct BodyRecord
     {
         NativeBinding binding;
         PxRigidActor* actor = nullptr;
         uint64 configurationHash = 0;
-        uint32 layerMask = 1u;
-        uint32 collisionMask = 0xFFFFFFFFu;
         PhysicsBodyType bodyType = PhysicsBodyType::Static;
-        List<Mesh*> sourceMeshes;
-        bool sourceMeshInvalidated = false;
-        vector3 shapeScale;
+        std::unordered_map<int32, std::unique_ptr<ShapeRecord>> shapes;
         vector3 lastPosition;
         quaternion lastRotation;
         bool lastPoseValid = false;
+    };
+
+    struct BodyInput
+    {
+        Ens* ens = nullptr;
+        RigidBody* body = nullptr;
+        List<std::pair<Collider*, uint64>> colliders;
     };
 
     struct HeightFieldRecord
@@ -341,6 +365,7 @@ public:
         void onContact(const PxContactPairHeader& header, const PxContactPair* pairs, PxU32 pairCount) override
         {
             if (!owner) return;
+            if (header.flags & (PxContactPairHeaderFlag::eREMOVED_ACTOR_0 | PxContactPairHeaderFlag::eREMOVED_ACTOR_1)) return;
             EnsId first = owner->FindEns(header.actors[0]);
             EnsId second = owner->FindEns(header.actors[1]);
             if (first.IsNull() || second.IsNull()) return;
@@ -400,6 +425,9 @@ public:
     PxControllerManager* controllerManager = nullptr;
     std::unique_ptr<PxCookingParams> cookingParams;
     std::unordered_map<uint64, std::unique_ptr<BodyRecord>> bodies;
+    std::unordered_map<uint64, BodyInput> bodyInputs;
+    std::unordered_map<uint64, EnsId> attachedBodies;
+    List<std::tuple<EnsId, RigidBody*, uint64>> bodyTraversal;
     //已经报过「static 被物理驱动」的 Ens，按对象去重
     std::unordered_set<uint64> reportedStaticDrives;
     std::unordered_map<uint64, std::unique_ptr<HeightFieldRecord>> heightFields;
@@ -531,6 +559,9 @@ public:
         controllers.clear();
         for (auto& entry : bodies) DestroyBody(*entry.second);
         bodies.clear();
+        bodyInputs.clear();
+        attachedBodies.clear();
+        bodyTraversal.clear();
         for (auto& entry : heightFields) DestroyHeightField(*entry.second);
         heightFields.clear();
         for (auto& entry : convexMeshes) entry.second->release();
@@ -552,6 +583,40 @@ public:
     {
         NativeBinding* binding = FindBinding(actor);
         return binding ? binding->ens : EnsId();
+    }
+
+    //读取碰撞形状所属节点，特殊形状回退到 Actor 绑定
+    EnsId FindEns(const PxShape* shape, const PxActor* actor) const
+    {
+        NativeBinding* binding = shape ? static_cast<NativeBinding*>(shape->userData) : nullptr;
+        if (binding && binding->magic == BindingMagic && binding->owner == this)
+        {
+            return binding->ens;
+        }
+        return FindEns(actor);
+    }
+
+    //查找节点归属的刚体记录
+    BodyRecord* FindBody(EnsId ens) const
+    {
+        auto attached = attachedBodies.find(EnsKey(ens));
+        if (attached != attachedBodies.end() && !attached->second.IsNull())
+        {
+            ens = attached->second;
+        }
+        else if (attached == attachedBodies.end() && world)
+        {
+            for (Ens* current = world->GetEns(ens); current; current = world->GetParent(current->GetId()))
+            {
+                if (current->GetComponent<RigidBody>())
+                {
+                    ens = current->GetId();
+                    break;
+                }
+            }
+        }
+        auto found = bodies.find(EnsKey(ens));
+        return found != bodies.end() ? found->second.get() : nullptr;
     }
 
     void PushEvent(PhysicsEventType type, EnsId first, EnsId second, const PxContactPairPoint* contact)
@@ -581,11 +646,9 @@ public:
         uint64 hash = 0xCBF29CE484222325ull;
         hash = MixHash(hash, static_cast<uint32>(collider.GetGeometryType()));
         hash = MixHash(hash, collider.isTrigger);
-        hash = MixVector(hash, collider.center);
         hash = MixFloat(hash, collider.staticFriction);
         hash = MixFloat(hash, collider.dynamicFriction);
         hash = MixFloat(hash, collider.restitution);
-        hash = MixHash(hash, collider.collisionMask);
 
         if (const BoxCollider* box = collider.Cast<BoxCollider>())
         {
@@ -607,14 +670,9 @@ public:
         return hash;
     }
 
-    uint64 CalculateBodyHash(const List<Collider*>& colliders, const RigidBody* body) const
+    uint64 CalculateBodyHash(const RigidBody* body) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
-        for (const Collider* collider : colliders)
-        {
-            if (collider) hash = MixHash(hash, CalculateColliderHash(*collider));
-        }
-
         PhysicsBodyType type = body ? body->bodyType : PhysicsBodyType::Static;
         hash = MixHash(hash, static_cast<uint32>(type));
         if (body)
@@ -704,10 +762,12 @@ public:
         InvalidateCookedMeshes(*mesh);
         for (auto& entry : bodies)
         {
-            BodyRecord& body = *entry.second;
-            if (std::find(body.sourceMeshes.begin(), body.sourceMeshes.end(), mesh) != body.sourceMeshes.end())
+            for (auto& shape : entry.second->shapes)
             {
-                body.sourceMeshInvalidated = true;
+                if (shape.second->sourceMesh == mesh)
+                {
+                    shape.second->sourceMeshInvalidated = true;
+                }
             }
         }
     }
@@ -785,81 +845,36 @@ public:
         PxFilterData filter(layerMask, collider.collisionMask & collisionMask, collider.collisionMask, 0);
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
-        PxVec3 center(collider.center.x * scale.x, collider.center.y * scale.y, collider.center.z * scale.z);
-        PxQuat localRotation = geometryType == ColliderGeometryType::Capsule
-            ? PxQuat(PxHalfPi, PxVec3(0.0f, 0.0f, 1.0f))
-            : PxQuat(PxIdentity);
-        shape->setLocalPose(PxTransform(center, localRotation));
         return shape;
     }
 
-    std::unique_ptr<BodyRecord> CreateBody(
-        const List<Collider*>& colliders,
-        RigidBody* body,
-        Transform& transform,
-        uint64 configurationHash,
-        const List<Mesh*>& sourceMeshes,
-        uint32 layerMask, uint32 collisionMask)
+    //创建所属节点的刚体，碰撞形状由独立同步路径挂载
+    std::unique_ptr<BodyRecord> CreateBody(Ens& ens, RigidBody* body, uint64 configurationHash)
     {
-        if (colliders.empty()) return nullptr;
-
+        Transform& transform = *ens.Transform();
         PhysicsBodyType bodyType = body ? body->bodyType : PhysicsBodyType::Static;
-        //static 的 Ens 不驱动任何活动刚体：组合被拒绝，静态碰撞体仍然创建
-        if (bodyType != PhysicsBodyType::Static && world && world->GetEnsStatic(colliders.front()->GetEnsId()))
+        if (bodyType != PhysicsBodyType::Static && ens.GetStatic())
         {
-            ReportStaticDrive(colliders.front()->GetEnsId());
+            ReportStaticDrive(ens.GetId());
             bodyType = PhysicsBodyType::Static;
         }
         if (bodyType == PhysicsBodyType::Dynamic && !transform.parent.IsNull())
         {
-            Ens* ens = body->GetEns();
-            std::string message = "Dynamic rigid bodies must be root entities; the collider was skipped";
-            if (ens) message += " (" + ens->GetName() + ")";
-            Log::Warning(message.c_str());
+            Log::Warning(("Dynamic rigid bodies must be root entities; the body was skipped (" + ens.GetName() + ").").c_str());
             return nullptr;
         }
 
         std::unique_ptr<BodyRecord> record = std::make_unique<BodyRecord>();
         record->binding.kind = BindingKind::Body;
-        record->binding.ens = colliders.front()->GetEnsId();
+        record->binding.ens = ens.GetId();
         record->binding.owner = this;
         record->configurationHash = configurationHash;
-        record->layerMask = layerMask;
-        record->collisionMask = collisionMask;
         record->bodyType = bodyType;
-        record->sourceMeshes = sourceMeshes;
-
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
         PxRigidActor* actor = bodyType == PhysicsBodyType::Static
             ? static_cast<PxRigidActor*>(physics->createRigidStatic(pose))
             : static_cast<PxRigidActor*>(physics->createRigidDynamic(pose));
         if (!actor) return nullptr;
-
-        bool hasShape = false;
-        vector3 scale = GetWorldScale(transform);
-        record->shapeScale = scale;
-        for (Collider* collider : colliders)
-        {
-            if (!collider) continue;
-
-            PxShape* shape = CreateShape(*collider, bodyType, scale, layerMask, collisionMask);
-            if (!shape)
-            {
-                Log::Warning("PhysX collider geometry creation failed; the shape was skipped.");
-                continue;
-            }
-
-            actor->attachShape(*shape);
-            shape->release();
-            hasShape = true;
-        }
-
-        if (!hasShape)
-        {
-            actor->release();
-            return nullptr;
-        }
-
         actor->userData = &record->binding;
         record->actor = actor;
 
@@ -875,12 +890,13 @@ public:
             dynamic->setRigidDynamicLockFlags(PxRigidDynamicLockFlags(body ? static_cast<PxU8>(body->lockFlags & 0x3Fu) : 0));
             if (!kinematic)
             {
-                PxRigidBodyExt::setMassAndUpdateInertia(*dynamic, body ? Positive(body->mass) : 1.0f);
+                float32 mass = body ? Positive(body->mass) : 1.0f;
+                dynamic->setMass(mass);
+                dynamic->setMassSpaceInertiaTensor(PxVec3(mass));
                 dynamic->setLinearVelocity(body ? ToPx(body->linearVelocity) : PxVec3(0.0f), false);
                 dynamic->setAngularVelocity(body ? ToPx(body->angularVelocity) : PxVec3(0.0f), false);
             }
         }
-
         scene->addActor(*actor);
         record->lastPosition = transform.worldPosition;
         record->lastRotation = transform.worldRotation;
@@ -888,9 +904,151 @@ public:
         return record;
     }
 
+    //摘除形状并释放组件绑定
+    void DestroyShape(BodyRecord& body, ShapeRecord& shape)
+    {
+        shape.shape->userData = nullptr;
+        body.actor->detachShape(*shape.shape);
+        shape.shape->release();
+        shape.shape = nullptr;
+    }
+
+    //同步复合刚体的各个碰撞形状
+    void SyncBodyShapes(BodyRecord& record, const BodyInput& input,
+        const std::unordered_set<Mesh*>& dirtyMeshes, bool queryOnly)
+    {
+        for (auto& entry : record.shapes)
+        {
+            entry.second->seen = false;
+        }
+        Transform& bodyTransform = *input.ens->Transform();
+        PxTransform inverseBody = PxTransform(ToPx(bodyTransform.worldPosition), ToPx(bodyTransform.worldRotation)).getInverse();
+        bool massChanged = false;
+        bool filtersChanged = false;
+        for (auto [collider, poseHash] : input.colliders)
+        {
+            Ens& ens = *collider->GetEns();
+            Transform& transform = *ens.Transform();
+            int32 id = collider->GetObjectId();
+            uint64 hash = CalculateColliderHash(*collider);
+            vector3 scale = GetWorldScale(transform);
+            Mesh* mesh = GetColliderMesh(*collider);
+            auto found = record.shapes.find(id);
+            if (found != record.shapes.end() && (found->second->configurationHash != hash
+                || !NearlyEqual(found->second->scale, scale) || found->second->sourceMesh != mesh
+                || found->second->sourceMeshInvalidated || dirtyMeshes.contains(mesh)))
+            {
+                DestroyShape(record, *found->second);
+                record.shapes.erase(found);
+                found = record.shapes.end();
+                massChanged = true;
+            }
+
+            //保留碰撞体自身的层与过滤掩码
+            uint32 layerMask = ens.GetLayerMask();
+            uint32 collisionMask = LayerSettings::GetCollisionMask(ens.GetLayer());
+            PxFilterData filter(layerMask, collider->collisionMask & collisionMask, collider->collisionMask, 0);
+            bool created = found == record.shapes.end();
+            if (created)
+            {
+                PxShape* shape = CreateShape(*collider, record.bodyType, scale, layerMask, collisionMask);
+                if (!shape)
+                {
+                    Log::Warning("PhysX collider geometry creation failed; the shape was skipped.");
+                    continue;
+                }
+                std::unique_ptr<ShapeRecord> entry = std::make_unique<ShapeRecord>();
+                entry->binding.ens = ens.GetId();
+                entry->binding.owner = this;
+                entry->shape = shape;
+                entry->sourceMesh = mesh;
+                entry->configurationHash = hash;
+                entry->scale = scale;
+                entry->filter = filter;
+                shape->userData = &entry->binding;
+                record.actor->attachShape(*shape);
+                found = record.shapes.emplace(id, std::move(entry)).first;
+                massChanged = true;
+            }
+            ShapeRecord& entry = *found->second;
+            entry.seen = true;
+            if (entry.filter.word0 != filter.word0 || entry.filter.word1 != filter.word1 || entry.filter.word2 != filter.word2)
+            {
+                entry.shape->setSimulationFilterData(filter);
+                entry.shape->setQueryFilterData(filter);
+                entry.filter = filter;
+                filtersChanged = true;
+            }
+
+            //仅在局部变换链或中心变化时换算相对位姿
+            uint64 localPoseHash = poseHash ? MixVector(poseHash, collider->center) : 0;
+            if (created || localPoseHash == 0 || entry.poseHash != localPoseHash)
+            {
+                vector3 center = RenderMath::TransformPoint(transform.worldMatrix, collider->center);
+                PxQuat rotation = ToPx(transform.worldRotation);
+                if (collider->GetGeometryType() == ColliderGeometryType::Capsule)
+                {
+                    rotation = rotation * PxQuat(PxHalfPi, PxVec3(0.0f, 0.0f, 1.0f));
+                }
+                PxTransform localPose = inverseBody * PxTransform(ToPx(center), rotation);
+                if (created || !NearlyEqual(FromPx(entry.localPose.p), FromPx(localPose.p))
+                    || !NearlyEqual(FromPx(entry.localPose.q), FromPx(localPose.q)))
+                {
+                    entry.shape->setLocalPose(localPose);
+                    entry.localPose = localPose;
+                    massChanged = true;
+                }
+                entry.poseHash = localPoseHash;
+            }
+        }
+        for (auto iterator = record.shapes.begin(); iterator != record.shapes.end();)
+        {
+            if (iterator->second->seen)
+            {
+                ++iterator;
+                continue;
+            }
+            DestroyShape(record, *iterator->second);
+            iterator = record.shapes.erase(iterator);
+            massChanged = true;
+        }
+        if (filtersChanged)
+        {
+            scene->resetFiltering(*record.actor);
+        }
+
+        //按实体形状更新质量分布，纯悬挂刚体按质量设置惯量
+        if (massChanged && record.bodyType == PhysicsBodyType::Dynamic)
+        {
+            PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record.actor);
+            float32 mass = input.body ? Positive(input.body->mass) : 1.0f;
+            bool hasSimulationShape = false;
+            for (const auto& entry : record.shapes)
+            {
+                hasSimulationShape |= entry.second->shape->getFlags().isSet(PxShapeFlag::eSIMULATION_SHAPE);
+            }
+            if (!hasSimulationShape || !PxRigidBodyExt::setMassAndUpdateInertia(*dynamic, mass))
+            {
+                dynamic->setMass(mass);
+                dynamic->setCMassLocalPose(PxTransform(PxIdentity));
+                dynamic->setMassSpaceInertiaTensor(PxVec3(mass));
+            }
+            if (!queryOnly)
+            {
+                dynamic->wakeUp();
+            }
+        }
+    }
+
+    //释放刚体与其形状绑定
     void DestroyBody(BodyRecord& record)
     {
         if (!record.actor) return;
+        for (auto& entry : record.shapes)
+        {
+            DestroyShape(record, *entry.second);
+        }
+        record.shapes.clear();
         record.actor->userData = nullptr;
         record.actor->release();
         record.actor = nullptr;
@@ -1064,31 +1222,9 @@ public:
         if (record.actor) record.actor->setGlobalPose(pose);
     }
 
-    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform,
-        uint32 layerMask, uint32 collisionMask, bool queryOnly = false)
+    //同步所属刚体位姿、速度与脚本累积力
+    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform, bool queryOnly = false)
     {
-        //更新层过滤缓存
-        if (record.layerMask != layerMask || record.collisionMask != collisionMask)
-        {
-            PxShape* shapes[32];
-            for (PxU32 offset = 0; offset < record.actor->getNbShapes();)
-            {
-                PxU32 count = record.actor->getShapes(shapes, 32, offset);
-                for (PxU32 index = 0; index < count; ++index)
-                {
-                    PxFilterData filter = shapes[index]->getSimulationFilterData();
-                    filter.word0 = layerMask;
-                    filter.word1 = filter.word2 & collisionMask;
-                    shapes[index]->setSimulationFilterData(filter);
-                    shapes[index]->setQueryFilterData(filter);
-                }
-                offset += count;
-            }
-            scene->resetFiltering(*record.actor);
-            record.layerMask = layerMask;
-            record.collisionMask = collisionMask;
-        }
-
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
         //查询模式只把位姿写进场景，不设 kinematicTarget、不写速度、不施力也不清累积力
         if (queryOnly)
@@ -1141,64 +1277,115 @@ public:
         record.lastPoseValid = true;
     }
 
+    //按最近刚体归属收集形状并同步复合刚体
     void SyncBodies(World& currentWorld, bool queryOnly = false)
     {
-        std::unordered_set<uint64> seen;
+        for (auto& entry : bodyInputs)
+        {
+            entry.second.ens = nullptr;
+            entry.second.body = nullptr;
+            entry.second.colliders.clear();
+        }
+        attachedBodies.clear();
         std::unordered_set<uint64> heightFieldSeen;
         std::unordered_set<Mesh*> dirtyMeshes;
+        bodyTraversal.clear();
         currentWorld.ForEachEns([&](Ens& ens)
         {
-            Transform* transform = ens.Transform();
-            RigidBody* body = ens.GetComponent<RigidBody>();
-            //未激活的 Ens 不建体：key 不进 seen，紧随其后的剪枝会把已有体一起销毁
-            if (!transform || !ens.GetWorldActive() || (body && !body->enabled)) return;
-
-            uint32 layerMask = ens.GetLayerMask();
-            uint32 collisionMask = LayerSettings::GetCollisionMask(ens.GetLayer());
-
-            //HeightField 地形使用独立静态体，与普通 collider body 分开管理。
-            HeightField* heightField = ens.GetComponent<HeightField>();
-            if (heightField && heightField->enabled
-                && (!body || body->bodyType == PhysicsBodyType::Static))
+            if (!ens.Transform()->parent.IsNull()) return;
+            bodyTraversal.emplace_back(ens.GetId(), nullptr, 0);
+        });
+        std::reverse(bodyTraversal.begin(), bodyTraversal.end());
+        while (!bodyTraversal.empty())
+        {
+            auto [id, inheritedBody, inheritedPoseHash] = bodyTraversal.back();
+            bodyTraversal.pop_back();
+            Ens& ens = *currentWorld.GetEns(id);
+            Transform& transform = *ens.Transform();
+            RigidBody* ownBody = ens.GetComponent<RigidBody>();
+            RigidBody* attachedBody = ownBody ? ownBody : inheritedBody;
+            uint64 poseHash = inheritedPoseHash;
+            if (ownBody)
             {
-                uint64 key = EnsKey(ens.GetId());
-                heightFieldSeen.insert(key);
-                SyncHeightField(*heightField, *transform, key, layerMask, collisionMask);
+                poseHash = transform.parent.IsNull() ? MixVector(0xCBF29CE484222325ull, transform.GetLocalScale()) : 0;
             }
+            else if (attachedBody && poseHash != 0)
+            {
+                poseHash = MixVector(poseHash, transform.GetResolvedLocalPosition());
+                const quaternion& rotation = transform.GetLocalRotation();
+                poseHash = MixVector(poseHash, { rotation.x, rotation.y, rotation.z });
+                poseHash = MixFloat(poseHash, rotation.w);
+                poseHash = MixVector(poseHash, transform.GetLocalScale());
+            }
+            if (ownBody)
+            {
+                attachedBodies[EnsKey(id)] = id;
+            }
+            for (EnsId child = transform.lastChild; !child.IsNull(); child = currentWorld.GetTransform(child)->prev)
+            {
+                bodyTraversal.emplace_back(child, attachedBody, poseHash);
+            }
+            if (!ens.GetWorldActive()) continue;
 
-            List<Collider*> colliders;
-            List<Mesh*> sourceMeshes;
-            bool meshDirty = false;
+            //保留独立高度场的静态体同步
+            HeightField* heightField = ens.GetComponent<HeightField>();
+            if (heightField && heightField->enabled && (!ownBody || (ownBody->enabled && ownBody->bodyType == PhysicsBodyType::Static)))
+            {
+                uint64 key = EnsKey(id);
+                heightFieldSeen.insert(key);
+                SyncHeightField(*heightField, transform, key, ens.GetLayerMask(), LayerSettings::GetCollisionMask(ens.GetLayer()));
+            }
+            if (attachedBody && (!attachedBody->enabled || !attachedBody->GetEns()->GetWorldActive())) continue;
+
+            //刚体节点即使没有普通 Collider 也持有 Actor
+            if (ownBody)
+            {
+                BodyInput& input = bodyInputs[EnsKey(id)];
+                input.ens = &ens;
+                input.body = ownBody;
+            }
             for (Component* component : ens.GetComponents())
             {
+                if (component && component->Is(WheelCollider::StaticType()))
+                {
+                    attachedBodies[EnsKey(id)] = attachedBody ? attachedBody->GetEnsId() : EnsId();
+                }
                 Collider* collider = component ? component->Cast<Collider>() : nullptr;
                 if (!collider || !collider->enabled) continue;
-
-                colliders.push_back(collider);
+                attachedBodies[EnsKey(id)] = attachedBody ? attachedBody->GetEnsId() : EnsId();
+                Ens* owner = attachedBody ? attachedBody->GetEns() : &ens;
+                BodyInput& input = bodyInputs[EnsKey(owner->GetId())];
+                input.ens = owner;
+                input.body = attachedBody;
+                input.colliders.emplace_back(collider, poseHash);
                 Mesh* mesh = GetColliderMesh(*collider);
-                if (!mesh) continue;
-
-                if (std::find(sourceMeshes.begin(), sourceMeshes.end(), mesh) == sourceMeshes.end())
+                if (mesh && mesh->IsDirty(MeshDirtyFlags::Physics))
                 {
-                    sourceMeshes.push_back(mesh);
-                }
-                if (mesh->IsDirty(MeshDirtyFlags::Physics))
-                {
-                    meshDirty = true;
-                    if (dirtyMeshes.insert(mesh).second) InvalidateCookedMeshes(*mesh);
+                    dirtyMeshes.insert(mesh);
                 }
             }
-            if (colliders.empty()) return;
+        }
+        for (Mesh* mesh : dirtyMeshes)
+        {
+            InvalidateCookedMeshes(*mesh);
+        }
 
-            uint64 key = EnsKey(ens.GetId());
-            seen.insert(key);
-            uint64 hash = CalculateBodyHash(colliders, body);
+        //保留 Actor，只按各形状的几何与相对变换更新
+        for (auto iterator = bodyInputs.begin(); iterator != bodyInputs.end();)
+        {
+            BodyInput& input = iterator->second;
+            if (!input.ens)
+            {
+                iterator = bodyInputs.erase(iterator);
+                continue;
+            }
+            uint64 key = iterator->first;
+            uint64 hash = CalculateBodyHash(input.body);
             auto found = bodies.find(key);
-            bool meshChanged = found != bodies.end()
-                && (found->second->sourceMeshes != sourceMeshes || found->second->sourceMeshInvalidated);
-            //缩放采用容差比较；姿态变化产生的微小数值误差不应销毁 Actor。
-            bool scaleChanged = found != bodies.end() && !NearlyEqual(found->second->shapeScale, GetWorldScale(*transform));
-            if (found != bodies.end() && (found->second->configurationHash != hash || meshDirty || meshChanged || scaleChanged))
+            PhysicsBodyType type = input.body ? input.body->bodyType : PhysicsBodyType::Static;
+            if (input.ens->GetStatic()) type = PhysicsBodyType::Static;
+            if (found != bodies.end() && (found->second->configurationHash != hash || found->second->bodyType != type
+                || (type == PhysicsBodyType::Dynamic && !input.ens->Transform()->parent.IsNull())))
             {
                 DestroyBody(*found->second);
                 bodies.erase(found);
@@ -1206,40 +1393,36 @@ public:
             }
             if (found == bodies.end())
             {
-                std::unique_ptr<BodyRecord> created = CreateBody(colliders, body, *transform, hash, sourceMeshes, layerMask, collisionMask);
-                if (created)
-                {
-                    //新建或重建的刚体也必须在本步施加并清空待施加力，避免跨步累积爆发。
-                    SyncBodyPoseAndVelocity(*created, body, *transform, layerMask, collisionMask, queryOnly);
-                    bodies.emplace(key, std::move(created));
-                }
-                return;
+                std::unique_ptr<BodyRecord> created = CreateBody(*input.ens, input.body, hash);
+                if (created) found = bodies.emplace(key, std::move(created)).first;
             }
-            SyncBodyPoseAndVelocity(*found->second, body, *transform, layerMask, collisionMask, queryOnly);
-        });
-
-        for (auto it = bodies.begin(); it != bodies.end();)
-        {
-            if (seen.contains(it->first))
+            if (found != bodies.end())
             {
-                ++it;
+                SyncBodyShapes(*found->second, input, dirtyMeshes, queryOnly);
+                SyncBodyPoseAndVelocity(*found->second, input.body, *input.ens->Transform(), queryOnly);
+            }
+            ++iterator;
+        }
+        for (auto iterator = bodies.begin(); iterator != bodies.end();)
+        {
+            if (bodyInputs.contains(iterator->first))
+            {
+                ++iterator;
                 continue;
             }
-            DestroyBody(*it->second);
-            it = bodies.erase(it);
+            DestroyBody(*iterator->second);
+            iterator = bodies.erase(iterator);
         }
-
-        for (auto it = heightFields.begin(); it != heightFields.end();)
+        for (auto iterator = heightFields.begin(); iterator != heightFields.end();)
         {
-            if (heightFieldSeen.contains(it->first))
+            if (heightFieldSeen.contains(iterator->first))
             {
-                ++it;
+                ++iterator;
                 continue;
             }
-            DestroyHeightField(*it->second);
-            it = heightFields.erase(it);
+            DestroyHeightField(*iterator->second);
+            iterator = heightFields.erase(iterator);
         }
-
         for (Mesh* mesh : dirtyMeshes)
         {
             mesh->ClearDirty(MeshDirtyFlags::Physics);
@@ -1487,9 +1670,9 @@ public:
         }
     }
 
-    bool FillHit(const PxLocationHit& nativeHit, const PxRigidActor* actor, PhysicsQueryHit& hit) const
+    bool FillHit(const PxLocationHit& nativeHit, const PxShape* shape, const PxRigidActor* actor, PhysicsQueryHit& hit) const
     {
-        EnsId ens = FindEns(actor);
+        EnsId ens = FindEns(shape, actor);
         if (ens.IsNull()) return false;
         hit.ens = ens;
         hit.position = FromPx(nativeHit.position);
@@ -1498,15 +1681,17 @@ public:
         return true;
     }
 
-    //机轮向下探测地面。
-    bool WheelRaycast(const vector3& origin, float32 distance, PhysicsQueryHit& hit, uint32 layerMask) const
+    //沿悬挂方向探测地面并排除所属刚体和触发器
+    bool WheelRaycast(const vector3& origin, const vector3& direction, float32 distance,
+        PhysicsQueryHit& hit, uint32 layerMask, const PxRigidActor* body) const
     {
-        PxVec3 unitDirection = ToPx(vector3{ 0.0f, -1.0f, 0.0f });
-        LayerQueryFilter callback(layerMask, false);
+        PxVec3 unitDirection = ToPx(direction);
+        if (distance <= 0.0f || unitDirection.normalize() <= 0.0f) return false;
+        LayerQueryFilter callback(layerMask, false, 0, body, false);
         PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER);
         PxRaycastBuffer result;
         if (!scene->raycast(ToPx(origin), unitDirection, distance, result, PxHitFlag::eDEFAULT, filter, &callback) || !result.hasBlock) return false;
-        return FillHit(result.block, result.block.actor, hit);
+        return FillHit(result.block, result.block.shape, result.block.actor, hit);
     }
 
     //模拟全部机轮：弹簧阻尼悬挂 + 地面摩擦 + 转向侧向力。
@@ -1515,32 +1700,38 @@ public:
         currentWorld.ForEachComponent<WheelCollider>([&](WheelCollider* wheel)
         {
             Ens& ens = *wheel->GetEns();
-            RigidBody* body = ens.GetComponent<RigidBody>();
             Transform* transform = ens.Transform();
             wheel->grounded = false;
             wheel->compression = 0.0f;
             wheel->previousCompression = 0.0f;
-            if (!ens.GetWorldActive() || !wheel->enabled || !body || !body->enabled
-                || body->bodyType != PhysicsBodyType::Dynamic || !transform) return;
+            if (!ens.GetWorldActive() || !wheel->enabled || !transform) return;
+            BodyRecord* record = FindBody(ens.GetId());
+            if (!record || record->bodyType != PhysicsBodyType::Dynamic) return;
+            PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record->actor);
+            Transform& bodyTransform = *currentWorld.GetTransform(record->binding.ens);
+            quaternion rotation = bodyTransform.worldRotation;
 
-            //从悬挂安装点向下探测地面。
-            vector3 mountWorld = Add(transform->worldPosition, Rotate(transform->worldRotation, wheel->wheelOffset));
+            //取车轮节点位置，按所属刚体坐标系计算偏移与悬挂
+            vector3 mountWorld = Add(transform->worldPosition,
+                RenderMath::TransformDirection(bodyTransform.worldMatrix, wheel->wheelOffset));
+            vector3 direction = Rotate(rotation, { 0.0f, -1.0f, 0.0f });
+            float32 suspensionScale = GetWorldScale(bodyTransform).y;
             PhysicsQueryHit hit;
-            if (!WheelRaycast(mountWorld, wheel->raycastDistance, hit, wheel->groundQueryLayer)) return;
+            if (!WheelRaycast(mountWorld, direction, wheel->raycastDistance * suspensionScale,
+                hit, wheel->groundQueryLayer, dynamic)) return;
 
-            float32 compression = std::clamp(wheel->suspensionRestLength + wheel->wheelRadius - hit.distance, 0.0f, wheel->suspensionTravel);
+            float32 compression = std::clamp((wheel->suspensionRestLength + wheel->wheelRadius) * suspensionScale
+                - hit.distance, 0.0f, std::max(0.0f, wheel->suspensionTravel * suspensionScale));
             if (compression <= 0.0f) return;
 
             //接触点速度包含角速度；阻尼抵抗压缩和回弹，避免接地差分尖峰。
-            vector3 offset = Add(hit.position, Scale(transform->worldPosition, -1.0f));
-            vector3 velocity = Add(body->linearVelocity, Cross(body->angularVelocity, offset));
+            vector3 velocity = FromPx(PxRigidBodyExt::getVelocityAtPos(*dynamic, ToPx(hit.position)));
             float32 normalForce = std::max(wheel->suspensionStiffness * compression
                 - wheel->suspensionDamping * Dot(velocity, hit.normal), 0.0f);
 
             //地面切向速度与轮子朝向（转向轮按 steerAngle 旋转）。
             vector3 normal = hit.normal;
             vector3 tangentVelocity = Add(velocity, Scale(normal, -Dot(velocity, normal)));
-            quaternion rotation = transform->worldRotation;
             vector3 forwardWorld = Rotate(rotation, { 0.0f, 0.0f, -1.0f });
             vector3 forwardGround = NormalizeSafe(
                 Add(forwardWorld, Scale(normal, -Dot(forwardWorld, normal))),
@@ -1559,12 +1750,8 @@ public:
                 0.0f, wheel->lateralFriction * normalForce);
             friction = Add(friction, Scale(rightGround, -std::copysign(lateralMagnitude, lateralComponent)));
             //当前物理步直接提交轮力，避免上一帧变换和延迟悬挂力。
-            auto found = bodies.find(EnsKey(ens.GetId()));
-            if (found == bodies.end()) return;
-            PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(found->second->actor);
             vector3 force = Add(Scale(hit.normal, normalForce), friction);
-            dynamic->addForce(ToPx(force), PxForceMode::eFORCE, true);
-            dynamic->addTorque(ToPx(Cross(offset, force)), PxForceMode::eFORCE, true);
+            PxRigidBodyExt::addForceAtPos(*dynamic, ToPx(force), ToPx(hit.position), PxForceMode::eFORCE, true);
 
             wheel->grounded = true;
             wheel->compression = compression;
@@ -1658,7 +1845,7 @@ bool PhysicsSystem::Raycast(const vector3& origin, const vector3& direction, flo
     PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER);
     PxRaycastBuffer result;
     if (!impl->scene->raycast(ToPx(origin), unitDirection, distance, result, PxHitFlag::eDEFAULT, filter, &callback) || !result.hasBlock) return false;
-    return impl->FillHit(result.block, result.block.actor, hit);
+    return impl->FillHit(result.block, result.block.shape, result.block.actor, hit);
 }
 
 //使用球体扫描并返回最近命中
@@ -1673,7 +1860,7 @@ bool PhysicsSystem::SweepSphere(const vector3& origin, float32 radius, const vec
     PxSweepBuffer result;
     PxSphereGeometry geometry(radius);
     if (!impl->scene->sweep(geometry, PxTransform(ToPx(origin)), unitDirection, distance, result, PxHitFlag::eDEFAULT, filter, &callback) || !result.hasBlock) return false;
-    return impl->FillHit(result.block, result.block.actor, hit);
+    return impl->FillHit(result.block, result.block.shape, result.block.actor, hit);
 }
 
 //带附加过滤条件的球体扫描
@@ -1686,12 +1873,12 @@ bool PhysicsSystem::SweepSphereFiltered(const vector3& origin, float32 radius, c
     if (unitDirection.normalize() <= 0.0f) return false;
 
     LayerQueryFilter callback(queryFilter.layerMask, false, queryFilter,
-        [this](const PxActor* actor) { return impl->FindEns(actor); });
+        [this](const PxShape* shape, const PxActor* actor) { return impl->FindEns(shape, actor); });
     PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER);
     PxSweepBuffer result;
     PxSphereGeometry geometry(radius);
     if (!impl->scene->sweep(geometry, PxTransform(ToPx(origin)), unitDirection, distance, result, PxHitFlag::eDEFAULT, filter, &callback) || !result.hasBlock) return false;
-    if (!impl->FillHit(result.block, result.block.actor, hit)) return false;
+    if (!impl->FillHit(result.block, result.block.shape, result.block.actor, hit)) return false;
 
     //无效命中按未命中处理
     if (!std::isfinite(hit.distance) || !std::isfinite(hit.position.x) || !std::isfinite(hit.position.y) ||
@@ -1718,7 +1905,7 @@ uint32 PhysicsSystem::OverlapSphere(const vector3& center, float32 radius, List<
     std::unordered_set<uint64> unique;
     for (PxU32 index = 0; index < result.getNbTouches(); index++)
     {
-        EnsId ens = impl->FindEns(result.getTouch(index).actor);
+        EnsId ens = impl->FindEns(result.getTouch(index).shape, result.getTouch(index).actor);
         if (ens.IsNull() || !unique.insert(EnsKey(ens)).second) continue;
         PhysicsQueryHit hit;
         hit.ens = ens;
@@ -1839,8 +2026,8 @@ PxControllerManager* PhysicsSystem::GetControllerManager() const
 PxRigidActor* PhysicsSystem::GetRigidActor(EnsId ens) const
 {
     if (!impl) return nullptr;
-    auto found = impl->bodies.find(EnsKey(ens));
-    return found != impl->bodies.end() ? found->second->actor : nullptr;
+    Impl::BodyRecord* record = impl->FindBody(ens);
+    return record ? record->actor : nullptr;
 }
 
 //查找实体对应的原生角色控制器

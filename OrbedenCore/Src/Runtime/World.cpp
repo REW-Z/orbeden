@@ -275,6 +275,7 @@ int32 World::ApplyDerivedPositions(uint64 owner, std::span<const UIDerivedPositi
 //向生命周期监听器广播一次父级变化
 void World::NotifyEnsReparented(EnsId ens, EnsId parent)
 {
+    ++hierarchyRevision;
     List<IWorldLifecycleListener*> listeners = lifecycleListeners;
     for (IWorldLifecycleListener* listener : listeners)
     {
@@ -490,6 +491,7 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
 
     storedEns->name = name;
     storedEns->AddComponentInstance(transform);
+    ++hierarchyRevision;
     NotifyTransformChanged(value);
 
     //结构订阅者在节点完整之后才收到通知，此时组件与变换都已就绪。
@@ -602,6 +604,7 @@ bool World::DestroyEns(EnsId ens)
 
     SetDirty();
     freeEnsIds.push_back(ens.id);
+    ++hierarchyRevision;
     return true;
 }
 
@@ -883,6 +886,7 @@ bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
     SetParent(child, parent);
     transform = GetTransform(child);
     if (!transform || transform->parent != parent) return false;
+    ++hierarchyRevision;
 
     //获取根节点插入位置
     if (parent.IsNull())

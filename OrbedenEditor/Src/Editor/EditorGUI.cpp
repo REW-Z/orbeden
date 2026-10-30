@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <string_view>
 
 EditorGUI* EditorGUI::activeInstance = nullptr;
 
@@ -353,24 +354,28 @@ namespace
 
     //判断左键松开的这一下是否点在本节点上：按下点要落在这个节点自己的行内，
     //箭头区除外——箭头是按下当帧就切换展开的，松开时不该再补一次选中；叶子没有箭头，整行都能点
-    bool IsReleasedOnNodeLabel(uint8 options)
+    bool IsReleasedOnNodeLabel(uint8 options, float32 leadingSpace = 0.0f)
     {
         if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left) || !ImGui::IsItemHovered()) return false;
         ImVec2 pressed = ImGui::GetIO().MouseClickedPos[ImGuiMouseButton_Left];
         ImVec2 min = ImGui::GetItemRectMin(), max = ImGui::GetItemRectMax();
         if (pressed.x < min.x || pressed.x >= max.x || pressed.y < min.y || pressed.y >= max.y) return false;
         if (options & 2) return true;
-        return pressed.x > min.x + ImGui::GetTreeNodeToLabelSpacing() + ImGui::GetStyle().TouchExtraPadding.x;
+        return pressed.x > min.x + leadingSpace + ImGui::GetTreeNodeToLabelSpacing() + ImGui::GetStyle().TouchExtraPadding.x;
     }
 
     //绘制目录节点并返回展开与点击状态
-    //options：1 选中、2 叶子、4 默认展开、8 强制展开、16 强制折叠、32 灰显
-    //返回值：1 展开、2 按下点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换、64 松开点击
+    //options：1 选中、2 叶子、4 默认展开、8 强制展开、16 强制折叠、32 灰显、64 预制体、128 可切换拾取
+    //返回值：1 展开、2 按下点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换、64 松开点击、128 切换拾取、256 屏幕外、512 活动行
     //同一个节点两种点击都报：按下点击给要即刻响应的操作，选中用松开点击——
     //拖动会跨到别的面板，按下就落定选中会让对方面板在拖到一半时换掉内容
-    int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 options, const uint8* icon, int32 iconLength)
+    int32 DrawTreeNode(const uint8* label, int32 length, uint8 options, const uint8* icon, int32 iconLength, bool flat = false)
     {
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+        if (flat)
+        {
+            flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        }
         if (options & 1) flags |= ImGuiTreeNodeFlags_Selected;
         if (options & 2) flags |= ImGuiTreeNodeFlags_Leaf;
         if (options & 4) flags |= ImGuiTreeNodeFlags_DefaultOpen;
@@ -379,11 +384,42 @@ namespace
         //强制折叠同理：递归折叠时父节点一合上，子树这一帧就不会被提交，只能等它各自被画到时再压回去
         if (options & 16) ImGui::SetNextItemOpen(false, ImGuiCond_Always);
         std::string identity = ReadUtf8Text(label, length);
-        ImTextureID texture = EditorIcons::Get(ReadUtf8Text(icon, iconLength), ImGui::GetFontSize());
+        std::string_view iconName = icon && iconLength > 0
+            ? std::string_view(reinterpret_cast<const char*>(icon), static_cast<usize>(iconLength)) : std::string_view();
+        bool pickEnabled = iconName == "ScenePick";
+        bool pickInherited = iconName == "ScenePickInherited";
+        bool pickIcon = pickEnabled || pickInherited || iconName == "ScenePickDisabled";
+        ImTextureID texture = pickIcon ? 0 : EditorIcons::Get(std::string(iconName), ImGui::GetFontSize());
         ImVec2 iconPosition = ImGui::GetCursorScreenPos();
         iconPosition.x += ImGui::GetTreeNodeToLabelSpacing();
         iconPosition.y += ImGui::GetStyle().FramePadding.y;
         float32 iconSize = ImGui::GetFontSize();
+        ImGuiContext& context = *ImGui::GetCurrentContext();
+        ImGuiWindow* nodeWindow = context.CurrentWindow;
+        float32 workMinX = nodeWindow->WorkRect.Min.x;
+        ImRect contentClip = nodeWindow->ClipRect;
+        float32 leadingSpace = 0.0f;
+        bool clipTreeDrawing = false;
+        if (pickIcon)
+        {
+            //固定左侧图标位置，保留原行矩形和名称位置
+            float32 spaceWidth = ImGui::CalcTextSize(" ").x;
+            usize padding = static_cast<usize>((iconSize + ImGui::GetStyle().ItemInnerSpacing.x) / spaceWidth) + 1;
+            leadingSpace = static_cast<float32>(padding) * spaceWidth;
+            iconPosition.x = std::max(nodeWindow->InnerRect.Min.x + 1.0f, nodeWindow->InnerClipRect.Min.x);
+            nodeWindow->WorkRect.Min.x = nodeWindow->DC.CursorPos.x;
+            nodeWindow->DC.CursorPos.x += leadingSpace;
+            flags |= ImGuiTreeNodeFlags_SpanFullWidth;
+
+            //将树内容裁在固定图标区域右侧
+            nodeWindow->ClipRect.Min.x = std::max(contentClip.Min.x,
+                iconPosition.x + iconSize + ImGui::GetStyle().ItemInnerSpacing.x);
+            clipTreeDrawing = nodeWindow->DC.CursorPos.x < nodeWindow->ClipRect.Min.x;
+            if (clipTreeDrawing)
+            {
+                nodeWindow->DrawList->PushClipRect(nodeWindow->ClipRect.Min, nodeWindow->ClipRect.Max, true);
+            }
+        }
         //灰显连箭头一起压暗；取色走主题的 TextDisabled，与瓦片箭头、面板标签页一致
         bool dimmed = (options & 32) != 0;
         bool prefabBound = (options & 64) != 0;
@@ -405,13 +441,184 @@ namespace
                 ImVec2(iconPosition.x + iconSize, iconPosition.y + iconSize));
         }
         else expanded = ImGui::TreeNodeEx(identity.c_str(), flags);
+        if (pickIcon)
+        {
+            if (clipTreeDrawing)
+            {
+                nodeWindow->DrawList->PopClipRect();
+            }
+            nodeWindow->ClipRect = contentClip;
+            nodeWindow->WorkRect.Min.x = workMinX;
+        }
         if (dimmed || prefabBound) ImGui::PopStyleColor();
         bool toggled = ImGui::IsItemToggledOpen();
-        bool doubleClicked = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !toggled ? 2 : 0)
+        ImGuiLastItemData nodeItem = context.LastItemData;
+        //屏幕外节点只维护展开栈与行布局
+        if (pickIcon && (nodeItem.Rect.Max.y <= contentClip.Min.y || nodeItem.Rect.Min.y >= contentClip.Max.y)
+            && context.ActiveId != nodeItem.ID)
+        {
+            return (expanded ? 1 : 0) | 256;
+        }
+
+        //在面板左侧固定位置处理拾取图标
+        bool pickHovered = false;
+        bool pickPressed = false;
+        bool pickActivated = false;
+        if (pickIcon)
+        {
+            const ImGuiIO& io = ImGui::GetIO();
+            const ImRect& row = context.LastItemData.Rect;
+            iconPosition.y = row.Min.y + (row.GetHeight() - iconSize) * 0.5f;
+            ImRect bounds(ImVec2(iconPosition.x, row.Min.y),
+                ImVec2(iconPosition.x + iconSize + ImGui::GetStyle().ItemInnerSpacing.x * 0.5f, row.Max.y));
+            bounds.ClipWith(context.CurrentWindow->ClipRect);
+            pickHovered = bounds.Contains(io.MousePos)
+                && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+            pickPressed = bounds.Contains(io.MouseClickedPos[ImGuiMouseButton_Left]);
+
+            //图标拖动仍使用原树节点身份
+            if (pickHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !HasValidDrag())
+            {
+                ImGui::SetActiveID(nodeItem.ID, nodeWindow);
+                ImGui::SetFocusID(nodeItem.ID, nodeWindow);
+                ImGui::FocusWindow(nodeWindow);
+                ImGui::SetKeyOwner(ImGuiKey_MouseLeft, nodeItem.ID);
+                context.ActiveIdMouseButton = ImGuiMouseButton_Left;
+                context.ActiveIdClickOffset = ImVec2(io.MousePos.x - row.Min.x, io.MousePos.y - row.Min.y);
+            }
+
+            //仅为可见的禁选或悬停图标生成顶点
+            if ((!pickEnabled || pickHovered) && bounds.GetWidth() > 0.0f && bounds.GetHeight() > 0.0f)
+            {
+                static const ImVec2 hand[] = {
+                    {0.35f, 0.94f}, {0.35f, 0.79f}, {0.14f, 0.53f}, {0.13f, 0.47f},
+                    {0.18f, 0.42f}, {0.24f, 0.44f}, {0.35f, 0.55f}, {0.35f, 0.15f},
+                    {0.38f, 0.08f}, {0.44f, 0.07f}, {0.49f, 0.11f}, {0.50f, 0.17f},
+                    {0.50f, 0.39f}, {0.55f, 0.34f}, {0.61f, 0.35f}, {0.65f, 0.42f},
+                    {0.69f, 0.38f}, {0.75f, 0.40f}, {0.78f, 0.47f}, {0.83f, 0.44f},
+                    {0.89f, 0.49f}, {0.89f, 0.66f}, {0.81f, 0.81f}, {0.81f, 0.94f},
+                };
+                ImVec2 points[IM_ARRAYSIZE(hand)];
+                for (int32 index = 0; index < IM_ARRAYSIZE(hand); ++index)
+                {
+                    points[index] = ImVec2(iconPosition.x + hand[index].x * iconSize,
+                        iconPosition.y + hand[index].y * iconSize);
+                }
+                ImU32 ink = pickEnabled ? ImGui::GetColorU32(ImGuiCol_TextDisabled, 0.45f)
+                    : pickHovered && (options & 128) ? EditorGUI::GetActiveColor()
+                    : ImGui::GetColorU32(pickInherited ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+                float32 thickness = std::max(1.0f, iconSize * 0.075f);
+                ImDrawList* draw = ImGui::GetWindowDrawList();
+                draw->AddPolyline(points, IM_ARRAYSIZE(points), ink, thickness, ImDrawFlags_Closed);
+
+                //为禁选和继承状态添加斜杠
+                if (!pickEnabled)
+                {
+                    ImVec2 from(iconPosition.x + iconSize * 0.08f, iconPosition.y + iconSize * 0.89f);
+                    ImVec2 to(iconPosition.x + iconSize * 0.94f, iconPosition.y + iconSize * 0.12f);
+                    ImU32 background = ImGui::GetColorU32(ImGui::IsItemHovered() ? ImGuiCol_HeaderHovered
+                        : options & 1 ? ImGuiCol_Header : ImGuiCol_WindowBg);
+                    draw->AddLine(from, to, background, thickness * 3.0f);
+                    draw->AddLine(from, to, ink, thickness * 1.35f);
+                }
+            }
+
+            //只把原地松开识别为切换，拖动继续交给树节点
+            float32 threshold = io.MouseDragThreshold;
+            pickActivated = (options & 128) && pickHovered && pickPressed
+                && (context.ActiveId == nodeItem.ID || context.ActiveIdPreviousFrame == nodeItem.ID)
+                && ImGui::IsMouseReleased(ImGuiMouseButton_Left)
+                && io.MouseDragMaxDistanceSqr[ImGuiMouseButton_Left] < threshold * threshold
+                && !HasValidDrag();
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && context.ActiveId == nodeItem.ID)
+            {
+                ImGui::ClearActiveID();
+            }
+            if (pickHovered)
+            {
+                if (options & 128)
+                {
+                    ImGui::SetTooltip("%s", pickEnabled ? "Disable SceneView picking" : "Enable SceneView picking");
+                }
+                else
+                {
+                    ImGui::SetTooltip("%s", pickInherited
+                        ? "SceneView picking is disabled by an ancestor; this node keeps its own setting"
+                        : "SceneView picking is read-only here");
+                }
+            }
+        }
+
+        //保留树节点身份、矩形与拖放状态
+        context.LastItemData = nodeItem;
+        bool doubleClicked = !pickHovered && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !toggled && !pickPressed ? 2 : 0)
             | (ImGui::GetIO().KeyCtrl ? 4 : 0) | (doubleClicked ? 8 : 0)
             | (ImGui::GetIO().KeyAlt ? 16 : 0) | (toggled ? 32 : 0)
-            | (IsReleasedOnNodeLabel(options) ? 64 : 0);
+            | (!pickPressed && IsReleasedOnNodeLabel(options, leadingSpace) ? 64 : 0)
+            | (pickActivated ? 128 : 0) | (context.ActiveId == nodeItem.ID ? 512 : 0);
+    }
+
+    //绘制带层级栈的目录节点
+    int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 options,
+        const uint8* icon, int32 iconLength)
+    {
+        return DrawTreeNode(label, length, options, icon, iconLength);
+    }
+
+    ImGuiListClipper treeRowsClipper;
+
+    //开始裁剪展开后的层级行并保留交互节点
+    void ORBEDEN_NATIVE_CALL EditorGuiBeginTreeRows(int32 count, int32 reveal, int32 rename,
+        int32 active, int32 menu, uint8 resetScroll)
+    {
+        if (resetScroll)
+        {
+            ImGui::SetScrollY(0.0f);
+        }
+        treeRowsClipper.Begin(count, ImGui::GetTextLineHeightWithSpacing());
+        for (int32 row : { reveal, rename, active, menu })
+        {
+            if (row >= 0 && row < count)
+            {
+                treeRowsClipper.IncludeItemByIndex(row);
+            }
+        }
+    }
+
+    //取得下一段需要提交的层级行
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiStepTreeRows(int32* first, int32* last)
+    {
+        if (!treeRowsClipper.Step())
+        {
+            return 0;
+        }
+        *first = treeRowsClipper.DisplayStart;
+        *last = treeRowsClipper.DisplayEnd;
+        return 1;
+    }
+
+    //结束层级行裁剪并补齐滚动范围
+    void ORBEDEN_NATIVE_CALL EditorGuiEndTreeRows()
+    {
+        treeRowsClipper.End();
+    }
+
+    //按缓存深度绘制独立树行
+    int32 ORBEDEN_NATIVE_CALL EditorGuiTreeRow(const uint8* label, int32 length, uint8 options,
+        const uint8* icon, int32 iconLength, int32 depth)
+    {
+        float32 indent = static_cast<float32>(depth) * ImGui::GetStyle().IndentSpacing;
+        if (indent > 0.0f)
+        {
+            ImGui::Indent(indent);
+        }
+        int32 state = DrawTreeNode(label, length, options, icon, iconLength, true);
+        if (indent > 0.0f)
+        {
+            ImGui::Unindent(indent);
+        }
+        return state;
     }
 
     //结束目录节点
@@ -2104,6 +2311,10 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.beginChild = reinterpret_cast<void*>(&EditorGuiBeginChild);
     api.endChild = reinterpret_cast<void*>(&EditorGuiEndChild);
     api.treeNode = reinterpret_cast<void*>(&EditorGuiTreeNode);
+    api.beginTreeRows = reinterpret_cast<void*>(&EditorGuiBeginTreeRows);
+    api.stepTreeRows = reinterpret_cast<void*>(&EditorGuiStepTreeRows);
+    api.endTreeRows = reinterpret_cast<void*>(&EditorGuiEndTreeRows);
+    api.treeRow = reinterpret_cast<void*>(&EditorGuiTreeRow);
     api.treePop = reinterpret_cast<void*>(&EditorGuiTreePop);
     api.openPopup = reinterpret_cast<void*>(&EditorGuiOpenPopup);
     api.beginPopup = reinterpret_cast<void*>(&EditorGuiBeginPopup);

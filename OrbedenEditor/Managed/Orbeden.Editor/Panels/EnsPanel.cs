@@ -7,30 +7,48 @@ internal sealed class EnsPanel : EditorPanel
 {
     private readonly Dictionary<EnsId, List<Ens>> children = [];
     private readonly Stack<List<Ens>> childLists = [];
+    private Dictionary<EnsId, (Ens Ens, EnsId Parent, int Order, string Key, GuiContent Label, ulong NameRevision)> rows = [];
+    private readonly List<(EnsId Id, int Depth, bool PrefabBound, bool PrefabRoot)> visibleRows = [];
+    private readonly Dictionary<EnsId, int> visibleIndices = [];
+    private readonly HashSet<EnsId> expanded = [];
+    private readonly Stack<(Ens Ens, int Depth, bool PrefabBound)> rowStack = [];
+    private bool visibleRowsDirty = true;
+    private bool resetScroll;
+    private bool playing;
+    private EnsId interactionEns = EnsId.Null;
+    private EnsId menuEns = EnsId.Null;
+    private readonly HashSet<string> prefabRoots = [];
+    private readonly HashSet<EnsId> selectedSet = [];
+    private ulong contentRevision = ulong.MaxValue;
+    private ulong hierarchyRevision = ulong.MaxValue;
+    private static readonly GuiContent pickContent = new("ScenePick");
+    private static readonly GuiContent pickDisabledContent = new("ScenePickDisabled");
+    private static readonly GuiContent pickInheritedContent = new("ScenePickInherited");
     private Action? pendingDrop;
     private Action? pendingSelection;
+    private Action? pendingSelectable;
     private readonly List<EnsId> visibleEns = [];
     private IReadOnlyList<EnsId> selectedIds = [];
     private EnsId selectionAnchor = EnsId.Null;
     private EnsId selectedEns = EnsId.Null;
     private EnsId renamingEns = EnsId.Null;
     private string renameBuffer = string.Empty;
+    private readonly GuiContent renameContent = new();
     private bool renameFocusRequested;
     private bool panelFocused;
-    //待消费的定位请求，以及本次绘制要强制展开、要滚过去的节点
+    //待消费的定位请求与滚动目标
     private static string pingKey = string.Empty;
     private static bool selectPingTarget = true;
-    private readonly HashSet<string> revealKeys = [];
-    private string scrollKey = string.Empty;
-    //Alt 折叠的待办：节点一合上，子树这一帧就不再被提交，只能等它们各自被画到时再逐个压回折叠
-    private readonly HashSet<string> collapsedKeys = [];
+    private EnsId scrollEns = EnsId.Null;
 
     private sealed record Position(string Parent, string Before, vector3 Translation, quaternion Rotation, vector3 Scale);
 
     private const string InvalidNameMessage = "Ens name cannot be empty or contain control characters.";
 
-    public override EditorPanelInfo Info => new("ens_view", "EnsView", true,
+    private static readonly EditorPanelInfo panelInfo = new("ens_view", "EnsView", true,
         new vector2(320, 420), PanelDockPlacement.Left, 0.22f, 200);
+
+    public override EditorPanelInfo Info => panelInfo;
 
     //请求定位节点并按选项更新选择
     internal static void Ping(string resourceKey, bool select = true)
@@ -49,39 +67,97 @@ internal sealed class EnsPanel : EditorPanel
         selectedIds = context.SelectedEnsList;
         if (selectedIds.Count == 0) selectionAnchor = EnsId.Null;
         EditorSelection.Report(Info.Id, panelFocused, !selectedEns.IsNull);
-        if (EditorApplication.IsPlaying) EndRename();
-        RevealRequestedEns();
+        playing = EditorApplication.IsPlaying;
+        if (playing) EndRename();
+        selectedSet.Clear();
+        foreach (EnsId id in selectedIds)
+        {
+            selectedSet.Add(id);
+        }
+        visibleRowsDirty |= EditorPrefabSession.CopyBindingRoots(prefabRoots);
 
         pendingDrop = null;
         pendingSelection = null;
-        visibleEns.Clear();
+        pendingSelectable = null;
         using (new EditorProfileScope("Editor/EnsPanel/BuildHierarchy"u8))
         {
-            //回收上一帧的父子关系列表
-            foreach (List<Ens> siblings in children.Values)
+            (ulong content, ulong revision) = EditorNativeComponents.GetWorldEnsState();
+            if (content != contentRevision || revision != hierarchyRevision)
             {
-                siblings.Clear();
-                childLists.Push(siblings);
-            }
-            children.Clear();
-            foreach (EnsId id in EditorNativeComponents.GetWorldEns())
-            {
-                Ens ens = Ens.FromId(id);
-                if (!ens.IsValid) continue;
-                EnsId parent = ens.Transform.GetParent();
-                if (!children.TryGetValue(parent, out List<Ens>? siblings))
+                //载入内容后清除旧的展开与重命名状态
+                bool worldChanged = content != contentRevision;
+                if (worldChanged)
                 {
-                    siblings = childLists.Count > 0 ? childLists.Pop() : [];
-                    children[parent] = siblings;
+                    expanded.Clear();
+                    resetScroll = true;
+                    selectionAnchor = EnsId.Null;
+                    interactionEns = menuEns = EnsId.Null;
+                    EndRename();
                 }
-                siblings.Add(ens);
+                contentRevision = content;
+                hierarchyRevision = revision;
+                visibleRowsDirty = true;
+
+                //仅在节点结构或顺序改变时重建缓存
+                foreach (List<Ens> siblings in children.Values)
+                {
+                    siblings.Clear();
+                    childLists.Push(siblings);
+                }
+                children.Clear();
+                var previousRows = rows;
+                EnsId[] ids = EditorNativeComponents.GetWorldEns();
+                rows = new(ids.Length);
+                foreach (EnsId id in ids)
+                {
+                    Ens ens = Ens.FromId(id);
+                    if (!ens.IsValid) continue;
+                    EnsId parent = ens.Transform.GetParent();
+                    if (!children.TryGetValue(parent, out List<Ens>? siblings))
+                    {
+                        siblings = childLists.Count > 0 ? childLists.Pop() : [];
+                        children[parent] = siblings;
+                    }
+                    siblings.Add(ens);
+
+                    string key = ens.ResourceKey;
+                    previousRows.TryGetValue(id, out var previous);
+                    GuiContent label = previous.Key == key ? previous.Label : new();
+                    rows[id] = (ens, parent, rows.Count, key, label,
+                        previous.Key == key ? previous.NameRevision : 0);
+                }
+                expanded.RemoveWhere(id => !rows.ContainsKey(id));
             }
         }
+        RevealRequestedEns();
+        if (visibleRowsDirty) RebuildVisibleRows();
         using (new EditorProfileScope("Editor/EnsPanel/DrawHierarchy"u8))
         {
-            if (children.TryGetValue(EnsId.Null, out List<Ens>? roots))
-                foreach (Ens ens in roots) DrawNode(ens, context);
-            else EditorGUI.Label("No Ens objects.");
+            EnsId previousInteraction = interactionEns;
+            EnsId previousMenu = menuEns;
+            interactionEns = menuEns = EnsId.Null;
+            if (resetScroll)
+            {
+                EditorApplication.RequestRepaint();
+            }
+            NativeEditorGUI.BeginTreeRows(visibleRows.Count, GetVisibleIndex(scrollEns), GetVisibleIndex(renamingEns),
+                GetVisibleIndex(previousInteraction), GetVisibleIndex(previousMenu), resetScroll);
+            resetScroll = false;
+            try
+            {
+                while (NativeEditorGUI.StepTreeRows(out int first, out int last))
+                {
+                    for (int index = first; index < last; ++index)
+                    {
+                        DrawRow(index, context);
+                    }
+                }
+            }
+            finally
+            {
+                NativeEditorGUI.EndTreeRows();
+            }
+            if (rows.Count == 0) EditorGUI.Label("No Ens objects.");
         }
 
         int state = NativeEditorGUI.FillRemainingArea();
@@ -101,97 +177,182 @@ internal sealed class EnsPanel : EditorPanel
         DrawDropTarget(Ens.Null, 0);
         pendingSelection?.Invoke();
         pendingSelection = null;
+        pendingSelectable?.Invoke();
+        pendingSelectable = null;
         Action? action = pendingDrop;
         pendingDrop = null;
         action?.Invoke();
     }
 
-    //定位目标并展开祖先节点
+    //定位目标并展开缓存中的祖先节点
     private void RevealRequestedEns()
     {
-        revealKeys.Clear();
-        scrollKey = string.Empty;
         if (pingKey.Length == 0) return;
 
         string key = pingKey;
         pingKey = string.Empty;
         Ens target = Ens.Find(key);
-        if (!target.IsValid) return;
+        if (!target.IsValid || !rows.ContainsKey(target.Id)) return;
 
-        if (selectPingTarget) EditorNativeComponents.SelectEns(target.Id);
-        scrollKey = target.ResourceKey;
-        //折叠节点的子孙根本不会被提交，所以要让目标可见必须逐级打开它和它的祖先
-        for (EnsId ancestor = target.Transform.GetParent(); !ancestor.IsNull;)
+        if (selectPingTarget)
         {
-            Ens value = Ens.FromId(ancestor);
-            if (!value.IsValid) break;
-            revealKeys.Add(value.ResourceKey);
-            ancestor = value.Transform.GetParent();
+            EditorNativeComponents.SelectEns(target.Id);
+        }
+        scrollEns = target.Id;
+        for (EnsId ancestor = rows[target.Id].Parent; !ancestor.IsNull; ancestor = rows[ancestor].Parent)
+        {
+            visibleRowsDirty |= expanded.Add(ancestor);
         }
     }
 
-    //绘制节点并记录选择或投放操作；forceExpand 来自上级的 Alt 展开，要求整棵子树一并展开
-    private void DrawNode(Ens ens, EditorPanelContext context, bool forceExpand = false)
+    //按展开状态重建平铺行与范围选择顺序
+    private void RebuildVisibleRows()
     {
-        visibleEns.Add(ens.Id);
-        string key = ens.ResourceKey;
-        bool hasChildren = children.TryGetValue(ens.Id, out List<Ens>? descendants);
-        bool renaming = renamingEns.Equals(ens.Id);
-        bool forceOpen = forceExpand || revealKeys.Contains(key);
-        //Alt 折叠的待办在这里被消费一次：本次先把节点压回折叠，之后交回 ImGui 自己记状态。
-        //定位展开是刚发生的指名操作，优先于更早的折叠请求，待办就此作废
-        bool forceCollapse = collapsedKeys.Remove(key) && !forceOpen;
-        //重命名时把名称让给输入框。隐藏标签后节点宽度仍是「箭头+标签宽」，输入框正好从原名称的位置开始。
-        //灰显看层级生效状态：父节点被禁用时整棵子树一起变灰，和运行时的实际行为一致
-        int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : ens.Name) + "##ens_" + key,
-            context.SelectedEnsList.Contains(ens.Id), !hasChildren, true, forceOpen, forceCollapse,
-            dimmed: !ens.WorldActive, prefabBound: EditorPrefabSession.FindBinding(ens) != null);
-        //滚动必须紧跟着节点提交：SetScrollHereY 取的是「上一行」的光标位置，中间不能插别的条目
-        if (key == scrollKey)
+        visibleRowsDirty = false;
+        visibleRows.Clear();
+        visibleEns.Clear();
+        visibleIndices.Clear();
+        rowStack.Clear();
+        if (children.TryGetValue(EnsId.Null, out List<Ens>? roots))
         {
-            scrollKey = string.Empty;
+            for (int index = roots.Count - 1; index >= 0; --index)
+            {
+                rowStack.Push((roots[index], 0, false));
+            }
+        }
+        while (rowStack.TryPop(out var entry))
+        {
+            EnsId id = entry.Ens.Id;
+            bool prefabRoot = prefabRoots.Contains(rows[id].Key);
+            bool prefabBound = entry.PrefabBound || prefabRoot;
+            visibleIndices[id] = visibleRows.Count;
+            visibleRows.Add((id, entry.Depth, prefabBound, prefabRoot));
+            visibleEns.Add(id);
+            if (!expanded.Contains(id) || !children.TryGetValue(id, out List<Ens>? descendants)) continue;
+            for (int index = descendants.Count - 1; index >= 0; --index)
+            {
+                rowStack.Push((descendants[index], entry.Depth + 1, prefabBound));
+            }
+        }
+        if (!renamingEns.IsNull && !visibleIndices.ContainsKey(renamingEns))
+        {
+            EndRename();
+        }
+    }
+
+    //取得平铺行下标
+    private int GetVisibleIndex(EnsId id) => visibleIndices.TryGetValue(id, out int index) ? index : -1;
+
+    //更新节点展开状态，Alt 操作同时写入子树
+    private void SetExpanded(EnsId id, bool value, bool recursive)
+    {
+        Stack<EnsId> pending = new();
+        pending.Push(id);
+        while (pending.TryPop(out EnsId current))
+        {
+            if (value)
+            {
+                expanded.Add(current);
+            }
+            else
+            {
+                expanded.Remove(current);
+            }
+            if (!recursive || !children.TryGetValue(current, out List<Ens>? descendants))
+            {
+                continue;
+            }
+            foreach (Ens child in descendants)
+            {
+                pending.Push(child.Id);
+            }
+        }
+        visibleRowsDirty = true;
+        EditorApplication.RequestRepaint();
+    }
+
+    //只提交视口行与需要保留的交互行
+    private void DrawRow(int index, EditorPanelContext context)
+    {
+        var visible = visibleRows[index];
+        var row = rows[visible.Id];
+        Ens ens = row.Ens;
+        string? name = EditorNativeComponents.ReadEnsHeader(visible.Id, ref row.NameRevision, out byte header);
+        if (name != null)
+        {
+            row.Label.Text = name + "###ens_" + row.Key;
+            rows[visible.Id] = row;
+        }
+        bool valid = (header & 8) != 0;
+        bool active = (header & 1) != 0;
+        bool selectable = (header & 2) != 0;
+        bool parentSelectable = (header & 4) != 0;
+        bool canTogglePick = valid && parentSelectable && !playing
+            && (EditorPrefabSession.Updating || EditorPrefabSession.IsEditing
+                || !visible.PrefabBound || visible.PrefabRoot);
+        GuiContent pickIcon = !parentSelectable ? pickInheritedContent : selectable ? pickContent : pickDisabledContent;
+        bool renaming = renamingEns.Equals(visible.Id);
+        bool hasChildren = children.ContainsKey(visible.Id);
+        int state = NativeEditorGUI.TreeRow(renaming ? renameContent : row.Label, visible.Depth,
+            selectedSet.Contains(visible.Id), !hasChildren, expanded.Contains(visible.Id),
+            pickIcon, !active, visible.PrefabBound, canTogglePick);
+        if (visible.Id.Equals(scrollEns))
+        {
+            scrollEns = EnsId.Null;
             NativeEditorGUI.SetScrollHereY(0.5f);
+            EditorApplication.RequestRepaint();
+        }
+        if (!valid)
+        {
+            hierarchyRevision = ulong.MaxValue;
+            return;
+        }
+        if ((state & 512) != 0)
+        {
+            interactionEns = visible.Id;
+        }
+        if ((state & 32) != 0 && hasChildren)
+        {
+            SetExpanded(visible.Id, (state & 1) != 0, (state & 16) != 0);
         }
         if (renaming)
         {
             EditorGUI.SameLine();
             DrawRenameInput(ens);
         }
-        //按住 Alt 点箭头才递归：刚展开的这一帧子树会被提交，展开能顺着递归直接传下去；
-        //刚折叠的这一帧子树一个都不会提交，只能记进待折叠集合
-        bool altToggle = (state & 16) != 0 && (state & 32) != 0;
-        bool expandSubtree = altToggle && (state & 1) != 0;
-        if (altToggle && !expandSubtree) MarkCollapsedSubtree(ens);
-        //选中认松开点击：按下就换选中会让检视面板立刻改内容，把节点拖到别的面板时那边已经换掉了
-        if ((state & 64) != 0)
+        if ((state & 256) == 0)
         {
-            int modifiers = NativeEditorGUI.SelectionModifiers;
-            EnsId[] previous = context.SelectedEnsList.ToArray();
-            pendingSelection = () => SelectEns(ens.Id, modifiers, previous);
+            if ((state & 128) != 0)
+            {
+                pendingSelectable = () => ToggleEditorSelectable(ens);
+            }
+            if ((state & 64) != 0)
+            {
+                int modifiers = NativeEditorGUI.SelectionModifiers;
+                EnsId[] previous = context.SelectedEnsList.ToArray();
+                pendingSelection = () => SelectEns(visible.Id, modifiers, previous);
+            }
+            if ((state & 8) != 0)
+            {
+                EditorNativeComponents.FocusEns(visible.Id);
+            }
+            DrawDropTarget(ens, NativeEditorGUI.GetDropPlacement());
+            NativeEditorGUI.DragSource(1, row.Key);
         }
-        if ((state & 8) != 0) EditorNativeComponents.FocusEns(ens.Id);
-        DrawDropTarget(ens, NativeEditorGUI.GetDropPlacement());
-        NativeEditorGUI.DragSource(1, key);
-        if (EditorGUI.BeginPopupContextItem("##ens_menu_" + key))
+        if (EditorGUI.BeginPopupContextItem("##ens_menu_" + row.Key))
         {
+            menuEns = visible.Id;
             try { DrawContextMenu(ens); }
             finally { EditorGUI.EndPopup(); }
         }
-        if ((state & 1) == 0) return;
-        try
-        {
-            if (descendants != null)
-                foreach (Ens child in descendants) DrawNode(child, context, expandSubtree);
-        }
-        finally { NativeEditorGUI.TreePop(); }
     }
 
     //按可见层级顺序执行单选、增减选择或范围选择
     private void SelectEns(EnsId clicked, int modifiers, IReadOnlyList<EnsId> previous)
     {
         bool toggle = (modifiers & 1) != 0;
-        int start = visibleEns.IndexOf(selectionAnchor.IsNull ? selectedEns : selectionAnchor);
-        int end = visibleEns.IndexOf(clicked);
+        int start = GetVisibleIndex(selectionAnchor.IsNull ? selectedEns : selectionAnchor);
+        int end = GetVisibleIndex(clicked);
         if ((modifiers & 2) == 0 || start < 0 || end < 0)
         {
             selectionAnchor = clicked;
@@ -199,8 +360,14 @@ internal sealed class EnsPanel : EditorPanel
             return;
         }
         List<EnsId> range = toggle ? previous.ToList() : [];
+        HashSet<EnsId> rangeIds = range.ToHashSet();
         for (int index = Math.Min(start, end); index <= Math.Max(start, end); ++index)
-            if (!range.Contains(visibleEns[index])) range.Add(visibleEns[index]);
+        {
+            if (rangeIds.Add(visibleEns[index]))
+            {
+                range.Add(visibleEns[index]);
+            }
+        }
         EditorNativeComponents.SelectEns(EnsId.Null);
         foreach (EnsId id in range.Where(id => !id.Equals(clicked))) EditorNativeComponents.SelectEns(id, true);
         EditorNativeComponents.SelectEns(clicked, true);
@@ -209,26 +376,33 @@ internal sealed class EnsPanel : EditorPanel
     //取得拖拽选择中的最外层节点并保持层级顺序
     private List<Ens> GetMovingEns(Ens source)
     {
-        if (!selectedIds.Contains(source.Id)) return source.IsValid ? [source] : [];
-        HashSet<EnsId> selection = selectedIds.ToHashSet();
-        return EditorNativeComponents.GetWorldEns().Where(selection.Contains).Select(Ens.FromId).Where(ens =>
+        if (selectedIds.Count <= 1 || !selectedSet.Contains(source.Id))
         {
-            if (!ens.IsValid) return false;
-            for (Ens ancestor = Ens.FromId(ens.Transform.GetParent()); ancestor.IsValid; ancestor = Ens.FromId(ancestor.Transform.GetParent()))
-                if (selection.Contains(ancestor.Id)) return false;
-            return true;
-        }).ToList();
-    }
-
-    //把整棵子树的键记进待折叠集合，等被折叠挡住的那些节点各自被画到时再压回折叠
-    private void MarkCollapsedSubtree(Ens ens)
-    {
-        if (!children.TryGetValue(ens.Id, out List<Ens>? descendants)) return;
-        foreach (Ens child in descendants)
-        {
-            collapsedKeys.Add(child.ResourceKey);
-            MarkCollapsedSubtree(child);
+            return source.IsValid ? [source] : [];
         }
+        List<Ens> moving = [];
+        foreach (EnsId id in selectedIds)
+        {
+            if (!rows.TryGetValue(id, out var row))
+            {
+                continue;
+            }
+            bool nested = false;
+            for (EnsId ancestor = row.Parent; !ancestor.IsNull; ancestor = rows[ancestor].Parent)
+            {
+                if (selectedSet.Contains(ancestor))
+                {
+                    nested = true;
+                    break;
+                }
+            }
+            if (!nested)
+            {
+                moving.Add(row.Ens);
+            }
+        }
+        moving.Sort((left, right) => rows[left.Id].Order.CompareTo(rows[right.Id].Order));
+        return moving;
     }
 
     /// <summary>面板隐藏后不再持有选择。</summary>
@@ -277,7 +451,9 @@ internal sealed class EnsPanel : EditorPanel
         if (!ens.IsValid || !EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header)) return;
         renamingEns = id;
         renameBuffer = ens.Name;
+        renameContent.Text = "###ens_" + ens.ResourceKey;
         renameFocusRequested = true;
+        Ping(ens.ResourceKey, false);
         EditorApplication.RequestRepaint();
     }
 
@@ -328,6 +504,37 @@ internal sealed class EnsPanel : EditorPanel
     {
         Ens ens = Ens.Find(key);
         if (ens.IsValid && EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header)) ens.Name = name;
+    }
+
+    //切换场景拾取并记录整次撤销
+    private void ToggleEditorSelectable(Ens ens)
+    {
+        if (!ens.IsValid || EditorApplication.IsPlaying
+            || !EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header))
+        {
+            return;
+        }
+
+        string key = ens.ResourceKey;
+        bool previous = ens.EditorSelectable;
+        SetEnsEditorSelectable(key, !previous);
+        EditorPropertyHistory.PushAction("Toggle SceneView Picking",
+            () => SetEnsEditorSelectable(key, previous),
+            () => SetEnsEditorSelectable(key, !previous));
+    }
+
+    //按稳定身份恢复场景拾取设置
+    private static void SetEnsEditorSelectable(string key, bool selectable)
+    {
+        Ens ens = Ens.Find(key);
+        if (!ens.IsValid || !EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header))
+        {
+            return;
+        }
+
+        ens.EditorSelectable = selectable;
+        EditorApplication.MarkWorldDirty();
+        EditorApplication.RequestRepaint();
     }
 
     //切换激活状态并记一次撤销事务
@@ -498,7 +705,7 @@ internal sealed class EnsPanel : EditorPanel
     //判断目标位置并在释放后排队提交
     private void DrawDropTarget(Ens target, int placement)
     {
-        string key = NativeEditorGUI.ReadDrag(out int kind, includeItemSpacing: target.IsValid);
+        string key = NativeEditorGUI.ReadDrag(out int kind, includeItemSpacing: !target.Id.IsNull);
         if (key.Length == 0) return;
         EnsId parent = EnsId.Null, before = EnsId.Null;
         if (target.IsValid)

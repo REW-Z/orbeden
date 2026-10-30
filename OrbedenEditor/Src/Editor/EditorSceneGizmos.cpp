@@ -9,6 +9,7 @@
 #include "Runtime/Object/Collider.h"
 #include "Runtime/Object/DirectionalLight.h"
 #include "Runtime/Object/WheelCollider.h"
+#include "Runtime/Object/RigidBody.h"
 #include <imgui.h>
 #include <algorithm>
 #include <bit>
@@ -253,22 +254,28 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
             if (WheelCollider* wheel = component->Cast<WheelCollider>())
             {
                 bool wheelActive = active && wheel->enabled;
-                float32 radius = std::max(std::abs(wheel->wheelRadius), 0.001f);
-                float32 restLength = std::max(wheel->suspensionRestLength, 0.0f);
-                float32 travel = std::max(wheel->suspensionTravel, 0.0f);
+                RigidBody* body = ens.FindComponentInAncestors<RigidBody>();
+                Transform* bodyTransform = body ? body->GetEns()->Transform() : transform;
+                matrix4x4 wheelRotation = RenderMath::Rotation(bodyTransform->worldRotation);
+                const float32* matrix = bodyTransform->worldMatrix.m;
+                float32 suspensionScale = std::sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]);
+                float32 radius = std::max(std::abs(wheel->wheelRadius) * suspensionScale, 0.001f);
+                float32 restLength = std::max(wheel->suspensionRestLength, 0.0f) * suspensionScale;
+                float32 travel = std::max(wheel->suspensionTravel, 0.0f) * suspensionScale;
                 float32 compression = wheelActive && wheel->IsGrounded()
                     ? std::clamp(wheel->GetCompression(), 0.0f, travel) : 0.0f;
 
-                //按物理计算定位安装点与轮心，悬挂沿世界向下且不受缩放影响
+                //取车轮节点位置，按所属刚体坐标系绘制悬挂
                 vector3 mount = Offset(transform->worldPosition,
-                    RenderMath::TransformDirection(rotation, wheel->wheelOffset), 1.0f);
-                vector3 restCenter = Offset(mount, {0, -1, 0}, restLength);
-                vector3 compressedCenter = Offset(restCenter, {0, 1, 0}, travel);
-                vector3 center = Offset(restCenter, {0, 1, 0}, compression);
+                    RenderMath::TransformDirection(bodyTransform->worldMatrix, wheel->wheelOffset), 1.0f);
+                vector3 down = RenderMath::TransformDirection(wheelRotation, {0, -1, 0});
+                vector3 restCenter = Offset(mount, down, restLength);
+                vector3 compressedCenter = Offset(restCenter, down, -travel);
+                vector3 center = Offset(restCenter, down, -compression);
                 float32 halfAngle = wheel->steeringWheel ? wheel->steerAngle * Pi / 360.0f : 0.0f;
                 quaternion steering{0, std::sin(halfAngle), 0, std::cos(halfAngle)};
                 matrix4x4 pose = RenderMath::TRS(center,
-                    RenderMath::Mul(transform->worldRotation, steering), {1, 1, 1});
+                    RenderMath::Mul(bodyTransform->worldRotation, steering), {1, 1, 1});
 
                 //绘制车轮圆环、直径与轮轴标记
                 sink.ink = wheelActive ? IM_COL32(90, 230, 135, selected ? 245 : 130) : IM_COL32(105, 155, 120, 140);
@@ -284,7 +291,7 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                 sink.Line(mount, center);
                 sink.ink = wheelActive ? IM_COL32(255, 180, 75, selected ? 245 : 130) : IM_COL32(155, 140, 110, 140);
                 sink.Line(restCenter, compressedCenter);
-                vector3 axle = RenderMath::TransformDirection(rotation, {1, 0, 0});
+                vector3 axle = RenderMath::TransformDirection(wheelRotation, {1, 0, 0});
                 for (vector3 endpoint : {restCenter, compressedCenter})
                     sink.Line(Offset(endpoint, axle, -marker), Offset(endpoint, axle, marker));
                 continue;

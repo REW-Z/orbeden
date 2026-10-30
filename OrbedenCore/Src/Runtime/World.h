@@ -32,6 +32,7 @@ private:
     bool dirtyTrackingEnabled = true;//Play 期间关闭，运行时改动不污染磁盘脏标记
     int32 dirtySuppressionDepth = 0;//大于 0 表示正在写编辑器临时对象
     uint64 contentRevision = 0;//内容整体替换序号，原地换内容时渲染侧据此重新绑定
+    uint64 hierarchyRevision = 0;//节点结构与顺序变更序号
     List<std::pair<Object*, StringId>> preparedObjectPaths;
     List<EnsSlot> ensSlots;//按EnsId索引的稀疏槽位表
     List<Ens*> liveEns;//所有存活Ens指针
@@ -118,6 +119,10 @@ public:
 
     //获取内容整体替换序号
     uint64 GetContentRevision() const { return contentRevision; }
+
+    //读取节点结构与顺序变更序号
+    ORBEDEN_BIND_IGNORE
+    uint64 GetHierarchyRevision() const { return hierarchyRevision; }
 
     //判断场景内容相对磁盘文件是否已有改动
     bool IsDirty() const { return dirty; }
