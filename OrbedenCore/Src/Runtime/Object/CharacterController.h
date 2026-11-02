@@ -4,6 +4,7 @@
 #include "Runtime/Object/Component.h"
 
 //PhysX CCT 角色控制器组件，位置使用实体变换的脚底坐标
+//碰撞层读取所属 Ens，交互规则由项目碰撞矩阵决定
 class CharacterController : public Component
 {
     OBJECT_TYPE_DECLARE(CharacterController)
@@ -19,5 +20,4 @@ public:
     float32 contactOffset = 0.05f;
     float32 slopeLimit = 0.707f;
     float32 minMoveDistance = 0.001f;
-    uint32 collisionMask = 0xFFFFFFFFu;
 };

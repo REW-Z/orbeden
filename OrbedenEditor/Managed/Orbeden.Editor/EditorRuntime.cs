@@ -403,7 +403,10 @@ public static class EditorRuntime
                     CustomEditorRegistry.DrawScene();
                     break;
                 case SceneGizmoPass.CommitEdits:
-                    while (Gizmos.TakeEdit(out EditorGizmoEdit edit)) CommitGizmoEdit(edit);
+                    while (Gizmos.TakeEditBatch(out EditorGizmoEdit[] edits))
+                    {
+                        CommitGizmoEditBatch(edits);
+                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(pass), pass, "Unknown scene Gizmo pass.");
@@ -446,38 +449,39 @@ public static class EditorRuntime
     }
 
     //把一次手柄拖拽记成一条撤销事务，撤销/重做直接写局部变换
-    private static void CommitGizmoEdit(EditorGizmoEdit edit)
+    private static void CommitGizmoEditBatch(EditorGizmoEdit[] edits)
     {
-        if (edit.Ens.IsNull) return;
-
-        EnsId id = edit.Ens;
-        vector3 startPosition = edit.StartPosition;
-        quaternion startRotation = edit.StartRotation;
-        vector3 startScale = edit.StartScale;
-        vector3 endPosition = edit.EndPosition;
-        quaternion endRotation = edit.EndRotation;
-        vector3 endScale = edit.EndScale;
-
-        string label = edit.Mode switch
+        string label = edits[0].Mode switch
         {
             1 => "Rotate Ens",
             2 => "Scale Ens",
             _ => "Move Ens",
         };
         EditorPropertyHistory.PushAction(label,
-            () => RestoreGizmoTransform(id, startPosition, startRotation, startScale),
-            () => RestoreGizmoTransform(id, endPosition, endRotation, endScale));
+            () => RestoreGizmoTransforms(edits, useEndValues: false),
+            () => RestoreGizmoTransforms(edits, useEndValues: true));
+        EditorApplication.MarkWorldDirty();
     }
 
-    //按撤销记录写回一个 Ens 的局部变换
-    private static void RestoreGizmoTransform(EnsId id, vector3 position, quaternion rotation, vector3 scale)
+    //按整批撤销记录恢复各节点的局部变换
+    private static void RestoreGizmoTransforms(EditorGizmoEdit[] edits, bool useEndValues)
     {
-        Ens ens = Ens.FromId(id);
-        if (!ens.IsValid) return;
+        foreach (EditorGizmoEdit edit in edits)
+        {
+            if (!Ens.FromId(edit.Ens).IsValid)
+            {
+                throw new InvalidOperationException("Cannot restore transform batch: an Ens no longer exists.");
+            }
+        }
 
-        ens.Transform.localPosition = position;
-        ens.Transform.localRotation = rotation;
-        ens.Transform.localScale = scale;
+        foreach (EditorGizmoEdit edit in edits)
+        {
+            Transform transform = Ens.FromId(edit.Ens).Transform;
+            transform.localPosition = useEndValues ? edit.EndPosition : edit.StartPosition;
+            transform.localRotation = useEndValues ? edit.EndRotation : edit.StartRotation;
+            transform.localScale = useEndValues ? edit.EndScale : edit.StartScale;
+        }
+        EditorApplication.MarkWorldDirty();
     }
 
     /// <summary>发布当前项目的 NativeAOT 库。</summary>
@@ -598,6 +602,7 @@ public static class EditorRuntime
         ValidateSize<EditorComponentSnapshotAbi>(nameof(EditorComponentSnapshotAbi), 32);
         ValidateSize<EditorRectPrimitive>(nameof(EditorRectPrimitive), 36);
         ValidateSize<EditorScenePickHit>(nameof(EditorScenePickHit), 20);
+        ValidateSize<EditorGizmoEdit>(nameof(EditorGizmoEdit), 92);
         ValidateSize<ProfileEvent>(nameof(ProfileEvent), 40);
         ValidateSize<ProfileGpuEvent>(nameof(ProfileGpuEvent), 24);
         ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 104);

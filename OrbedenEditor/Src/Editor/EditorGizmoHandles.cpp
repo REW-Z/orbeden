@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace
 {
@@ -229,13 +230,19 @@ bool EditorGizmoHandles::IsDragging() const { return dragActive; }
 
 bool EditorGizmoHandles::OwnsMouse() const { return dragActive || hovered != EditorGizmoHandle::None; }
 
-bool EditorGizmoHandles::TakeEdit(EditorGizmoEdit& edit)
+//取出完整拖拽批次并保留借用数据
+int32 EditorGizmoHandles::TakeEditBatch(const EditorGizmoEdit*& edits)
 {
-    if (pendingEdits.empty()) return false;
+    edits = nullptr;
+    if (pendingEditBatches.empty())
+    {
+        return 0;
+    }
 
-    edit = pendingEdits.front();
-    pendingEdits.erase(pendingEdits.begin());
-    return true;
+    takenEdits.swap(pendingEditBatches.front());
+    pendingEditBatches.pop_front();
+    edits = takenEdits.data();
+    return static_cast<int32>(takenEdits.size());
 }
 
 //把世界点投影到场景视口屏幕坐标
@@ -803,12 +810,6 @@ void EditorGizmoHandles::RestoreTargets(World& world) const
     }
 }
 
-//记录一条待提交的编辑
-void EditorGizmoHandles::PushEdit(const EditorGizmoEdit& edit)
-{
-    pendingEdits.push_back(edit);
-}
-
 //取消拖拽并还原起始变换
 void EditorGizmoHandles::CancelDrag(World& world)
 {
@@ -854,6 +855,8 @@ void EditorGizmoHandles::Update(World& world, const EditorGizmoView& view, bool 
         //没收到松开事件（失焦等）时按取消处理，避免留下半截状态
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
         {
+            std::vector<EditorGizmoEdit> edits;
+            edits.reserve(targets.size());
             for (const Target& target : targets)
             {
                 Transform* transform = world.GetTransform(target.ens);
@@ -885,7 +888,13 @@ void EditorGizmoHandles::Update(World& world, const EditorGizmoView& view, bool 
                 edit.endPosition = { localPosition.x, localPosition.y, localPosition.z };
                 edit.endRotation = { localRotation.x, localRotation.y, localRotation.z, localRotation.w };
                 edit.endScale = { localScale.x, localScale.y, localScale.z };
-                PushEdit(edit);
+                edits.push_back(edit);
+            }
+
+            //按本次拖拽提交完整批次
+            if (!edits.empty())
+            {
+                pendingEditBatches.push_back(std::move(edits));
             }
 
             dragActive = false;

@@ -25,7 +25,7 @@ internal unsafe struct EditorGizmoApi
 {
     public delegate* unmanaged[Cdecl]<vector3, vector3, color, void> Line3D;
     public delegate* unmanaged[Cdecl]<vector3, byte*, int, void> Label3D;
-    public delegate* unmanaged[Cdecl]<EditorGizmoEdit*, int> TakeEdit;
+    public delegate* unmanaged[Cdecl]<EditorGizmoEdit**, int> TakeEditBatch;
     public delegate* unmanaged[Cdecl]<EnsId, byte> IsSelected;
     public delegate* unmanaged[Cdecl]<byte> IsVisible;
     public delegate* unmanaged[Cdecl]<vector3, vector2*, byte> ProjectPoint;
@@ -154,16 +154,23 @@ public static unsafe class Gizmos
         }
     }
 
-    /// <summary>取出一条待提交的手柄编辑，没有时返回 false。</summary>
-    internal static bool TakeEdit(out EditorGizmoEdit edit)
+    /// <summary>复制一次拖拽的全部编辑，没有待提交批次时返回 false。</summary>
+    internal static bool TakeEditBatch(out EditorGizmoEdit[] edits)
     {
-        edit = default;
-        if (!initialized || api.TakeEdit == null) return false;
+        edits = Array.Empty<EditorGizmoEdit>();
+        if (!initialized || api.TakeEditBatch == null)
+        {
+            return false;
+        }
 
-        EditorGizmoEdit value = default;
-        if (api.TakeEdit(&value) == 0) return false;
+        EditorGizmoEdit* data = null;
+        int count = api.TakeEditBatch(&data);
+        if (count == 0)
+        {
+            return false;
+        }
 
-        edit = value;
+        edits = new ReadOnlySpan<EditorGizmoEdit>(data, count).ToArray();
         return true;
     }
 }

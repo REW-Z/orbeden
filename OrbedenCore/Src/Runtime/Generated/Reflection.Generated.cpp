@@ -1447,62 +1447,6 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
-    //读取 CharacterController.collisionMask 字段
-    static std::string Get_CharacterController_collisionMask(Object* object)
-    {
-        CharacterController* instance = static_cast<CharacterController*>(object);
-        return Reflection::ToXmlValue(instance->collisionMask);
-    }
-
-    //直接读取 CharacterController.collisionMask 字段
-    static Reflection::Value GetValue_CharacterController_collisionMask(Object* object)
-    {
-        CharacterController* instance = static_cast<CharacterController*>(object);
-        return instance ? Reflection::ToValue(instance->collisionMask) : Reflection::Value();
-    }
-
-    //写入 CharacterController.collisionMask 字段
-    static bool Set_CharacterController_collisionMask(Object* object, const std::string& value)
-    {
-        CharacterController* instance = static_cast<CharacterController*>(object);
-        return Reflection::SetFromXmlValue(instance->collisionMask, value);
-    }
-
-    //直接写入 CharacterController.collisionMask 字段
-    static bool SetValue_CharacterController_collisionMask(Object* object, const Reflection::Value& value)
-    {
-        CharacterController* instance = static_cast<CharacterController*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->collisionMask, value);
-    }
-
-    //按具体类型读取 CharacterController.collisionMask
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_collisionMask(Object* object, uint32* output)
-    {
-        try
-        {
-            auto* instance = static_cast<CharacterController*>(object);
-            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-            *output = instance->collisionMask;
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 CharacterController.collisionMask，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_collisionMask(Object* object, uint32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<CharacterController*>(object);
-            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->collisionMask = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
     //读取 Collider.enabled 字段
     static std::string Get_Collider_enabled(Object* object)
     {
@@ -1833,62 +1777,6 @@ public:
             auto* instance = static_cast<Collider*>(object);
             if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
             instance->restitution = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //读取 Collider.collisionMask 字段
-    static std::string Get_Collider_collisionMask(Object* object)
-    {
-        Collider* instance = static_cast<Collider*>(object);
-        return Reflection::ToXmlValue(instance->collisionMask);
-    }
-
-    //直接读取 Collider.collisionMask 字段
-    static Reflection::Value GetValue_Collider_collisionMask(Object* object)
-    {
-        Collider* instance = static_cast<Collider*>(object);
-        return instance ? Reflection::ToValue(instance->collisionMask) : Reflection::Value();
-    }
-
-    //写入 Collider.collisionMask 字段
-    static bool Set_Collider_collisionMask(Object* object, const std::string& value)
-    {
-        Collider* instance = static_cast<Collider*>(object);
-        return Reflection::SetFromXmlValue(instance->collisionMask, value);
-    }
-
-    //直接写入 Collider.collisionMask 字段
-    static bool SetValue_Collider_collisionMask(Object* object, const Reflection::Value& value)
-    {
-        Collider* instance = static_cast<Collider*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->collisionMask, value);
-    }
-
-    //按具体类型读取 Collider.collisionMask
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_collisionMask(Object* object, uint32* output)
-    {
-        try
-        {
-            auto* instance = static_cast<Collider*>(object);
-            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-            *output = instance->collisionMask;
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 Collider.collisionMask，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_collisionMask(Object* object, uint32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<Collider*>(object);
-            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->collisionMask = value;
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -6730,6 +6618,286 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //读取 RigidBody.automaticCenterOfMass 字段
+    static std::string Get_RigidBody_automaticCenterOfMass(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->automaticCenterOfMass);
+    }
+
+    //直接读取 RigidBody.automaticCenterOfMass 字段
+    static Reflection::Value GetValue_RigidBody_automaticCenterOfMass(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->automaticCenterOfMass) : Reflection::Value();
+    }
+
+    //写入 RigidBody.automaticCenterOfMass 字段
+    static bool Set_RigidBody_automaticCenterOfMass(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->automaticCenterOfMass, value);
+    }
+
+    //直接写入 RigidBody.automaticCenterOfMass 字段
+    static bool SetValue_RigidBody_automaticCenterOfMass(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->automaticCenterOfMass, value);
+    }
+
+    //按具体类型读取 RigidBody.automaticCenterOfMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_automaticCenterOfMass(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->automaticCenterOfMass) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.automaticCenterOfMass，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_automaticCenterOfMass(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->automaticCenterOfMass = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //读取 RigidBody.centerOfMass 字段
+    static std::string Get_RigidBody_centerOfMass(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->centerOfMass);
+    }
+
+    //直接读取 RigidBody.centerOfMass 字段
+    static Reflection::Value GetValue_RigidBody_centerOfMass(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->centerOfMass) : Reflection::Value();
+    }
+
+    //写入 RigidBody.centerOfMass 字段
+    static bool Set_RigidBody_centerOfMass(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->centerOfMass, value);
+    }
+
+    //直接写入 RigidBody.centerOfMass 字段
+    static bool SetValue_RigidBody_centerOfMass(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->centerOfMass, value);
+    }
+
+    //按具体类型读取 RigidBody.centerOfMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_centerOfMass(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->centerOfMass;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.centerOfMass，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_centerOfMass(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->centerOfMass = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //读取 RigidBody.automaticInertiaTensor 字段
+    static std::string Get_RigidBody_automaticInertiaTensor(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->automaticInertiaTensor);
+    }
+
+    //直接读取 RigidBody.automaticInertiaTensor 字段
+    static Reflection::Value GetValue_RigidBody_automaticInertiaTensor(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->automaticInertiaTensor) : Reflection::Value();
+    }
+
+    //写入 RigidBody.automaticInertiaTensor 字段
+    static bool Set_RigidBody_automaticInertiaTensor(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->automaticInertiaTensor, value);
+    }
+
+    //直接写入 RigidBody.automaticInertiaTensor 字段
+    static bool SetValue_RigidBody_automaticInertiaTensor(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->automaticInertiaTensor, value);
+    }
+
+    //按具体类型读取 RigidBody.automaticInertiaTensor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_automaticInertiaTensor(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->automaticInertiaTensor) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.automaticInertiaTensor，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_automaticInertiaTensor(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->automaticInertiaTensor = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //读取 RigidBody.inertiaTensor 字段
+    static std::string Get_RigidBody_inertiaTensor(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->inertiaTensor);
+    }
+
+    //直接读取 RigidBody.inertiaTensor 字段
+    static Reflection::Value GetValue_RigidBody_inertiaTensor(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->inertiaTensor) : Reflection::Value();
+    }
+
+    //写入 RigidBody.inertiaTensor 字段
+    static bool Set_RigidBody_inertiaTensor(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->inertiaTensor, value);
+    }
+
+    //直接写入 RigidBody.inertiaTensor 字段
+    static bool SetValue_RigidBody_inertiaTensor(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->inertiaTensor, value);
+    }
+
+    //按具体类型读取 RigidBody.inertiaTensor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_inertiaTensor(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->inertiaTensor;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.inertiaTensor，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_inertiaTensor(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->inertiaTensor = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //读取 RigidBody.inertiaTensorRotation 字段
+    static std::string Get_RigidBody_inertiaTensorRotation(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->inertiaTensorRotation);
+    }
+
+    //直接读取 RigidBody.inertiaTensorRotation 字段
+    static Reflection::Value GetValue_RigidBody_inertiaTensorRotation(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->inertiaTensorRotation) : Reflection::Value();
+    }
+
+    //写入 RigidBody.inertiaTensorRotation 字段
+    static bool Set_RigidBody_inertiaTensorRotation(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->inertiaTensorRotation, value);
+    }
+
+    //直接写入 RigidBody.inertiaTensorRotation 字段
+    static bool SetValue_RigidBody_inertiaTensorRotation(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->inertiaTensorRotation, value);
+    }
+
+    //按具体类型读取 RigidBody.inertiaTensorRotation
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_inertiaTensorRotation(Object* object, quaternion* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->inertiaTensorRotation;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.inertiaTensorRotation，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_inertiaTensorRotation(Object* object, quaternion value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->inertiaTensorRotation = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 RigidBody.useGravity 字段
     static std::string Get_RigidBody_useGravity(Object* object)
     {
@@ -10423,62 +10591,6 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
-    //读取 WheelCollider.groundQueryLayer 字段
-    static std::string Get_WheelCollider_groundQueryLayer(Object* object)
-    {
-        WheelCollider* instance = static_cast<WheelCollider*>(object);
-        return Reflection::ToXmlValue(instance->groundQueryLayer);
-    }
-
-    //直接读取 WheelCollider.groundQueryLayer 字段
-    static Reflection::Value GetValue_WheelCollider_groundQueryLayer(Object* object)
-    {
-        WheelCollider* instance = static_cast<WheelCollider*>(object);
-        return instance ? Reflection::ToValue(instance->groundQueryLayer) : Reflection::Value();
-    }
-
-    //写入 WheelCollider.groundQueryLayer 字段
-    static bool Set_WheelCollider_groundQueryLayer(Object* object, const std::string& value)
-    {
-        WheelCollider* instance = static_cast<WheelCollider*>(object);
-        return Reflection::SetFromXmlValue(instance->groundQueryLayer, value);
-    }
-
-    //直接写入 WheelCollider.groundQueryLayer 字段
-    static bool SetValue_WheelCollider_groundQueryLayer(Object* object, const Reflection::Value& value)
-    {
-        WheelCollider* instance = static_cast<WheelCollider*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->groundQueryLayer, value);
-    }
-
-    //按具体类型读取 WheelCollider.groundQueryLayer
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_groundQueryLayer(Object* object, uint32* output)
-    {
-        try
-        {
-            auto* instance = static_cast<WheelCollider*>(object);
-            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-            *output = instance->groundQueryLayer;
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 WheelCollider.groundQueryLayer，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_groundQueryLayer(Object* object, uint32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<WheelCollider*>(object);
-            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->groundQueryLayer = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
     //读取 WheelCollider.steeringWheel 字段
     static std::string Get_WheelCollider_steeringWheel(Object* object)
     {
@@ -10874,7 +10986,6 @@ namespace Reflection
                 FieldInfo("contactOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_contactOffset, ReflectionGeneratedAccess::Set_CharacterController_contactOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_contactOffset, ReflectionGeneratedAccess::SetValue_CharacterController_contactOffset, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_contactOffset), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_contactOffset)),
                 FieldInfo("slopeLimit", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_slopeLimit, ReflectionGeneratedAccess::Set_CharacterController_slopeLimit, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_slopeLimit, ReflectionGeneratedAccess::SetValue_CharacterController_slopeLimit, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_slopeLimit), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_slopeLimit)),
                 FieldInfo("minMoveDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_minMoveDistance, ReflectionGeneratedAccess::Set_CharacterController_minMoveDistance, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_minMoveDistance, ReflectionGeneratedAccess::SetValue_CharacterController_minMoveDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_minMoveDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_minMoveDistance)),
-                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionMask, ReflectionGeneratedAccess::Set_CharacterController_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionMask, ReflectionGeneratedAccess::SetValue_CharacterController_collisionMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_collisionMask), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_collisionMask)),
             });
 
         RegisterTypeMethods(CharacterController::StaticType(),
@@ -10889,7 +11000,6 @@ namespace Reflection
                 FieldInfo("staticFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_staticFriction, ReflectionGeneratedAccess::Set_Collider_staticFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_staticFriction, ReflectionGeneratedAccess::SetValue_Collider_staticFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_staticFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_staticFriction)),
                 FieldInfo("dynamicFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_dynamicFriction, ReflectionGeneratedAccess::Set_Collider_dynamicFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_dynamicFriction, ReflectionGeneratedAccess::SetValue_Collider_dynamicFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_dynamicFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_dynamicFriction)),
                 FieldInfo("restitution", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_restitution, ReflectionGeneratedAccess::Set_Collider_restitution, nullptr, ReflectionGeneratedAccess::GetValue_Collider_restitution, ReflectionGeneratedAccess::SetValue_Collider_restitution, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_restitution), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_restitution)),
-                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionMask, ReflectionGeneratedAccess::Set_Collider_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionMask, ReflectionGeneratedAccess::SetValue_Collider_collisionMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_collisionMask), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_collisionMask)),
             });
 
         RegisterTypeMethods(Collider::StaticType(),
@@ -11171,6 +11281,11 @@ namespace Reflection
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_enabled, ReflectionGeneratedAccess::Set_RigidBody_enabled, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_enabled, ReflectionGeneratedAccess::SetValue_RigidBody_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_enabled)),
                 FieldInfo("bodyType", "PhysicsBodyType", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
                 FieldInfo("mass", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_mass, ReflectionGeneratedAccess::Set_RigidBody_mass, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_mass, ReflectionGeneratedAccess::SetValue_RigidBody_mass, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_mass), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_mass)),
+                FieldInfo("automaticCenterOfMass", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_automaticCenterOfMass, ReflectionGeneratedAccess::Set_RigidBody_automaticCenterOfMass, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_automaticCenterOfMass, ReflectionGeneratedAccess::SetValue_RigidBody_automaticCenterOfMass, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_automaticCenterOfMass), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_automaticCenterOfMass)),
+                FieldInfo("centerOfMass", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_centerOfMass, ReflectionGeneratedAccess::Set_RigidBody_centerOfMass, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_centerOfMass, ReflectionGeneratedAccess::SetValue_RigidBody_centerOfMass, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_centerOfMass), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_centerOfMass)),
+                FieldInfo("automaticInertiaTensor", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_automaticInertiaTensor, ReflectionGeneratedAccess::Set_RigidBody_automaticInertiaTensor, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_automaticInertiaTensor, ReflectionGeneratedAccess::SetValue_RigidBody_automaticInertiaTensor, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_automaticInertiaTensor), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_automaticInertiaTensor)),
+                FieldInfo("inertiaTensor", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_inertiaTensor, ReflectionGeneratedAccess::Set_RigidBody_inertiaTensor, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_inertiaTensor, ReflectionGeneratedAccess::SetValue_RigidBody_inertiaTensor, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_inertiaTensor), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_inertiaTensor)),
+                FieldInfo("inertiaTensorRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_RigidBody_inertiaTensorRotation, ReflectionGeneratedAccess::Set_RigidBody_inertiaTensorRotation, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_inertiaTensorRotation, ReflectionGeneratedAccess::SetValue_RigidBody_inertiaTensorRotation, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Quaternion, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_inertiaTensorRotation), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_inertiaTensorRotation)),
                 FieldInfo("useGravity", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_useGravity, ReflectionGeneratedAccess::Set_RigidBody_useGravity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_useGravity, ReflectionGeneratedAccess::SetValue_RigidBody_useGravity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_useGravity), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_useGravity)),
                 FieldInfo("linearDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_linearDamping, ReflectionGeneratedAccess::Set_RigidBody_linearDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_linearDamping, ReflectionGeneratedAccess::SetValue_RigidBody_linearDamping, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_linearDamping), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_linearDamping)),
                 FieldInfo("angularDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_angularDamping, ReflectionGeneratedAccess::Set_RigidBody_angularDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_angularDamping, ReflectionGeneratedAccess::SetValue_RigidBody_angularDamping, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_angularDamping), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_angularDamping)),
@@ -11352,7 +11467,6 @@ namespace Reflection
                 FieldInfo("rollingFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_rollingFriction, ReflectionGeneratedAccess::Set_WheelCollider_rollingFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_rollingFriction, ReflectionGeneratedAccess::SetValue_WheelCollider_rollingFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_rollingFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_rollingFriction)),
                 FieldInfo("lateralFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_lateralFriction, ReflectionGeneratedAccess::Set_WheelCollider_lateralFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_lateralFriction, ReflectionGeneratedAccess::SetValue_WheelCollider_lateralFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_lateralFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_lateralFriction)),
                 FieldInfo("raycastDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_raycastDistance, ReflectionGeneratedAccess::Set_WheelCollider_raycastDistance, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_raycastDistance, ReflectionGeneratedAccess::SetValue_WheelCollider_raycastDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_raycastDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_raycastDistance)),
-                FieldInfo("groundQueryLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_WheelCollider_groundQueryLayer, ReflectionGeneratedAccess::Set_WheelCollider_groundQueryLayer, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_groundQueryLayer, ReflectionGeneratedAccess::SetValue_WheelCollider_groundQueryLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_groundQueryLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_groundQueryLayer)),
                 FieldInfo("steeringWheel", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_steeringWheel, ReflectionGeneratedAccess::Set_WheelCollider_steeringWheel, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_steeringWheel, ReflectionGeneratedAccess::SetValue_WheelCollider_steeringWheel, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_steeringWheel), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_steeringWheel)),
                 FieldInfo("steerAngle", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_steerAngle, ReflectionGeneratedAccess::Set_WheelCollider_steerAngle, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_steerAngle, ReflectionGeneratedAccess::SetValue_WheelCollider_steerAngle, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_steerAngle), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_steerAngle)),
                 FieldInfo("grounded", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_grounded, ReflectionGeneratedAccess::Set_WheelCollider_grounded, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_grounded, ReflectionGeneratedAccess::SetValue_WheelCollider_grounded, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_grounded), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_grounded)),

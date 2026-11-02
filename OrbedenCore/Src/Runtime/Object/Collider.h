@@ -15,6 +15,7 @@ enum class ColliderGeometryType : uint32
 };
 
 //物理碰撞体基类；归属自身或最近祖先的刚体，未找到时作为独立静态碰撞体
+//碰撞层读取所属 Ens，交互规则由项目碰撞矩阵决定
 class Collider : public Component
 {
     OBJECT_TYPE_DECLARE_ABSTRACT(Collider)
@@ -26,7 +27,6 @@ public:
     float32 staticFriction = 0.5f;
     float32 dynamicFriction = 0.5f;
     float32 restitution = 0.0f;
-    uint32 collisionMask = 0xFFFFFFFFu;
 
     //获取具体几何类型。
     virtual ColliderGeometryType GetGeometryType() const = 0;

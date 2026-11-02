@@ -298,6 +298,7 @@ public:
         PxRigidActor* actor = nullptr;
         uint64 configurationHash = 0;
         PhysicsBodyType bodyType = PhysicsBodyType::Static;
+        uint64 massPropertiesHash = 0;
         std::unordered_map<int32, std::unique_ptr<ShapeRecord>> shapes;
         vector3 lastPosition;
         quaternion lastRotation;
@@ -677,7 +678,6 @@ public:
         hash = MixHash(hash, static_cast<uint32>(type));
         if (body)
         {
-            hash = MixFloat(hash, body->mass);
             hash = MixHash(hash, body->useGravity);
             hash = MixFloat(hash, body->linearDamping);
             hash = MixFloat(hash, body->angularDamping);
@@ -841,8 +841,8 @@ public:
         material->release();
         if (!shape) return nullptr;
 
-        //缓存所属层、有效掩码和组件原始掩码
-        PxFilterData filter(layerMask, collider.collisionMask & collisionMask, collider.collisionMask, 0);
+        //缓存所属 Ens 的层与碰撞矩阵行
+        PxFilterData filter(layerMask, collisionMask, 0, 0);
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
         return shape;
@@ -944,10 +944,11 @@ public:
                 massChanged = true;
             }
 
-            //保留碰撞体自身的层与过滤掩码
-            uint32 layerMask = ens.GetLayerMask();
-            uint32 collisionMask = LayerSettings::GetCollisionMask(ens.GetLayer());
-            PxFilterData filter(layerMask, collider->collisionMask & collisionMask, collider->collisionMask, 0);
+            //读取碰撞体所属 Ens 的层与碰撞矩阵行
+            uint32 layer = ens.GetLayer();
+            uint32 layerMask = 1u << layer;
+            uint32 collisionMask = LayerSettings::GetCollisionMask(layer);
+            PxFilterData filter(layerMask, collisionMask, 0, 0);
             bool created = found == record.shapes.end();
             if (created)
             {
@@ -972,7 +973,7 @@ public:
             }
             ShapeRecord& entry = *found->second;
             entry.seen = true;
-            if (entry.filter.word0 != filter.word0 || entry.filter.word1 != filter.word1 || entry.filter.word2 != filter.word2)
+            if (entry.filter.word0 != filter.word0 || entry.filter.word1 != filter.word1)
             {
                 entry.shape->setSimulationFilterData(filter);
                 entry.shape->setQueryFilterData(filter);
@@ -1017,22 +1018,66 @@ public:
             scene->resetFiltering(*record.actor);
         }
 
-        //按实体形状更新质量分布，纯悬挂刚体按质量设置惯量
-        if (massChanged && record.bodyType == PhysicsBodyType::Dynamic)
+        if (record.bodyType != PhysicsBodyType::Dynamic)
+        {
+            return;
+        }
+
+        //比较当前质量分布设置
+        const RigidBody& body = *input.body;
+        uint64 massHash = MixFloat(0xCBF29CE484222325ull, body.mass);
+        massHash = MixHash(massHash, body.automaticCenterOfMass);
+        massHash = MixHash(massHash, body.automaticInertiaTensor);
+        if (!body.automaticCenterOfMass)
+        {
+            massHash = MixVector(massHash, body.centerOfMass);
+        }
+        if (!body.automaticInertiaTensor)
+        {
+            massHash = MixVector(massHash, body.inertiaTensor);
+            const quaternion& rotation = body.inertiaTensorRotation;
+            massHash = MixFloat(massHash, rotation.x);
+            massHash = MixFloat(massHash, rotation.y);
+            massHash = MixFloat(massHash, rotation.z);
+            massHash = MixFloat(massHash, rotation.w);
+        }
+
+        //按独立开关计算重心与惯量
+        if (massChanged || record.massPropertiesHash != massHash)
         {
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record.actor);
-            float32 mass = input.body ? Positive(input.body->mass) : 1.0f;
+            float32 mass = Positive(body.mass);
+            PxVec3 manualCenter = ToPx(body.centerOfMass);
             bool hasSimulationShape = false;
             for (const auto& entry : record.shapes)
             {
                 hasSimulationShape |= entry.second->shape->getFlags().isSet(PxShapeFlag::eSIMULATION_SHAPE);
             }
-            if (!hasSimulationShape || !PxRigidBodyExt::setMassAndUpdateInertia(*dynamic, mass))
+            bool calculate = hasSimulationShape && (body.automaticCenterOfMass || body.automaticInertiaTensor);
+            if (!calculate || !PxRigidBodyExt::setMassAndUpdateInertia(*dynamic, mass,
+                body.automaticCenterOfMass ? nullptr : &manualCenter))
             {
                 dynamic->setMass(mass);
                 dynamic->setCMassLocalPose(PxTransform(PxIdentity));
                 dynamic->setMassSpaceInertiaTensor(PxVec3(mass));
             }
+
+            //应用手动设置并保留自动计算的另一部分
+            PxTransform massPose = dynamic->getCMassLocalPose();
+            if (!body.automaticCenterOfMass)
+            {
+                massPose.p = manualCenter;
+            }
+            if (!body.automaticInertiaTensor)
+            {
+                massPose.q = ToPx(body.inertiaTensorRotation);
+                dynamic->setMassSpaceInertiaTensor(PxVec3(
+                    std::max(body.inertiaTensor.x, MinimumDimension),
+                    std::max(body.inertiaTensor.y, MinimumDimension),
+                    std::max(body.inertiaTensor.z, MinimumDimension)));
+            }
+            dynamic->setCMassLocalPose(massPose);
+            record.massPropertiesHash = massHash;
             if (!queryOnly)
             {
                 dynamic->wakeUp();
@@ -1152,7 +1197,7 @@ public:
         //PhysX 高度场从角落开始采样，渲染网格以中心为原点。
         shape->setLocalPose(PxTransform(PxVec3(-component.sizeX * 0.5f, 0.0f, -component.sizeZ * 0.5f)));
 
-        PxFilterData filter(layerMask, collisionMask, 0xFFFFFFFFu, 0);
+        PxFilterData filter(layerMask, collisionMask, 0, 0);
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
 
@@ -1209,7 +1254,7 @@ public:
             PxShape* shape = nullptr;
             if (record.actor->getShapes(&shape, 1) == 1)
             {
-                PxFilterData filter(layerMask, collisionMask, 0xFFFFFFFFu, 0);
+                PxFilterData filter(layerMask, collisionMask, 0, 0);
                 shape->setSimulationFilterData(filter);
                 shape->setQueryFilterData(filter);
                 scene->resetFiltering(*record.actor);
@@ -1538,7 +1583,7 @@ public:
 
             uint64 key = EnsKey(component->GetEnsId());
             PxFilterData filter(ens->GetLayerMask(),
-                component->collisionMask & LayerSettings::GetCollisionMask(ens->GetLayer()), 0, 0);
+                LayerSettings::GetCollisionMask(ens->GetLayer()), 0, 0);
             seen.insert(key);
             uint64 hash = CalculateControllerHash(*component);
             auto found = controllers.find(key);
@@ -1681,13 +1726,13 @@ public:
         return true;
     }
 
-    //沿悬挂方向探测地面并排除所属刚体和触发器
+    //按车轮层和碰撞矩阵探测地面，排除所属刚体与触发器
     bool WheelRaycast(const vector3& origin, const vector3& direction, float32 distance,
-        PhysicsQueryHit& hit, uint32 layerMask, const PxRigidActor* body) const
+        PhysicsQueryHit& hit, uint32 layer, const PxRigidActor* body) const
     {
         PxVec3 unitDirection = ToPx(direction);
         if (distance <= 0.0f || unitDirection.normalize() <= 0.0f) return false;
-        LayerQueryFilter callback(layerMask, false, 0, body, false);
+        LayerQueryFilter callback(LayerSettings::GetCollisionMask(layer), false, 1u << layer, body, false);
         PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER);
         PxRaycastBuffer result;
         if (!scene->raycast(ToPx(origin), unitDirection, distance, result, PxHitFlag::eDEFAULT, filter, &callback) || !result.hasBlock) return false;
@@ -1708,17 +1753,16 @@ public:
             BodyRecord* record = FindBody(ens.GetId());
             if (!record || record->bodyType != PhysicsBodyType::Dynamic) return;
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record->actor);
-            Transform& bodyTransform = *currentWorld.GetTransform(record->binding.ens);
-            quaternion rotation = bodyTransform.worldRotation;
+            quaternion rotation = transform->worldRotation;
 
-            //取车轮节点位置，按所属刚体坐标系计算偏移与悬挂
-            vector3 mountWorld = Add(transform->worldPosition,
-                RenderMath::TransformDirection(bodyTransform.worldMatrix, wheel->wheelOffset));
+            //按车轮节点世界变换计算安装点与悬挂轴
+            vector3 mountWorld = RenderMath::TransformPoint(transform->worldMatrix, wheel->wheelOffset);
             vector3 direction = Rotate(rotation, { 0.0f, -1.0f, 0.0f });
-            float32 suspensionScale = GetWorldScale(bodyTransform).y;
+            const float32* matrix = transform->worldMatrix.m;
+            float32 suspensionScale = std::sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]);
             PhysicsQueryHit hit;
             if (!WheelRaycast(mountWorld, direction, wheel->raycastDistance * suspensionScale,
-                hit, wheel->groundQueryLayer, dynamic)) return;
+                hit, ens.GetLayer(), dynamic)) return;
 
             float32 compression = std::clamp((wheel->suspensionRestLength + wheel->wheelRadius) * suspensionScale
                 - hit.distance, 0.0f, std::max(0.0f, wheel->suspensionTravel * suspensionScale));

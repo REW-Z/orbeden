@@ -1113,16 +1113,16 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.TextResource), "TextResource", 11768548724227209485UL, (ens, pointer) => new global::Orbeden.TextResource(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Texture2D), "Texture2D", 5833247944439309010UL, (ens, pointer) => new global::Orbeden.Texture2D(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Camera), "Camera", 1701664351275001347UL, (ens, pointer) => new global::Orbeden.Camera(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.CharacterController), "CharacterController", 10238575052024383737UL, (ens, pointer) => new global::Orbeden.CharacterController(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Collider), "Collider", 5756356102473752287UL, null);
+        NativeBindingRuntime.Register(typeof(global::Orbeden.CharacterController), "CharacterController", 5662530419562788132UL, (ens, pointer) => new global::Orbeden.CharacterController(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Collider), "Collider", 1618013108518935373UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.DirectionalLight), "DirectionalLight", 12538889494756729084UL, (ens, pointer) => new global::Orbeden.DirectionalLight(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.HeightField), "HeightField", 16283581396438651902UL, (ens, pointer) => new global::Orbeden.HeightField(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.ParticleSystem), "ParticleSystem", 12456303718290141251UL, (ens, pointer) => new global::Orbeden.ParticleSystem(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.RigidBody), "RigidBody", 11999458345191868740UL, (ens, pointer) => new global::Orbeden.RigidBody(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.RigidBody), "RigidBody", 6139362683202787086UL, (ens, pointer) => new global::Orbeden.RigidBody(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 4622765495942406386UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.StaticMeshRenderer), "StaticMeshRenderer", 6751409981195983079UL, (ens, pointer) => new global::Orbeden.StaticMeshRenderer(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Transform), "Transform", 2832195382186525765UL, (ens, pointer) => new global::Orbeden.Transform(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.WheelCollider), "WheelCollider", 13396853297441896464UL, (ens, pointer) => new global::Orbeden.WheelCollider(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.WheelCollider), "WheelCollider", 4616407760106585717UL, (ens, pointer) => new global::Orbeden.WheelCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.BoxCollider), "BoxCollider", 3698543718541020963UL, (ens, pointer) => new global::Orbeden.BoxCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.CapsuleCollider), "CapsuleCollider", 17385821896117399994UL, (ens, pointer) => new global::Orbeden.CapsuleCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.ConvexMeshCollider), "ConvexMeshCollider", 4227940251415473256UL, (ens, pointer) => new global::Orbeden.ConvexMeshCollider(ens!, pointer));
@@ -3747,33 +3747,18 @@ namespace Orbeden
 public unsafe partial class CharacterController : global::Orbeden.Component
 {
     protected internal CharacterController(Ens ens, IntPtr pointer) : base(ens, pointer) { }
-    public uint @collisionMask
-    {
-        get
-        {
-        uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 0, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (uint)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 1, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
     public float @contactOffset
     {
         get
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 2, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 0, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 3, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 1, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -3782,13 +3767,13 @@ public unsafe partial class CharacterController : global::Orbeden.Component
         get
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 4, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 2, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 5, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 3, this);
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
@@ -3797,17 +3782,32 @@ public unsafe partial class CharacterController : global::Orbeden.Component
         get
         {
         global::Orbeden.vector3 result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 6, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 4, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.vector3)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 7, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 5, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
     public float @height
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 6, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 7, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public float @minMoveDistance
     {
         get
         {
@@ -3822,7 +3822,7 @@ public unsafe partial class CharacterController : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @minMoveDistance
+    public float @radius
     {
         get
         {
@@ -3837,37 +3837,37 @@ public unsafe partial class CharacterController : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @radius
-    {
-        get
-        {
-        float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 12, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (float)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 13, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
     public global::Orbeden.CharacterControllerShape @shape
     {
         get
         {
         uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 14, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 12, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.CharacterControllerShape)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 15, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 13, this);
         NativeBindingRuntime.Check(callback(InstanceId, (uint)@value));
         }
     }
     public float @slopeLimit
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 14, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 15, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public float @stepOffset
     {
         get
         {
@@ -3879,21 +3879,6 @@ public unsafe partial class CharacterController : global::Orbeden.Component
         set
         {
         var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 17, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
-    public float @stepOffset
-    {
-        get
-        {
-        float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 18, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (float)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.CharacterController), 19, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -3927,37 +3912,37 @@ public abstract unsafe partial class Collider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public uint @collisionMask
-    {
-        get
-        {
-        uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 3, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (uint)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 4, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
     public float @dynamicFriction
     {
         get
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 5, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 3, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 6, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 4, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
     public bool @enabled
+    {
+        get
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 5, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return result != 0;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 6, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
+        }
+    }
+    public bool @isTrigger
     {
         get
         {
@@ -3972,22 +3957,22 @@ public abstract unsafe partial class Collider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
-    public bool @isTrigger
+    public float @restitution
     {
         get
         {
-        byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 9, this);
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 9, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return result != 0;
+        return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 10, this);
-        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 10, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @restitution
+    public float @staticFriction
     {
         get
         {
@@ -3999,21 +3984,6 @@ public abstract unsafe partial class Collider : global::Orbeden.Component
         set
         {
         var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 12, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
-    public float @staticFriction
-    {
-        get
-        {
-        float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 13, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (float)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Collider), 14, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -4955,22 +4925,22 @@ public unsafe partial class RigidBody : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public global::Orbeden.PhysicsBodyType @bodyType
+    public bool @automaticCenterOfMass
     {
         get
         {
-        uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 7, this);
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 7, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (global::Orbeden.PhysicsBodyType)result;
+        return result != 0;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 8, this);
-        NativeBindingRuntime.Check(callback(InstanceId, (uint)@value));
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 8, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
-    public bool @continuousCollisionDetection
+    public bool @automaticInertiaTensor
     {
         get
         {
@@ -4985,19 +4955,94 @@ public unsafe partial class RigidBody : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
-    public bool @enabled
+    public global::Orbeden.PhysicsBodyType @bodyType
+    {
+        get
+        {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 11, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.PhysicsBodyType)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 12, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (uint)@value));
+        }
+    }
+    public global::Orbeden.vector3 @centerOfMass
+    {
+        get
+        {
+        global::Orbeden.vector3 result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 13, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.vector3)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 14, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public bool @continuousCollisionDetection
     {
         get
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 11, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 15, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 12, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 16, this);
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
+        }
+    }
+    public bool @enabled
+    {
+        get
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 17, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return result != 0;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 18, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
+        }
+    }
+    public global::Orbeden.vector3 @inertiaTensor
+    {
+        get
+        {
+        global::Orbeden.vector3 result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 19, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.vector3)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 20, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public global::Orbeden.quaternion @inertiaTensorRotation
+    {
+        get
+        {
+        global::Orbeden.quaternion result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 21, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.quaternion)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 22, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
     public float @linearDamping
@@ -5005,13 +5050,13 @@ public unsafe partial class RigidBody : global::Orbeden.Component
         get
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 13, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 23, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 14, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 24, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -5020,13 +5065,13 @@ public unsafe partial class RigidBody : global::Orbeden.Component
         get
         {
         global::Orbeden.vector3 result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 15, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 25, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.vector3)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 16, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 26, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -5035,13 +5080,13 @@ public unsafe partial class RigidBody : global::Orbeden.Component
         get
         {
         uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 17, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 27, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (uint)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 18, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 28, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -5050,13 +5095,13 @@ public unsafe partial class RigidBody : global::Orbeden.Component
         get
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 19, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 29, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 20, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 30, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -5065,13 +5110,13 @@ public unsafe partial class RigidBody : global::Orbeden.Component
         get
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 21, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 31, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 22, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.RigidBody), 32, this);
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
@@ -5430,22 +5475,22 @@ public sealed unsafe partial class WheelCollider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
-    public uint @groundQueryLayer
+    public float @lateralFriction
     {
         get
         {
-        uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 4, this);
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 4, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (uint)result;
+        return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 5, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 5, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @lateralFriction
+    public float @raycastDistance
     {
         get
         {
@@ -5460,7 +5505,7 @@ public sealed unsafe partial class WheelCollider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @raycastDistance
+    public float @rollingFriction
     {
         get
         {
@@ -5475,7 +5520,7 @@ public sealed unsafe partial class WheelCollider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @rollingFriction
+    public float @steerAngle
     {
         get
         {
@@ -5490,37 +5535,37 @@ public sealed unsafe partial class WheelCollider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @steerAngle
-    {
-        get
-        {
-        float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 12, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (float)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 13, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
     public bool @steeringWheel
     {
         get
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 14, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 12, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 15, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 13, this);
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
     public float @suspensionDamping
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 14, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 15, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public float @suspensionRestLength
     {
         get
         {
@@ -5535,7 +5580,7 @@ public sealed unsafe partial class WheelCollider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @suspensionRestLength
+    public float @suspensionStiffness
     {
         get
         {
@@ -5550,7 +5595,7 @@ public sealed unsafe partial class WheelCollider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @suspensionStiffness
+    public float @suspensionTravel
     {
         get
         {
@@ -5565,33 +5610,18 @@ public sealed unsafe partial class WheelCollider : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @suspensionTravel
-    {
-        get
-        {
-        float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 22, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (float)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 23, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
     public global::Orbeden.vector3 @wheelOffset
     {
         get
         {
         global::Orbeden.vector3 result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 24, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 22, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.vector3)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 25, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 23, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -5600,13 +5630,13 @@ public sealed unsafe partial class WheelCollider : global::Orbeden.Component
         get
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 26, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 24, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 27, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.WheelCollider), 25, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }

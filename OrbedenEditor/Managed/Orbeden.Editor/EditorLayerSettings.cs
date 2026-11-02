@@ -109,18 +109,11 @@ internal static class EditorLayerSettings
     /// <summary>名称为空时使用层号，始终显示索引以区分重名层。</summary>
     internal static string Label(int index) => string.IsNullOrWhiteSpace(Names[index]) ? "Layer " + index : $"{index}: {Names[index]}";
 
-    /// <summary>按组件字段语义区分单层选择与多层掩码。</summary>
+    /// <summary>识别相机的渲染层掩码字段。</summary>
     internal static bool TryGetField(string type, string name, out bool mask)
     {
-        bool? selection = (type, name) switch
-        {
-            ("Camera", "drawLayerMask") or ("WheelCollider", "groundQueryLayer") => true,
-            _ when (type.EndsWith("Collider", StringComparison.Ordinal) || type is "HeightField" or "CharacterController")
-                && name == "collisionMask" => true,
-            _ => null,
-        };
-        mask = selection ?? false;
-        return selection.HasValue;
+        mask = type == "Camera" && name == "drawLayerMask";
+        return mask;
     }
 
     /// <summary>绘制单层或位掩码选择，保持历史非单个位值直到用户明确选择。</summary>

@@ -20,6 +20,9 @@
 
 namespace
 {
+    //为每次网格上传分配进程内递增版本
+    uint64 meshUploadRevision = 0;
+
     //上下文持有的一份网格内容。网格只在 UpdateMeshes 时被替换。
     struct MeshRecord
     {
@@ -285,7 +288,7 @@ namespace
             {
                 const UIMeshUpdate& update = updates[index];
                 MeshRecord& mesh = context->meshes[update.meshId];
-                mesh.revision = update.revision;
+                mesh.revision = ++meshUploadRevision;
                 mesh.vertices.assign(vertices + update.vertexOffset, vertices + update.vertexOffset + update.vertexCount);
                 mesh.indices.assign(indices + update.indexOffset, indices + update.indexOffset + update.indexCount);
             }

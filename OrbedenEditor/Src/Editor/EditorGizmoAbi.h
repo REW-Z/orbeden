@@ -99,7 +99,8 @@ struct EditorGizmoApi
 public:
     void* Line3D = nullptr;
     void* Label3D = nullptr;
-    void* TakeEdit = nullptr;              //取出一次待提交的手柄编辑，没有时返回 0
+    //返回整次拖拽的编辑数量和借用数据指针，数据有效至下次读取
+    void* TakeEditBatch = nullptr;
     void* IsSelected = nullptr;
     void* IsVisible = nullptr;
     //把世界点投影到场景视口屏幕坐标；不可见或相机无效时返回 0

@@ -610,6 +610,7 @@ namespace
             ImGuiWindowFlags_NoFocusOnAppearing |
             ImGuiWindowFlags_NoNav |
             ImGuiWindowFlags_NoInputs;
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         bool open = ImGui::Begin(value.empty() ? "##FixedWindow" : value.c_str(), nullptr, flags);
         return open ? 1 : 0;
     }
@@ -618,6 +619,7 @@ namespace
     void ORBEDEN_NATIVE_CALL RuntimeGuiEndFixedWindow()
     {
         ImGui::End();
+        ImGui::PopStyleVar();
     }
 
     //获取主视口工作区尺寸。

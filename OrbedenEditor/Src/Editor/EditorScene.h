@@ -203,8 +203,8 @@ public:
     /// <summary>查询组件 Gizmos 总开关，不影响选择手柄。</summary>
     bool GetGizmosVisible() const { return componentGizmos.enabled; }
 
-    /// <summary>取出一条待提交的手柄编辑，没有时返回 false。</summary>
-    bool TakeGizmoEdit(EditorGizmoEdit& edit);
+    /// <summary>取出一次拖拽的全部编辑，返回数量；数据有效至下次读取。</summary>
+    int32 TakeGizmoEditBatch(const EditorGizmoEdit*& edits);
 
     /// <summary>判断手柄是否正在拖拽。</summary>
     bool IsGizmoDragging() const;

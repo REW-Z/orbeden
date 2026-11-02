@@ -445,11 +445,16 @@ namespace
         DrawGizmoPolyLine(points, 2, color);
     }
 
-    //取出一次待提交的手柄编辑，供托管侧每帧轮询。
-    int32 ORBEDEN_NATIVE_CALL TakeGizmoEditNative(EditorGizmoEdit* edit)
+    //读取整次手柄拖拽的数据，供托管侧立即复制
+    int32 ORBEDEN_NATIVE_CALL TakeGizmoEditBatchNative(const EditorGizmoEdit** edits)
     {
-        EditorScene* scene = edit ? EditorScene::GetActiveScene() : nullptr;
-        return scene && scene->TakeGizmoEdit(*edit) ? 1 : 0;
+        if (!edits)
+        {
+            return 0;
+        }
+        *edits = nullptr;
+        EditorScene* scene = EditorScene::GetActiveScene();
+        return scene ? scene->TakeGizmoEditBatch(*edits) : 0;
     }
 
     //绘制手柄模式图标：位移四向箭头、旋转半圆弧、缩放方块加实心角。
@@ -1178,7 +1183,7 @@ EditorGizmoApi EditorScene::GetGizmoApi()
     api.Label3D = reinterpret_cast<void*>(&DrawGizmoLabel);
     api.IsSelected = reinterpret_cast<void*>(&IsGizmoEnsSelected);
     api.IsVisible = reinterpret_cast<void*>(&AreGizmosVisible);
-    api.TakeEdit = reinterpret_cast<void*>(&TakeGizmoEditNative);
+    api.TakeEditBatch = reinterpret_cast<void*>(&TakeGizmoEditBatchNative);
     api.ProjectPoint = reinterpret_cast<void*>(&ProjectGizmoPointForManaged);
     api.GetViewRect = reinterpret_cast<void*>(&GetGizmoViewRectForManaged);
     api.PolyLine3D = reinterpret_cast<void*>(&DrawGizmoPolyLine);
@@ -1804,10 +1809,10 @@ void EditorScene::DrawGizmoHandles()
     gizmoHandles.Draw(app.GetWorld(), gizmoView);
 }
 
-//取出一条待提交的手柄编辑。
-bool EditorScene::TakeGizmoEdit(EditorGizmoEdit& edit)
+//取出一次拖拽的全部手柄编辑
+int32 EditorScene::TakeGizmoEditBatch(const EditorGizmoEdit*& edits)
 {
-    return gizmoHandles.TakeEdit(edit);
+    return gizmoHandles.TakeEditBatch(edits);
 }
 
 //判断手柄是否正在拖拽。

@@ -956,8 +956,39 @@ internal sealed class InspectorPanel : EditorPanel
             //跳过已单独绘制的字段
             if (skipProperty.Length != 0 && string.Equals(property.Name, skipProperty, StringComparison.Ordinal)) continue;
             if (additionalSkipProperty.Length != 0 && string.Equals(property.Name, additionalSkipProperty, StringComparison.Ordinal)) continue;
+            //按刚体自动开关显示手动输入项
+            if (nativeType == "RigidBody")
+            {
+                string automaticProperty = property.Name switch
+                {
+                    "centerOfMass" => "automaticCenterOfMass",
+                    "inertiaTensor" or "inertiaTensorRotation" => "automaticInertiaTensor",
+                    _ => string.Empty,
+                };
+                if (automaticProperty.Length != 0)
+                {
+                    PropertyValue? automatic = document.FindProperty(automaticProperty);
+                    if (automatic == null || automatic.HasMultipleDifferentValues
+                        || !automatic.Value.TryGet(out bool enabled) || enabled)
+                    {
+                        continue;
+                    }
+                }
+            }
             //显示名优先用 Label：槽位的标识是 uniform 名，直接展示太生硬
             string title = property.Label.Length != 0 ? property.Label : property.Name;
+            if (nativeType == "RigidBody")
+            {
+                title = property.Name switch
+                {
+                    "automaticCenterOfMass" => "Automatic Center Of Mass",
+                    "centerOfMass" => "Center Of Mass",
+                    "automaticInertiaTensor" => "Automatic Tensor",
+                    "inertiaTensor" => "Inertia Tensor",
+                    "inertiaTensorRotation" => "Inertia Tensor Rotation",
+                    _ => title,
+                };
+            }
             string label = property.HasMultipleDifferentValues ? $"{title} (Mixed)" : title;
             InteropValue value;
             //容器字段统一绘制折叠头、元素和结构编辑按钮。
@@ -973,7 +1004,9 @@ internal sealed class InspectorPanel : EditorPanel
                     continue;
                 }
             }
-            else if (nativeType == "Transform" && property.Name == "localRotation" && property.Kind == InteropValueKind.Quaternion)
+            else if (property.Kind == InteropValueKind.Quaternion
+                && (nativeType == "Transform" && property.Name == "localRotation"
+                    || nativeType == "RigidBody" && property.Name == "inertiaTensorRotation"))
             {
                 if (!TryDrawEulerRotation(label, property, out value)) continue;
             }
@@ -1141,8 +1174,8 @@ internal sealed class InspectorPanel : EditorPanel
         }
     }
 
-    /// <summary>以角度显示 Transform 旋转，保留用户输入的欧拉角分支。
-    /// 次序是内禀 YXZ（等价于外禀 ZXY，即 R = Ry·Rx·Rz），与 Unity 一致；
+    /// <summary>以角度显示旋转，保留用户输入的欧拉角分支。
+    /// 次序是内禀 YXZ（等价于外禀 ZXY，即 R = Ry·Rx·Rz）；
     /// 完整说明见 Docs/ProjectConventions.md 的「旋转次序」。</summary>
     private static bool TryDrawEulerRotation(string label, PropertyValue property, out InteropValue value)
     {

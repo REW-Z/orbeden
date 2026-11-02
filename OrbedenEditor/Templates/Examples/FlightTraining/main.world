@@ -90,7 +90,6 @@
                 <Field name="staticFriction" type="float32" value="0.600000024" />
                 <Field name="dynamicFriction" type="float32" value="0.600000024" />
                 <Field name="restitution" type="float32" value="0" />
-                <Field name="collisionMask" type="uint32" value="4294967295" />
                 <Field name="halfExtents" type="vector3" value="1 1 1" />
             </Component>
         </Ens>
@@ -115,7 +114,6 @@
                 <Field name="staticFriction" type="float32" value="0.600000024" />
                 <Field name="dynamicFriction" type="float32" value="0.600000024" />
                 <Field name="restitution" type="float32" value="0" />
-                <Field name="collisionMask" type="uint32" value="4294967295" />
                 <Field name="halfExtents" type="vector3" value="1 1 1" />
             </Component>
         </Ens>
@@ -140,7 +138,6 @@
                 <Field name="staticFriction" type="float32" value="0.600000024" />
                 <Field name="dynamicFriction" type="float32" value="0.600000024" />
                 <Field name="restitution" type="float32" value="0" />
-                <Field name="collisionMask" type="uint32" value="4294967295" />
                 <Field name="halfExtents" type="vector3" value="1 1 1" />
             </Component>
         </Ens>
@@ -262,7 +259,6 @@
             <Field name="staticFriction" type="float32" value="0.600000024" />
             <Field name="dynamicFriction" type="float32" value="0.600000024" />
             <Field name="restitution" type="float32" value="0" />
-            <Field name="collisionMask" type="uint32" value="4294967295" />
             <Field name="halfExtents" type="vector3" value="6.5 0.0799999982 0.400000006" />
         </Component>
         <Component type="Script" stableId="world://preparing/b13ff9f6-dbe2-4cca-84a5-69d204b919d0/Script/ea9787e2-588b-4254-b5ef-caa0cf0eb04a">
@@ -277,7 +273,6 @@
             <Field name="staticFriction" type="float32" value="0.5" />
             <Field name="dynamicFriction" type="float32" value="0.5" />
             <Field name="restitution" type="float32" value="0" />
-            <Field name="collisionMask" type="uint32" value="4294967295" />
             <Field name="halfExtents" type="vector3" value="0.5 0.5 4" />
         </Component>
         <Component type="WheelCollider" stableId="world://preparing/b13ff9f6-dbe2-4cca-84a5-69d204b919d0/WheelCollider/22a9d7ff-5129-474e-9206-741978813579">
@@ -291,7 +286,6 @@
             <Field name="rollingFriction" type="float32" value="0.0199999996" />
             <Field name="lateralFriction" type="float32" value="0.800000012" />
             <Field name="raycastDistance" type="float32" value="1.20000005" />
-            <Field name="groundQueryLayer" type="uint32" value="1" />
             <Field name="steeringWheel" type="bool" value="true" />
             <Field name="steerAngle" type="float32" value="0" />
         </Component>
@@ -306,7 +300,6 @@
             <Field name="rollingFriction" type="float32" value="0.0199999996" />
             <Field name="lateralFriction" type="float32" value="0.800000012" />
             <Field name="raycastDistance" type="float32" value="1.20000005" />
-            <Field name="groundQueryLayer" type="uint32" value="1" />
             <Field name="steeringWheel" type="bool" value="false" />
             <Field name="steerAngle" type="float32" value="0" />
         </Component>
@@ -321,7 +314,6 @@
             <Field name="rollingFriction" type="float32" value="0.0199999996" />
             <Field name="lateralFriction" type="float32" value="0.800000012" />
             <Field name="raycastDistance" type="float32" value="1.20000005" />
-            <Field name="groundQueryLayer" type="uint32" value="1" />
             <Field name="steeringWheel" type="bool" value="false" />
             <Field name="steerAngle" type="float32" value="0" />
         </Component>

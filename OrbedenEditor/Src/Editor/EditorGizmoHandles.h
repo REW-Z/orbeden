@@ -4,6 +4,7 @@
 #include "Rendering/RenderTypes.h"
 #include "Runtime/EnsId.h"
 
+#include <deque>
 #include <vector>
 
 class EditorScene;
@@ -72,8 +73,8 @@ public:
     //在场景叠加层最上方绘制手柄
     void Draw(World& world, const EditorGizmoView& view) const;
 
-    //取出一次待提交的编辑记录，没有时返回 false
-    bool TakeEdit(EditorGizmoEdit& edit);
+    //取出一次拖拽的全部编辑，返回数量；数据有效至下次读取
+    int32 TakeEditBatch(const EditorGizmoEdit*& edits);
     //取消拖拽并还原起始变换
     void CancelDrag(World& world);
 
@@ -133,8 +134,6 @@ private:
     void ApplyDrag(World& world, const EditorGizmoView& view);
     //还原拖拽起始状态
     void RestoreTargets(World& world) const;
-    //记录一条待提交的编辑
-    void PushEdit(const EditorGizmoEdit& edit);
     //记录单个目标的局部变换与父级世界逆矩阵
     static bool CaptureTarget(World& world, EnsId ens, Target& target);
 
@@ -148,7 +147,8 @@ private:
     EditorGizmoHandle active = EditorGizmoHandle::None;
     bool dragActive = false;
     std::vector<Target> targets;
-    std::vector<EditorGizmoEdit> pendingEdits;
+    std::deque<std::vector<EditorGizmoEdit>> pendingEditBatches;
+    std::vector<EditorGizmoEdit> takenEdits;
     vector3 pivotWorld;
     vector3 startAxes[3];
     float32 startAxisParameter = 0.0f;

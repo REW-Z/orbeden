@@ -46,8 +46,7 @@ namespace
     PHYSICS_FIELD(TYPE, center, "vector3", Vector3), \
     PHYSICS_FIELD(TYPE, staticFriction, "float32", Float32), \
     PHYSICS_FIELD(TYPE, dynamicFriction, "float32", Float32), \
-    PHYSICS_FIELD(TYPE, restitution, "float32", Float32), \
-    PHYSICS_FIELD(TYPE, collisionMask, "uint32", UInt32)
+    PHYSICS_FIELD(TYPE, restitution, "float32", Float32)
 }
 
 namespace PhysicsReflection
@@ -100,7 +99,6 @@ namespace PhysicsReflection
             PHYSICS_FIELD(WheelCollider, rollingFriction, "float32", Float32),
             PHYSICS_FIELD(WheelCollider, lateralFriction, "float32", Float32),
             PHYSICS_FIELD(WheelCollider, raycastDistance, "float32", Float32),
-            PHYSICS_FIELD(WheelCollider, groundQueryLayer, "uint32", UInt32),
             PHYSICS_FIELD(WheelCollider, steeringWheel, "bool", Bool),
             PHYSICS_FIELD(WheelCollider, steerAngle, "float32", Float32),
         });
@@ -110,6 +108,11 @@ namespace PhysicsReflection
             PHYSICS_FIELD(RigidBody, enabled, "bool", Bool),
             PHYSICS_FIELD(RigidBody, bodyType, "PhysicsBodyType", UInt32),
             PHYSICS_FIELD(RigidBody, mass, "float32", Float32),
+            PHYSICS_FIELD(RigidBody, automaticCenterOfMass, "bool", Bool),
+            PHYSICS_FIELD(RigidBody, centerOfMass, "vector3", Vector3),
+            PHYSICS_FIELD(RigidBody, automaticInertiaTensor, "bool", Bool),
+            PHYSICS_FIELD(RigidBody, inertiaTensor, "vector3", Vector3),
+            PHYSICS_FIELD(RigidBody, inertiaTensorRotation, "quaternion", Quaternion),
             PHYSICS_FIELD(RigidBody, useGravity, "bool", Bool),
             PHYSICS_FIELD(RigidBody, linearDamping, "float32", Float32),
             PHYSICS_FIELD(RigidBody, angularDamping, "float32", Float32),
@@ -161,7 +164,6 @@ namespace PhysicsReflection
             PHYSICS_FIELD(CharacterController, contactOffset, "float32", Float32),
             PHYSICS_FIELD(CharacterController, slopeLimit, "float32", Float32),
             PHYSICS_FIELD(CharacterController, minMoveDistance, "float32", Float32),
-            PHYSICS_FIELD(CharacterController, collisionMask, "uint32", UInt32),
         });
     }
 }

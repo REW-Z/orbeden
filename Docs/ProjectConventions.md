@@ -119,7 +119,7 @@ Runtime/Object/
 
 | 种类 | 规则 | 示例 |
 |---|---|---|
-| 成员变量 | camelCase，无前缀 | `localPosition`、`collisionMask` |
+| 成员变量 | camelCase，无前缀 | `localPosition`、`drawLayerMask` |
 | 局部变量 | camelCase | `transformStorage` |
 | 方法 / 函数 | PascalCase | `GetEns()`、`OnAttach()` |
 | 常量 | PascalCase 或全大写（`static constexpr`） | `InvalidId` |
@@ -189,7 +189,7 @@ OBJECT_TYPE_IMPLEMENT(Transform, Component)
 
 - Ens 是层归属的唯一持有者：保存 `uint32 layer` 索引 `0～31`，默认 `0`；层名称由项目全局设置提供，不参与运行时判断。
 - C++ 通过 `GetLayer()` / `SetLayer()` 访问索引，通过 `GetLayerMask()` 取得 `1u << layer`；C# 使用 `Ens.Layer`。一次 setter 只修改当前节点，递归应用是编辑器显式批量操作，子节点不自动继承。
-- Collider、CharacterController、HeightField、StaticMeshRenderer、ParticleSystem 和 Canvas 不持有可编辑的独立 Layer；相机、碰撞和查询保留各自的 Mask。
+- Collider、WheelCollider、CharacterController、HeightField、StaticMeshRenderer、ParticleSystem 和 Canvas 不持有可编辑的独立 Layer。物理组件不配置独立 Mask，统一使用各自所属 Ens 的层与项目碰撞矩阵；相机和显式物理查询 API 保留各自的 Mask。
 - 渲染剔除、批处理与阴影读取运行时快照，物理过滤读取 PhysX 数据；层变更通过同步路径更新这些缓存，不在 Component 基类复制 Layer 或缓存 Ens 指针。
 - `.world` 和 `.prefab` 将层保存为 `<Ens layer="索引">`；缺少时默认 `0`。临时绘制和调试线等没有所属 Ens 的提交接口仍接收独立位掩码。
 

@@ -3821,30 +3821,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Camera_30(int32 objectId, float32 v
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_0(int32 objectId, uint32* result)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<CharacterController>(objectId);
-        if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<uint32>(instance->collisionMask);
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_1(int32 objectId, uint32 value)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<CharacterController>(objectId);
-        instance->collisionMask = value;
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_2(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_0(int32 objectId, float32* result)
 {
     try
     {
@@ -3856,7 +3833,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_2(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_3(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_1(int32 objectId, float32 value)
 {
     try
     {
@@ -3867,7 +3844,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_3(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_4(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_2(int32 objectId, uint8* result)
 {
     try
     {
@@ -3879,7 +3856,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_4(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_5(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_3(int32 objectId, uint8 value)
 {
     try
     {
@@ -3890,7 +3867,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_5(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_6(int32 objectId, vector3* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_4(int32 objectId, vector3* result)
 {
     try
     {
@@ -3902,7 +3879,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_6(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_7(int32 objectId, vector3 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_5(int32 objectId, vector3 value)
 {
     try
     {
@@ -3913,7 +3890,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_7(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_8(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_6(int32 objectId, float32* result)
 {
     try
     {
@@ -3925,7 +3902,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_8(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_9(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_7(int32 objectId, float32 value)
 {
     try
     {
@@ -3936,7 +3913,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_9(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_10(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_8(int32 objectId, float32* result)
 {
     try
     {
@@ -3948,7 +3925,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_10(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_11(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_9(int32 objectId, float32 value)
 {
     try
     {
@@ -3959,7 +3936,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_11(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_12(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_10(int32 objectId, float32* result)
 {
     try
     {
@@ -3971,7 +3948,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_12(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_13(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_11(int32 objectId, float32 value)
 {
     try
     {
@@ -3982,7 +3959,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_13(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_14(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_12(int32 objectId, uint32* result)
 {
     try
     {
@@ -3994,7 +3971,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_14(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_15(int32 objectId, uint32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_13(int32 objectId, uint32 value)
 {
     try
     {
@@ -4005,7 +3982,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_15(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_16(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_14(int32 objectId, float32* result)
 {
     try
     {
@@ -4017,7 +3994,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_16(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_17(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_15(int32 objectId, float32 value)
 {
     try
     {
@@ -4028,7 +4005,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_17(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_18(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_16(int32 objectId, float32* result)
 {
     try
     {
@@ -4040,7 +4017,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_18(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_19(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_CharacterController_17(int32 objectId, float32 value)
 {
     try
     {
@@ -4086,30 +4063,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_2(int32 objectId, vector3 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_3(int32 objectId, uint32* result)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<Collider>(objectId);
-        if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<uint32>(instance->collisionMask);
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_4(int32 objectId, uint32 value)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<Collider>(objectId);
-        instance->collisionMask = value;
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_5(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_3(int32 objectId, float32* result)
 {
     try
     {
@@ -4121,7 +4075,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_5(int32 objectId, float32*
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_6(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_4(int32 objectId, float32 value)
 {
     try
     {
@@ -4132,7 +4086,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_6(int32 objectId, float32 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_7(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_5(int32 objectId, uint8* result)
 {
     try
     {
@@ -4144,7 +4098,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_7(int32 objectId, uint8* r
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_8(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_6(int32 objectId, uint8 value)
 {
     try
     {
@@ -4155,7 +4109,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_8(int32 objectId, uint8 va
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_9(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_7(int32 objectId, uint8* result)
 {
     try
     {
@@ -4167,7 +4121,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_9(int32 objectId, uint8* r
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_10(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_8(int32 objectId, uint8 value)
 {
     try
     {
@@ -4178,7 +4132,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_10(int32 objectId, uint8 v
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_11(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_9(int32 objectId, float32* result)
 {
     try
     {
@@ -4190,7 +4144,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_11(int32 objectId, float32
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_12(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_10(int32 objectId, float32 value)
 {
     try
     {
@@ -4201,7 +4155,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_12(int32 objectId, float32
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_13(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_11(int32 objectId, float32* result)
 {
     try
     {
@@ -4213,7 +4167,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_13(int32 objectId, float32
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_14(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Collider_12(int32 objectId, float32 value)
 {
     try
     {
@@ -5612,24 +5566,24 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_6(int32 objectId, vector3
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_7(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_7(int32 objectId, uint8* result)
 {
     try
     {
         auto* instance = NativeBindings::Require<RigidBody>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<uint32>(instance->bodyType);
+        *result = static_cast<uint8>(instance->automaticCenterOfMass);
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_8(int32 objectId, uint32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_8(int32 objectId, uint8 value)
 {
     try
     {
         auto* instance = NativeBindings::Require<RigidBody>(objectId);
-        instance->bodyType = static_cast<PhysicsBodyType>(value);
+        instance->automaticCenterOfMass = static_cast<bool>(value);
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -5641,7 +5595,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_9(int32 objectId, uint8* 
     {
         auto* instance = NativeBindings::Require<RigidBody>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<uint8>(instance->continuousCollisionDetection);
+        *result = static_cast<uint8>(instance->automaticInertiaTensor);
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -5652,13 +5606,82 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_10(int32 objectId, uint8 
     try
     {
         auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        instance->automaticInertiaTensor = static_cast<bool>(value);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_11(int32 objectId, uint32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint32>(instance->bodyType);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_12(int32 objectId, uint32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        instance->bodyType = static_cast<PhysicsBodyType>(value);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_13(int32 objectId, vector3* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<vector3>(instance->centerOfMass);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_14(int32 objectId, vector3 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        instance->centerOfMass = value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_15(int32 objectId, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->continuousCollisionDetection);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_16(int32 objectId, uint8 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
         instance->continuousCollisionDetection = static_cast<bool>(value);
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_11(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_17(int32 objectId, uint8* result)
 {
     try
     {
@@ -5670,7 +5693,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_11(int32 objectId, uint8*
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_12(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_18(int32 objectId, uint8 value)
 {
     try
     {
@@ -5681,7 +5704,53 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_12(int32 objectId, uint8 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_13(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_19(int32 objectId, vector3* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<vector3>(instance->inertiaTensor);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_20(int32 objectId, vector3 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        instance->inertiaTensor = value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_21(int32 objectId, quaternion* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<quaternion>(instance->inertiaTensorRotation);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_22(int32 objectId, quaternion value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<RigidBody>(objectId);
+        instance->inertiaTensorRotation = value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_23(int32 objectId, float32* result)
 {
     try
     {
@@ -5693,7 +5762,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_13(int32 objectId, float3
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_14(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_24(int32 objectId, float32 value)
 {
     try
     {
@@ -5704,7 +5773,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_14(int32 objectId, float3
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_15(int32 objectId, vector3* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_25(int32 objectId, vector3* result)
 {
     try
     {
@@ -5716,7 +5785,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_15(int32 objectId, vector
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_16(int32 objectId, vector3 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_26(int32 objectId, vector3 value)
 {
     try
     {
@@ -5727,7 +5796,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_16(int32 objectId, vector
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_17(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_27(int32 objectId, uint32* result)
 {
     try
     {
@@ -5739,7 +5808,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_17(int32 objectId, uint32
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_18(int32 objectId, uint32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_28(int32 objectId, uint32 value)
 {
     try
     {
@@ -5750,7 +5819,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_18(int32 objectId, uint32
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_19(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_29(int32 objectId, float32* result)
 {
     try
     {
@@ -5762,7 +5831,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_19(int32 objectId, float3
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_20(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_30(int32 objectId, float32 value)
 {
     try
     {
@@ -5773,7 +5842,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_20(int32 objectId, float3
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_21(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_31(int32 objectId, uint8* result)
 {
     try
     {
@@ -5785,7 +5854,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_21(int32 objectId, uint8*
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_22(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_32(int32 objectId, uint8 value)
 {
     try
     {
@@ -6251,30 +6320,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_3(int32 objectId, uin
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_4(int32 objectId, uint32* result)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<WheelCollider>(objectId);
-        if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<uint32>(instance->groundQueryLayer);
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_5(int32 objectId, uint32 value)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<WheelCollider>(objectId);
-        instance->groundQueryLayer = value;
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_6(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_4(int32 objectId, float32* result)
 {
     try
     {
@@ -6286,7 +6332,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_6(int32 objectId, flo
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_7(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_5(int32 objectId, float32 value)
 {
     try
     {
@@ -6297,7 +6343,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_7(int32 objectId, flo
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_8(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_6(int32 objectId, float32* result)
 {
     try
     {
@@ -6309,7 +6355,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_8(int32 objectId, flo
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_9(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_7(int32 objectId, float32 value)
 {
     try
     {
@@ -6320,7 +6366,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_9(int32 objectId, flo
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_10(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_8(int32 objectId, float32* result)
 {
     try
     {
@@ -6332,7 +6378,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_10(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_11(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_9(int32 objectId, float32 value)
 {
     try
     {
@@ -6343,7 +6389,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_11(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_12(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_10(int32 objectId, float32* result)
 {
     try
     {
@@ -6355,7 +6401,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_12(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_13(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_11(int32 objectId, float32 value)
 {
     try
     {
@@ -6366,7 +6412,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_13(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_14(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_12(int32 objectId, uint8* result)
 {
     try
     {
@@ -6378,7 +6424,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_14(int32 objectId, ui
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_15(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_13(int32 objectId, uint8 value)
 {
     try
     {
@@ -6389,7 +6435,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_15(int32 objectId, ui
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_16(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_14(int32 objectId, float32* result)
 {
     try
     {
@@ -6401,7 +6447,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_16(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_17(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_15(int32 objectId, float32 value)
 {
     try
     {
@@ -6412,7 +6458,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_17(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_18(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_16(int32 objectId, float32* result)
 {
     try
     {
@@ -6424,7 +6470,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_18(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_19(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_17(int32 objectId, float32 value)
 {
     try
     {
@@ -6435,7 +6481,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_19(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_20(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_18(int32 objectId, float32* result)
 {
     try
     {
@@ -6447,7 +6493,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_20(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_21(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_19(int32 objectId, float32 value)
 {
     try
     {
@@ -6458,7 +6504,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_21(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_22(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_20(int32 objectId, float32* result)
 {
     try
     {
@@ -6470,7 +6516,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_22(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_23(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_21(int32 objectId, float32 value)
 {
     try
     {
@@ -6481,7 +6527,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_23(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_24(int32 objectId, vector3* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_22(int32 objectId, vector3* result)
 {
     try
     {
@@ -6493,7 +6539,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_24(int32 objectId, ve
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_25(int32 objectId, vector3 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_23(int32 objectId, vector3 value)
 {
     try
     {
@@ -6504,7 +6550,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_25(int32 objectId, ve
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_26(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_24(int32 objectId, float32* result)
 {
     try
     {
@@ -6516,7 +6562,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_26(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_27(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_WheelCollider_25(int32 objectId, float32 value)
 {
     try
     {
@@ -6753,26 +6799,26 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(Texture2D::StaticType(), 5833247944439309010ULL, { functions_Texture2D, 29 });
     static void* functions_Camera[] = { reinterpret_cast<void*>(&Call_Camera_0), reinterpret_cast<void*>(&Call_Camera_1), reinterpret_cast<void*>(&Call_Camera_2), reinterpret_cast<void*>(&Call_Camera_3), reinterpret_cast<void*>(&Call_Camera_4), reinterpret_cast<void*>(&Call_Camera_5), reinterpret_cast<void*>(&Call_Camera_6), reinterpret_cast<void*>(&Call_Camera_7), reinterpret_cast<void*>(&Call_Camera_8), reinterpret_cast<void*>(&Call_Camera_9), reinterpret_cast<void*>(&Call_Camera_10), reinterpret_cast<void*>(&Call_Camera_11), reinterpret_cast<void*>(&Call_Camera_12), reinterpret_cast<void*>(&Call_Camera_13), reinterpret_cast<void*>(&Call_Camera_14), reinterpret_cast<void*>(&Call_Camera_15), reinterpret_cast<void*>(&Call_Camera_16), reinterpret_cast<void*>(&Call_Camera_17), reinterpret_cast<void*>(&Call_Camera_18), reinterpret_cast<void*>(&Call_Camera_19), reinterpret_cast<void*>(&Call_Camera_20), reinterpret_cast<void*>(&Call_Camera_21), reinterpret_cast<void*>(&Call_Camera_22), reinterpret_cast<void*>(&Call_Camera_23), reinterpret_cast<void*>(&Call_Camera_24), reinterpret_cast<void*>(&Call_Camera_25), reinterpret_cast<void*>(&Call_Camera_26), reinterpret_cast<void*>(&Call_Camera_27), reinterpret_cast<void*>(&Call_Camera_28), reinterpret_cast<void*>(&Call_Camera_29), reinterpret_cast<void*>(&Call_Camera_30) };
     NativeBindings::Register(Camera::StaticType(), 1701664351275001347ULL, { functions_Camera, 31 });
-    static void* functions_CharacterController[] = { reinterpret_cast<void*>(&Call_CharacterController_0), reinterpret_cast<void*>(&Call_CharacterController_1), reinterpret_cast<void*>(&Call_CharacterController_2), reinterpret_cast<void*>(&Call_CharacterController_3), reinterpret_cast<void*>(&Call_CharacterController_4), reinterpret_cast<void*>(&Call_CharacterController_5), reinterpret_cast<void*>(&Call_CharacterController_6), reinterpret_cast<void*>(&Call_CharacterController_7), reinterpret_cast<void*>(&Call_CharacterController_8), reinterpret_cast<void*>(&Call_CharacterController_9), reinterpret_cast<void*>(&Call_CharacterController_10), reinterpret_cast<void*>(&Call_CharacterController_11), reinterpret_cast<void*>(&Call_CharacterController_12), reinterpret_cast<void*>(&Call_CharacterController_13), reinterpret_cast<void*>(&Call_CharacterController_14), reinterpret_cast<void*>(&Call_CharacterController_15), reinterpret_cast<void*>(&Call_CharacterController_16), reinterpret_cast<void*>(&Call_CharacterController_17), reinterpret_cast<void*>(&Call_CharacterController_18), reinterpret_cast<void*>(&Call_CharacterController_19) };
-    NativeBindings::Register(CharacterController::StaticType(), 10238575052024383737ULL, { functions_CharacterController, 20 });
-    static void* functions_Collider[] = { reinterpret_cast<void*>(&Call_Collider_0), reinterpret_cast<void*>(&Call_Collider_1), reinterpret_cast<void*>(&Call_Collider_2), reinterpret_cast<void*>(&Call_Collider_3), reinterpret_cast<void*>(&Call_Collider_4), reinterpret_cast<void*>(&Call_Collider_5), reinterpret_cast<void*>(&Call_Collider_6), reinterpret_cast<void*>(&Call_Collider_7), reinterpret_cast<void*>(&Call_Collider_8), reinterpret_cast<void*>(&Call_Collider_9), reinterpret_cast<void*>(&Call_Collider_10), reinterpret_cast<void*>(&Call_Collider_11), reinterpret_cast<void*>(&Call_Collider_12), reinterpret_cast<void*>(&Call_Collider_13), reinterpret_cast<void*>(&Call_Collider_14) };
-    NativeBindings::Register(Collider::StaticType(), 5756356102473752287ULL, { functions_Collider, 15 });
+    static void* functions_CharacterController[] = { reinterpret_cast<void*>(&Call_CharacterController_0), reinterpret_cast<void*>(&Call_CharacterController_1), reinterpret_cast<void*>(&Call_CharacterController_2), reinterpret_cast<void*>(&Call_CharacterController_3), reinterpret_cast<void*>(&Call_CharacterController_4), reinterpret_cast<void*>(&Call_CharacterController_5), reinterpret_cast<void*>(&Call_CharacterController_6), reinterpret_cast<void*>(&Call_CharacterController_7), reinterpret_cast<void*>(&Call_CharacterController_8), reinterpret_cast<void*>(&Call_CharacterController_9), reinterpret_cast<void*>(&Call_CharacterController_10), reinterpret_cast<void*>(&Call_CharacterController_11), reinterpret_cast<void*>(&Call_CharacterController_12), reinterpret_cast<void*>(&Call_CharacterController_13), reinterpret_cast<void*>(&Call_CharacterController_14), reinterpret_cast<void*>(&Call_CharacterController_15), reinterpret_cast<void*>(&Call_CharacterController_16), reinterpret_cast<void*>(&Call_CharacterController_17) };
+    NativeBindings::Register(CharacterController::StaticType(), 5662530419562788132ULL, { functions_CharacterController, 18 });
+    static void* functions_Collider[] = { reinterpret_cast<void*>(&Call_Collider_0), reinterpret_cast<void*>(&Call_Collider_1), reinterpret_cast<void*>(&Call_Collider_2), reinterpret_cast<void*>(&Call_Collider_3), reinterpret_cast<void*>(&Call_Collider_4), reinterpret_cast<void*>(&Call_Collider_5), reinterpret_cast<void*>(&Call_Collider_6), reinterpret_cast<void*>(&Call_Collider_7), reinterpret_cast<void*>(&Call_Collider_8), reinterpret_cast<void*>(&Call_Collider_9), reinterpret_cast<void*>(&Call_Collider_10), reinterpret_cast<void*>(&Call_Collider_11), reinterpret_cast<void*>(&Call_Collider_12) };
+    NativeBindings::Register(Collider::StaticType(), 1618013108518935373ULL, { functions_Collider, 13 });
     static void* functions_DirectionalLight[] = { reinterpret_cast<void*>(&Call_DirectionalLight_0), reinterpret_cast<void*>(&Call_DirectionalLight_1), reinterpret_cast<void*>(&Call_DirectionalLight_2), reinterpret_cast<void*>(&Call_DirectionalLight_3), reinterpret_cast<void*>(&Call_DirectionalLight_4), reinterpret_cast<void*>(&Call_DirectionalLight_5), reinterpret_cast<void*>(&Call_DirectionalLight_6), reinterpret_cast<void*>(&Call_DirectionalLight_7), reinterpret_cast<void*>(&Call_DirectionalLight_8), reinterpret_cast<void*>(&Call_DirectionalLight_9), reinterpret_cast<void*>(&Call_DirectionalLight_10), reinterpret_cast<void*>(&Call_DirectionalLight_11), reinterpret_cast<void*>(&Call_DirectionalLight_12), reinterpret_cast<void*>(&Call_DirectionalLight_13), reinterpret_cast<void*>(&Call_DirectionalLight_14), reinterpret_cast<void*>(&Call_DirectionalLight_15), reinterpret_cast<void*>(&Call_DirectionalLight_16), reinterpret_cast<void*>(&Call_DirectionalLight_17), reinterpret_cast<void*>(&Call_DirectionalLight_18), reinterpret_cast<void*>(&Call_DirectionalLight_19), reinterpret_cast<void*>(&Call_DirectionalLight_20), reinterpret_cast<void*>(&Call_DirectionalLight_21), reinterpret_cast<void*>(&Call_DirectionalLight_22), reinterpret_cast<void*>(&Call_DirectionalLight_23), reinterpret_cast<void*>(&Call_DirectionalLight_24), reinterpret_cast<void*>(&Call_DirectionalLight_25), reinterpret_cast<void*>(&Call_DirectionalLight_26) };
     NativeBindings::Register(DirectionalLight::StaticType(), 12538889494756729084ULL, { functions_DirectionalLight, 27 });
     static void* functions_HeightField[] = { reinterpret_cast<void*>(&Call_HeightField_0), reinterpret_cast<void*>(&Call_HeightField_1), reinterpret_cast<void*>(&Call_HeightField_2), reinterpret_cast<void*>(&Call_HeightField_3), reinterpret_cast<void*>(&Call_HeightField_4), reinterpret_cast<void*>(&Call_HeightField_5), reinterpret_cast<void*>(&Call_HeightField_6), reinterpret_cast<void*>(&Call_HeightField_7), reinterpret_cast<void*>(&Call_HeightField_8), reinterpret_cast<void*>(&Call_HeightField_9), reinterpret_cast<void*>(&Call_HeightField_10), reinterpret_cast<void*>(&Call_HeightField_11), reinterpret_cast<void*>(&Call_HeightField_12), reinterpret_cast<void*>(&Call_HeightField_13), reinterpret_cast<void*>(&Call_HeightField_14), reinterpret_cast<void*>(&Call_HeightField_15), reinterpret_cast<void*>(&Call_HeightField_16), reinterpret_cast<void*>(&Call_HeightField_17), reinterpret_cast<void*>(&Call_HeightField_18), reinterpret_cast<void*>(&Call_HeightField_19), reinterpret_cast<void*>(&Call_HeightField_20), reinterpret_cast<void*>(&Call_HeightField_21), reinterpret_cast<void*>(&Call_HeightField_22), reinterpret_cast<void*>(&Call_HeightField_23), reinterpret_cast<void*>(&Call_HeightField_24), reinterpret_cast<void*>(&Call_HeightField_25), reinterpret_cast<void*>(&Call_HeightField_26), reinterpret_cast<void*>(&Call_HeightField_27), reinterpret_cast<void*>(&Call_HeightField_28), reinterpret_cast<void*>(&Call_HeightField_29), reinterpret_cast<void*>(&Call_HeightField_30), reinterpret_cast<void*>(&Call_HeightField_31), reinterpret_cast<void*>(&Call_HeightField_32), reinterpret_cast<void*>(&Call_HeightField_33), reinterpret_cast<void*>(&Call_HeightField_34), reinterpret_cast<void*>(&Call_HeightField_35), reinterpret_cast<void*>(&Call_HeightField_36), reinterpret_cast<void*>(&Call_HeightField_37), reinterpret_cast<void*>(&Call_HeightField_38), reinterpret_cast<void*>(&Call_HeightField_39), reinterpret_cast<void*>(&Call_HeightField_40), reinterpret_cast<void*>(&Call_HeightField_41), reinterpret_cast<void*>(&Call_HeightField_42), reinterpret_cast<void*>(&Call_HeightField_43), reinterpret_cast<void*>(&Call_HeightField_44), reinterpret_cast<void*>(&Call_HeightField_45), reinterpret_cast<void*>(&Call_HeightField_46), reinterpret_cast<void*>(&Call_HeightField_47), reinterpret_cast<void*>(&Call_HeightField_48), reinterpret_cast<void*>(&Call_HeightField_49), reinterpret_cast<void*>(&Call_HeightField_50), reinterpret_cast<void*>(&Call_HeightField_51), reinterpret_cast<void*>(&Call_HeightField_52), reinterpret_cast<void*>(&Call_HeightField_53) };
     NativeBindings::Register(HeightField::StaticType(), 16283581396438651902ULL, { functions_HeightField, 54 });
     static void* functions_ParticleSystem[] = { reinterpret_cast<void*>(&Call_ParticleSystem_0), reinterpret_cast<void*>(&Call_ParticleSystem_1), reinterpret_cast<void*>(&Call_ParticleSystem_2), reinterpret_cast<void*>(&Call_ParticleSystem_3), reinterpret_cast<void*>(&Call_ParticleSystem_4), reinterpret_cast<void*>(&Call_ParticleSystem_5), reinterpret_cast<void*>(&Call_ParticleSystem_6), reinterpret_cast<void*>(&Call_ParticleSystem_7), reinterpret_cast<void*>(&Call_ParticleSystem_8), reinterpret_cast<void*>(&Call_ParticleSystem_9), reinterpret_cast<void*>(&Call_ParticleSystem_10), reinterpret_cast<void*>(&Call_ParticleSystem_11), reinterpret_cast<void*>(&Call_ParticleSystem_12), reinterpret_cast<void*>(&Call_ParticleSystem_13), reinterpret_cast<void*>(&Call_ParticleSystem_14), reinterpret_cast<void*>(&Call_ParticleSystem_15), reinterpret_cast<void*>(&Call_ParticleSystem_16), reinterpret_cast<void*>(&Call_ParticleSystem_17), reinterpret_cast<void*>(&Call_ParticleSystem_18), reinterpret_cast<void*>(&Call_ParticleSystem_19), reinterpret_cast<void*>(&Call_ParticleSystem_20), reinterpret_cast<void*>(&Call_ParticleSystem_21), reinterpret_cast<void*>(&Call_ParticleSystem_22), reinterpret_cast<void*>(&Call_ParticleSystem_23), reinterpret_cast<void*>(&Call_ParticleSystem_24), reinterpret_cast<void*>(&Call_ParticleSystem_25), reinterpret_cast<void*>(&Call_ParticleSystem_26), reinterpret_cast<void*>(&Call_ParticleSystem_27), reinterpret_cast<void*>(&Call_ParticleSystem_28) };
     NativeBindings::Register(ParticleSystem::StaticType(), 12456303718290141251ULL, { functions_ParticleSystem, 29 });
-    static void* functions_RigidBody[] = { reinterpret_cast<void*>(&Call_RigidBody_0), reinterpret_cast<void*>(&Call_RigidBody_1), reinterpret_cast<void*>(&Call_RigidBody_2), reinterpret_cast<void*>(&Call_RigidBody_3), reinterpret_cast<void*>(&Call_RigidBody_4), reinterpret_cast<void*>(&Call_RigidBody_5), reinterpret_cast<void*>(&Call_RigidBody_6), reinterpret_cast<void*>(&Call_RigidBody_7), reinterpret_cast<void*>(&Call_RigidBody_8), reinterpret_cast<void*>(&Call_RigidBody_9), reinterpret_cast<void*>(&Call_RigidBody_10), reinterpret_cast<void*>(&Call_RigidBody_11), reinterpret_cast<void*>(&Call_RigidBody_12), reinterpret_cast<void*>(&Call_RigidBody_13), reinterpret_cast<void*>(&Call_RigidBody_14), reinterpret_cast<void*>(&Call_RigidBody_15), reinterpret_cast<void*>(&Call_RigidBody_16), reinterpret_cast<void*>(&Call_RigidBody_17), reinterpret_cast<void*>(&Call_RigidBody_18), reinterpret_cast<void*>(&Call_RigidBody_19), reinterpret_cast<void*>(&Call_RigidBody_20), reinterpret_cast<void*>(&Call_RigidBody_21), reinterpret_cast<void*>(&Call_RigidBody_22) };
-    NativeBindings::Register(RigidBody::StaticType(), 11999458345191868740ULL, { functions_RigidBody, 23 });
+    static void* functions_RigidBody[] = { reinterpret_cast<void*>(&Call_RigidBody_0), reinterpret_cast<void*>(&Call_RigidBody_1), reinterpret_cast<void*>(&Call_RigidBody_2), reinterpret_cast<void*>(&Call_RigidBody_3), reinterpret_cast<void*>(&Call_RigidBody_4), reinterpret_cast<void*>(&Call_RigidBody_5), reinterpret_cast<void*>(&Call_RigidBody_6), reinterpret_cast<void*>(&Call_RigidBody_7), reinterpret_cast<void*>(&Call_RigidBody_8), reinterpret_cast<void*>(&Call_RigidBody_9), reinterpret_cast<void*>(&Call_RigidBody_10), reinterpret_cast<void*>(&Call_RigidBody_11), reinterpret_cast<void*>(&Call_RigidBody_12), reinterpret_cast<void*>(&Call_RigidBody_13), reinterpret_cast<void*>(&Call_RigidBody_14), reinterpret_cast<void*>(&Call_RigidBody_15), reinterpret_cast<void*>(&Call_RigidBody_16), reinterpret_cast<void*>(&Call_RigidBody_17), reinterpret_cast<void*>(&Call_RigidBody_18), reinterpret_cast<void*>(&Call_RigidBody_19), reinterpret_cast<void*>(&Call_RigidBody_20), reinterpret_cast<void*>(&Call_RigidBody_21), reinterpret_cast<void*>(&Call_RigidBody_22), reinterpret_cast<void*>(&Call_RigidBody_23), reinterpret_cast<void*>(&Call_RigidBody_24), reinterpret_cast<void*>(&Call_RigidBody_25), reinterpret_cast<void*>(&Call_RigidBody_26), reinterpret_cast<void*>(&Call_RigidBody_27), reinterpret_cast<void*>(&Call_RigidBody_28), reinterpret_cast<void*>(&Call_RigidBody_29), reinterpret_cast<void*>(&Call_RigidBody_30), reinterpret_cast<void*>(&Call_RigidBody_31), reinterpret_cast<void*>(&Call_RigidBody_32) };
+    NativeBindings::Register(RigidBody::StaticType(), 6139362683202787086ULL, { functions_RigidBody, 33 });
     static void* functions_Script[] = { reinterpret_cast<void*>(&Call_Script_0), reinterpret_cast<void*>(&Call_Script_1), reinterpret_cast<void*>(&Call_Script_2), reinterpret_cast<void*>(&Call_Script_3), reinterpret_cast<void*>(&Call_Script_4), reinterpret_cast<void*>(&Call_Script_5) };
     NativeBindings::Register(Script::StaticType(), 4622765495942406386ULL, { functions_Script, 6 });
     static void* functions_StaticMeshRenderer[] = { reinterpret_cast<void*>(&Call_StaticMeshRenderer_0), reinterpret_cast<void*>(&Call_StaticMeshRenderer_1), reinterpret_cast<void*>(&Call_StaticMeshRenderer_2), reinterpret_cast<void*>(&Call_StaticMeshRenderer_3), reinterpret_cast<void*>(&Call_StaticMeshRenderer_4), reinterpret_cast<void*>(&Call_StaticMeshRenderer_5), reinterpret_cast<void*>(&Call_StaticMeshRenderer_6), reinterpret_cast<void*>(&Call_StaticMeshRenderer_7), reinterpret_cast<void*>(&Call_StaticMeshRenderer_8), reinterpret_cast<void*>(&Call_StaticMeshRenderer_9), reinterpret_cast<void*>(&Call_StaticMeshRenderer_10), reinterpret_cast<void*>(&Call_StaticMeshRenderer_11), reinterpret_cast<void*>(&Call_StaticMeshRenderer_12) };
     NativeBindings::Register(StaticMeshRenderer::StaticType(), 6751409981195983079ULL, { functions_StaticMeshRenderer, 13 });
     static void* functions_Transform[] = { reinterpret_cast<void*>(&Call_Transform_0), reinterpret_cast<void*>(&Call_Transform_1), reinterpret_cast<void*>(&Call_Transform_2), reinterpret_cast<void*>(&Call_Transform_3), reinterpret_cast<void*>(&Call_Transform_4), reinterpret_cast<void*>(&Call_Transform_5), reinterpret_cast<void*>(&Call_Transform_6), reinterpret_cast<void*>(&Call_Transform_7), reinterpret_cast<void*>(&Call_Transform_8), reinterpret_cast<void*>(&Call_Transform_9), reinterpret_cast<void*>(&Call_Transform_10), reinterpret_cast<void*>(&Call_Transform_11), reinterpret_cast<void*>(&Call_Transform_12), reinterpret_cast<void*>(&Call_Transform_13) };
     NativeBindings::Register(Transform::StaticType(), 2832195382186525765ULL, { functions_Transform, 14 });
-    static void* functions_WheelCollider[] = { reinterpret_cast<void*>(&Call_WheelCollider_0), reinterpret_cast<void*>(&Call_WheelCollider_1), reinterpret_cast<void*>(&Call_WheelCollider_2), reinterpret_cast<void*>(&Call_WheelCollider_3), reinterpret_cast<void*>(&Call_WheelCollider_4), reinterpret_cast<void*>(&Call_WheelCollider_5), reinterpret_cast<void*>(&Call_WheelCollider_6), reinterpret_cast<void*>(&Call_WheelCollider_7), reinterpret_cast<void*>(&Call_WheelCollider_8), reinterpret_cast<void*>(&Call_WheelCollider_9), reinterpret_cast<void*>(&Call_WheelCollider_10), reinterpret_cast<void*>(&Call_WheelCollider_11), reinterpret_cast<void*>(&Call_WheelCollider_12), reinterpret_cast<void*>(&Call_WheelCollider_13), reinterpret_cast<void*>(&Call_WheelCollider_14), reinterpret_cast<void*>(&Call_WheelCollider_15), reinterpret_cast<void*>(&Call_WheelCollider_16), reinterpret_cast<void*>(&Call_WheelCollider_17), reinterpret_cast<void*>(&Call_WheelCollider_18), reinterpret_cast<void*>(&Call_WheelCollider_19), reinterpret_cast<void*>(&Call_WheelCollider_20), reinterpret_cast<void*>(&Call_WheelCollider_21), reinterpret_cast<void*>(&Call_WheelCollider_22), reinterpret_cast<void*>(&Call_WheelCollider_23), reinterpret_cast<void*>(&Call_WheelCollider_24), reinterpret_cast<void*>(&Call_WheelCollider_25), reinterpret_cast<void*>(&Call_WheelCollider_26), reinterpret_cast<void*>(&Call_WheelCollider_27) };
-    NativeBindings::Register(WheelCollider::StaticType(), 13396853297441896464ULL, { functions_WheelCollider, 28 });
+    static void* functions_WheelCollider[] = { reinterpret_cast<void*>(&Call_WheelCollider_0), reinterpret_cast<void*>(&Call_WheelCollider_1), reinterpret_cast<void*>(&Call_WheelCollider_2), reinterpret_cast<void*>(&Call_WheelCollider_3), reinterpret_cast<void*>(&Call_WheelCollider_4), reinterpret_cast<void*>(&Call_WheelCollider_5), reinterpret_cast<void*>(&Call_WheelCollider_6), reinterpret_cast<void*>(&Call_WheelCollider_7), reinterpret_cast<void*>(&Call_WheelCollider_8), reinterpret_cast<void*>(&Call_WheelCollider_9), reinterpret_cast<void*>(&Call_WheelCollider_10), reinterpret_cast<void*>(&Call_WheelCollider_11), reinterpret_cast<void*>(&Call_WheelCollider_12), reinterpret_cast<void*>(&Call_WheelCollider_13), reinterpret_cast<void*>(&Call_WheelCollider_14), reinterpret_cast<void*>(&Call_WheelCollider_15), reinterpret_cast<void*>(&Call_WheelCollider_16), reinterpret_cast<void*>(&Call_WheelCollider_17), reinterpret_cast<void*>(&Call_WheelCollider_18), reinterpret_cast<void*>(&Call_WheelCollider_19), reinterpret_cast<void*>(&Call_WheelCollider_20), reinterpret_cast<void*>(&Call_WheelCollider_21), reinterpret_cast<void*>(&Call_WheelCollider_22), reinterpret_cast<void*>(&Call_WheelCollider_23), reinterpret_cast<void*>(&Call_WheelCollider_24), reinterpret_cast<void*>(&Call_WheelCollider_25) };
+    NativeBindings::Register(WheelCollider::StaticType(), 4616407760106585717ULL, { functions_WheelCollider, 26 });
     static void* functions_BoxCollider[] = { reinterpret_cast<void*>(&Call_BoxCollider_0), reinterpret_cast<void*>(&Call_BoxCollider_1), reinterpret_cast<void*>(&Call_BoxCollider_2) };
     NativeBindings::Register(BoxCollider::StaticType(), 3698543718541020963ULL, { functions_BoxCollider, 3 });
     static void* functions_CapsuleCollider[] = { reinterpret_cast<void*>(&Call_CapsuleCollider_0), reinterpret_cast<void*>(&Call_CapsuleCollider_1), reinterpret_cast<void*>(&Call_CapsuleCollider_2), reinterpret_cast<void*>(&Call_CapsuleCollider_3), reinterpret_cast<void*>(&Call_CapsuleCollider_4) };
