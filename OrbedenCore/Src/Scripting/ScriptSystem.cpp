@@ -288,6 +288,7 @@ void ScriptSystem::ShutdownNativeScripts()
 
 void ScriptSystem::RebuildNativeInvocations()
 {
+    PROFILE("Script/NativeInvocations");
     if (nativeListsDirty)
     {
         nativeListsDirty = false;
@@ -410,6 +411,7 @@ void ScriptSystem::DispatchNativeUpdate(float32 deltaTime)
 
 void ScriptSystem::DispatchNativeFixedUpdate(float32 fixedDeltaTime)
 {
+    PROFILE("Script/NativeFixedUpdate");
     RebuildNativeInvocations();
     for (const NativeScriptUpdateInvocation& invocation : nativeFixedUpdateInvocations)
     {
@@ -419,6 +421,7 @@ void ScriptSystem::DispatchNativeFixedUpdate(float32 fixedDeltaTime)
 
 void ScriptSystem::DispatchNativeLateUpdate(float32 deltaTime)
 {
+    PROFILE("Script/NativeLateUpdate");
     RebuildNativeInvocations();
     for (const NativeScriptUpdateInvocation& invocation : nativeLateUpdateInvocations)
     {
@@ -442,11 +445,13 @@ void ScriptSystem::DispatchManagedUpdate(float32 deltaTime)
 
 void ScriptSystem::DispatchManagedFixedUpdate(float32 fixedDeltaTime)
 {
+    PROFILE("Script/ManagedFixedUpdate");
     if (entryPoints.fixedUpdate) entryPoints.fixedUpdate(fixedDeltaTime);
 }
 
 void ScriptSystem::DispatchManagedLateUpdate(float32 deltaTime)
 {
+    PROFILE("Script/ManagedLateUpdate");
     if (entryPoints.lateUpdate) entryPoints.lateUpdate(deltaTime);
 }
 

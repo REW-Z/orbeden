@@ -147,7 +147,8 @@ public static unsafe class NativeBindingRuntime
         return Wrap(api.CreateObject(Resolve(type).TypeId), type);
     }
     internal static Component? AddComponent(EnsId ens, Type type) => Wrap(api.AddComponent(ens, Resolve(type).TypeId), type) as Component;
-    internal static List<Component> GetComponents(EnsId ens, Type requestedType)
+    //读取节点组件标识
+    internal static int[] GetComponentIds(EnsId ens, Type requestedType)
     {
         Entry entry = Resolve(types.ContainsKey(requestedType) ? requestedType : typeof(Component));
         int count = api.GetComponents(ens, entry.TypeId, null, 0);
@@ -155,11 +156,26 @@ public static unsafe class NativeBindingRuntime
         fixed (int* pointer = ids)
         {
             int actual = api.GetComponents(ens, entry.TypeId, pointer, ids.Length);
-            if (actual != count) throw new InvalidOperationException("Component collection changed while enumerating bindings.");
+            if (actual != count)
+            {
+                throw new InvalidOperationException("Component collection changed while enumerating bindings.");
+            }
         }
+        return ids;
+    }
+
+    //按原生类型包装节点组件
+    internal static List<Component> GetComponents(EnsId ens, Type requestedType)
+    {
         List<Component> result = [];
-        foreach (int id in ids)
-            if (Wrap(id, types.ContainsKey(requestedType) ? requestedType : null) is Component component && requestedType.IsInstanceOfType(component)) result.Add(component);
+        foreach (int id in GetComponentIds(ens, requestedType))
+        {
+            if (Wrap(id, types.ContainsKey(requestedType) ? requestedType : null) is Component component
+                && requestedType.IsInstanceOfType(component))
+            {
+                result.Add(component);
+            }
+        }
         return result;
     }
     internal static T? Load<T>(string key) where T : Object

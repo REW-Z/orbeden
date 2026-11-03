@@ -12367,6 +12367,11 @@
               "Name": "type",
               "Type": "Type*",
               "DefaultValue": ""
+            },
+            {
+              "Name": "configure",
+              "Type": "const std::function\u003Cvoid(Component\u0026)\u003E\u0026",
+              "DefaultValue": "{}"
             }
           ]
         },
@@ -12676,6 +12681,31 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "AddComponent",
+          "Type": "T*",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": true,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "configure",
+              "Type": "const std::function\u003Cvoid(T\u0026)\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
         },
         {
           "Name": "AddComponentInstance",
@@ -56243,6 +56273,44 @@
           "Parameters": []
         },
         {
+          "Name": "GetTransformRevision",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "ReadTransformMatrices",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Create",
           "Type": "RetainedGuiApi",
           "Access": "public",
@@ -78856,6 +78924,11 @@
               "Name": "type",
               "Type": "Type*",
               "DefaultValue": ""
+            },
+            {
+              "Name": "configure",
+              "Type": "const std::function\u003Cvoid(Component\u0026)\u003E\u0026",
+              "DefaultValue": "{}"
             }
           ]
         },
@@ -78891,6 +78964,11 @@
               "Name": "stablePath",
               "Type": "const std::string\u0026",
               "DefaultValue": "\u0022\u0022"
+            },
+            {
+              "Name": "configure",
+              "Type": "const std::function\u003Cvoid(Component\u0026)\u003E\u0026",
+              "DefaultValue": "{}"
             }
           ]
         },

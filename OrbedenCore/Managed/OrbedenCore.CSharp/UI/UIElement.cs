@@ -57,7 +57,7 @@ public abstract class UIElement : Script, IManagedComponentLifecycle
     }
 
     /// <summary>取本节点上的布局组件；没有 UILayout 的节点不参与 UI 树。</summary>
-    public UILayout? GetLayout() => Ens.GetComponent<UILayout>();
+    public UILayout? GetLayout() => UIWorldContext.Current?.FindNode(EnsId)?.Layout ?? Ens.GetComponent<UILayout>();
 
     /// <summary>沿祖先查找所属画布；本节点自身是画布时返回自己。</summary>
     public Canvas? GetCanvas()

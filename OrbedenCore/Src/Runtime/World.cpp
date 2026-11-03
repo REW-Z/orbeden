@@ -938,40 +938,90 @@ Ens* World::GetParent(EnsId child) const
 }
 
 //添加组件
-Component* World::AddComponent(EnsId ens, Type* type)
+Component* World::AddComponent(EnsId ens, Type* type, const std::function<void(Component&)>& configure)
 {
     Transform* transform = GetTransform(ens);
-    if (!transform || !type || !type->Is(Component::StaticType())) return nullptr;
-    if (type == Transform::StaticType()) return transform;
+    if (!transform || !type || !type->Is(Component::StaticType()))
+    {
+        return nullptr;
+    }
+    if (type == Transform::StaticType())
+    {
+        return transform;
+    }
 
     Component* oldComponent = GetComponent(ens, type);
-    if (oldComponent) return oldComponent;
+    if (oldComponent)
+    {
+        return oldComponent;
+    }
 
-    return AddComponentInstance(ens, type);
+    return AddComponentInstance(ens, type, "", configure);
 }
 
 //添加同类型的独立组件实例
-Component* World::AddComponentInstance(EnsId ens, Type* type, const std::string& stablePath)
+Component* World::AddComponentInstance(EnsId ens, Type* type, const std::string& stablePath,
+    const std::function<void(Component&)>& configure)
 {
-    if (std::find(destroyingEns.begin(), destroyingEns.end(), ens) != destroyingEns.end()) return nullptr;
+    if (std::find(destroyingEns.begin(), destroyingEns.end(), ens) != destroyingEns.end())
+    {
+        return nullptr;
+    }
     Transform* transform = GetTransform(ens);
-    if (!transform || !type || !type->Is(Component::StaticType()) || !type->CanCreateObject()) return nullptr;
-    if (type == Transform::StaticType()) return transform;
+    if (!transform || !type || !type->Is(Component::StaticType()) || !type->CanCreateObject())
+    {
+        return nullptr;
+    }
+    if (type == Transform::StaticType())
+    {
+        return transform;
+    }
 
     Ens* storedEns = GetEns(ens);
-    if (!storedEns) return nullptr;
+    if (!storedEns)
+    {
+        return nullptr;
+    }
 
-    //创建并注册组件
+    //创建组件对象
     std::string instancePath = stablePath.empty()
         ? Object::CreateRuntimeInstancePath(storedEns->GetInstanceId().GetPath(), type) : stablePath;
-    if (Object::FindObject(StringId(instancePath))) return nullptr;
+    if (Object::FindObject(StringId(instancePath)))
+    {
+        return nullptr;
+    }
     ComponentStorage* storage = GetOrCreateComponentStorage(type);
     Component* component = storage ? storage->Create(ens, instancePath) : nullptr;
-    if (!component) return nullptr;
+    if (!component)
+    {
+        return nullptr;
+    }
 
+    //配置新组件参数
+    if (configure)
+    {
+        try
+        {
+            configure(*component);
+        }
+        catch (...)
+        {
+            storage->Remove(component);
+            component->SetEnsId(EnsId());
+            component->SetWorld(nullptr);
+            component->SetOwnership(Object::Ownership::None);
+            Object::DestroyDetachedInstance(component);
+            throw;
+        }
+    }
+
+    //注册组件并执行挂载回调
     storedEns->AddComponentInstance(component);
     SetDirty();
-    if (!preparing) component->OnAttach();
+    if (!preparing)
+    {
+        component->OnAttach();
+    }
     return component;
 }
 

@@ -217,7 +217,7 @@ public class Slider : UIControl
     }
 
     //驱动拇指与填充的运行期矩形，不修改它们的配置。
-    private void DriveVisuals()
+    internal void DriveVisuals()
     {
         float normalized = UIRangeMath.Normalize(value, minimum, maximum);
         float direction = reverse ? 1.0f - normalized : normalized;
@@ -227,7 +227,7 @@ public class Slider : UIControl
 
     private void DriveThumb(float normalized)
     {
-        if (track == null || thumb == null) return;
+        if (track == null || thumb == null || !track.HasResolvedRect || !thumb.HasResolvedRect) return;
 
         //轨道与拇指换算到共同空间（它们的父级空间）；两者的锚点就是各自原点的落点。
         UIRect trackRect = InParentSpace(track);
@@ -254,7 +254,7 @@ public class Slider : UIControl
 
     private void DriveFill(float normalized)
     {
-        if (track == null || fill == null) return;
+        if (track == null || fill == null || !track.HasResolvedRect || !fill.HasResolvedRect) return;
 
         UIRect trackRect = InParentSpace(track);
         UIRect fillRect = InParentSpace(fill);

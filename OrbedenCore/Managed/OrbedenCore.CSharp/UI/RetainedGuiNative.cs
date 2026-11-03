@@ -11,7 +11,7 @@ namespace Orbeden;
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct RetainedGuiApi
 {
-    /// <summary>表版本。当前为 3。</summary>
+    /// <summary>表版本。当前为 4。</summary>
     public uint version;
 
     /// <summary>表字节数。</summary>
@@ -41,13 +41,16 @@ internal unsafe struct RetainedGuiApi
 
     /// <summary>读取指定字体版本的预烘焙图集载荷。</summary>
     public delegate* unmanaged[Cdecl]<ulong, int, ulong, byte*, int, int> ReadPrebakedAtlas;
+
+    public delegate* unmanaged[Cdecl]<ulong, ulong> GetTransformRevision;
+    public delegate* unmanaged[Cdecl]<ulong, EnsId*, int, matrix4x4*, matrix4x4*, byte> ReadTransformMatrices;
 }
 
 /// <summary>RetainedGUI 函数表的进程级持有者。表在进程内稳定，不随世界切换变化。</summary>
 internal static unsafe class RetainedGuiNative
 {
     /// <summary>当前表版本；与原生 RetainedGuiApi::version 必须一致。</summary>
-    internal const uint ExpectedVersion = 3;
+    internal const uint ExpectedVersion = 4;
 
     private static RetainedGuiApi api;
     private static bool initialized;
@@ -61,16 +64,25 @@ internal static unsafe class RetainedGuiNative
         initialized = false;
         api = default;
         //表还没绑定不算错误：模块初始化可能早于引擎 API 绑定，由世界附着时兜底重试。
-        if (table == IntPtr.Zero) return false;
+        if (table == IntPtr.Zero)
+        {
+            return false;
+        }
 
-        RetainedGuiApi candidate = *(RetainedGuiApi*)table;
-        if (candidate.version != ExpectedVersion
-            || candidate.structSize != sizeof(RetainedGuiApi)
-            || candidate.CreateContext == null
-            || candidate.DestroyContext == null)
+        //校验表头与函数槽
+        uint* header = (uint*)table;
+        if (header[0] != ExpectedVersion || header[1] != sizeof(RetainedGuiApi))
         {
             Console.Error.WriteLine(
-                $"RetainedGuiNative: 函数表不匹配（表 0x{table.ToInt64():X}，版本 {candidate.version}，尺寸 {candidate.structSize}，期望 {ExpectedVersion}/{sizeof(RetainedGuiApi)}）。");
+                $"RetainedGuiNative: 函数表不匹配（表 0x{table.ToInt64():X}，版本 {header[0]}，尺寸 {header[1]}，期望 {ExpectedVersion}/{sizeof(RetainedGuiApi)}）。");
+            return false;
+        }
+
+        RetainedGuiApi candidate = *(RetainedGuiApi*)table;
+        if (candidate.CreateContext == null || candidate.DestroyContext == null
+            || candidate.GetTransformRevision == null || candidate.ReadTransformMatrices == null)
+        {
+            Console.Error.WriteLine("RetainedGuiNative: 原生函数表缺少必要入口。");
             return false;
         }
 
@@ -143,6 +155,15 @@ internal static unsafe class RetainedGuiNative
 
     internal static byte ApplyDerivedPositions(ulong context, UIDerivedPosition* positions, int count) =>
         initialized ? api.ApplyDerivedPositions(context, positions, count) : (byte)0;
+
+    //读取变换版本
+    internal static ulong GetTransformRevision(ulong context) =>
+        initialized ? api.GetTransformRevision(context) : 0;
+
+    //批量读取局部矩阵与世界矩阵
+    internal static byte ReadTransformMatrices(ulong context, EnsId* nodes, int count,
+        matrix4x4* localMatrices, matrix4x4* worldMatrices) =>
+        initialized ? api.ReadTransformMatrices(context, nodes, count, localMatrices, worldMatrices) : (byte)0;
 
     internal static byte ReadDepth(ulong context, ulong viewId, ulong viewerId, ulong presentedFrame,
         int x, int y, float* depth) =>

@@ -3,6 +3,7 @@
 #include "Runtime/Object/Component.h"
 #include "Runtime/EngineTypes.h"
 
+#include <functional>
 #include <string>
 #include <type_traits>
 
@@ -153,9 +154,9 @@ public:
     ORBEDEN_BIND_IGNORE
     Ens* GetParent() const;
 
-    //添加组件
+    //添加组件并在挂载前配置新实例
     ORBEDEN_BIND_IGNORE
-    Component* AddComponent(Type* type);
+    Component* AddComponent(Type* type, const std::function<void(Component&)>& configure = {});
 
     //添加同类型的独立组件实例
     ORBEDEN_BIND_IGNORE
@@ -208,6 +209,23 @@ public:
     {
         static_assert(std::is_base_of_v<Component, T>);
         return static_cast<T*>(AddComponent(T::StaticType()));
+    }
+
+    //添加组件并同步配置新实例
+    template<typename T>
+    ORBEDEN_BIND_IGNORE
+    T* AddComponent(const std::function<void(T&)>& configure)
+    {
+        static_assert(std::is_base_of_v<Component, T>);
+        if (!configure)
+        {
+            return AddComponent<T>();
+        }
+
+        return static_cast<T*>(AddComponent(T::StaticType(), [&configure](Component& component)
+        {
+            configure(static_cast<T&>(component));
+        }));
     }
 
     //添加同类型的独立组件实例

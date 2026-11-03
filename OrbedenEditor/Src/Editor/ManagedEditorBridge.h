@@ -12,6 +12,9 @@ class PanelManager;
 struct EditorGizmoApi;
 enum class EditorWorldFileOperation : uint8;
 
+//脚本指纹操作，与托管 ScriptBuildOperation 对应
+enum class ScriptBuildOperation : uint8 { Check, Begin, Complete };
+
 //与托管入口共用的场景辅助绘制阶段
 enum class SceneGizmoPass : uint8
 {
@@ -58,12 +61,15 @@ private:
     void* RequestPasteSelectedFunction = nullptr;
     void* RequestToggleActiveSelectedFunction = nullptr;
     void* RequestScriptBuildFunction = nullptr;
+    void* UpdateScriptBuildFunction = nullptr;
     void* ProcessWorldFileFunction = nullptr;
     void* CanModifyPrefabFunction = nullptr;
     void* RevealSelectedEnsFunction = nullptr;
     bool initialized = false;
 
 public:
+    //检查脚本指纹或记录构建快照
+    bool UpdateScriptBuild(ScriptBuildOperation operation, bool native) const;
     //在层级面板定位场景选中的节点
     void RevealSelectedEns(EnsId ens);
     //处理编辑场景文件和运行场景产物

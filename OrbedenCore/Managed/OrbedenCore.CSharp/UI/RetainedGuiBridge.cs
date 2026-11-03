@@ -85,6 +85,31 @@ public sealed unsafe class RetainedGuiBridge : IRetainedGuiHost, IUIDerivedPosit
             return RetainedGuiNative.ApplyDerivedPositions(context, pointer, positions.Length) != 0;
     }
 
+    //读取原生变换版本
+    internal ulong GetTransformRevision() => IsValid ? RetainedGuiNative.GetTransformRevision(context) : 0;
+
+    //批量读取节点矩阵
+    internal bool ReadTransformMatrices(ReadOnlySpan<EnsId> nodes, Span<matrix4x4> localMatrices,
+        Span<matrix4x4> worldMatrices)
+    {
+        if (localMatrices.Length < nodes.Length || worldMatrices.Length < nodes.Length)
+        {
+            throw new ArgumentException("Transform matrix output buffers are too small.");
+        }
+        if (!IsValid)
+        {
+            return false;
+        }
+
+        fixed (EnsId* nodePointer = nodes)
+        fixed (matrix4x4* localPointer = localMatrices)
+        fixed (matrix4x4* worldPointer = worldMatrices)
+        {
+            return RetainedGuiNative.ReadTransformMatrices(context, nodePointer, nodes.Length,
+                localPointer, worldPointer) != 0;
+        }
+    }
+
     /// <summary>读取视图快照。容量不足时按原生约定不部分写，返回所需条数。</summary>
     public Span<UIView> ReadViews(Span<UIView> output)
     {

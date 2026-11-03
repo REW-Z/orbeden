@@ -32,7 +32,7 @@
           {
             "Name": "colorSlots",
             "TypeName": "List\u003CMaterialColorSlot\u003E",
-            "Value": "2 elements\nu_DiffuseColor: 0.379999995 0.519999981 0.360000014 1\nu_SpecularColor: 0.119999997 0.159999996 0.119999997 1"
+            "Value": "2 elements\nu_DiffuseColor: 0.379999995 0.360000014 0.360000014 1\nu_SpecularColor: 0.119999997 0.119999997 0.119999997 1"
           },
           {
             "Name": "floatSlots",

@@ -73,8 +73,8 @@ void TransformCache::Update(World& currentWorld)
         if (!transform) continue;
 
         CollectChangedRecursive(ens);
-        if (!transform->transformDirty && transform->transformCacheInitialized) continue;
 
+        //检查根节点及其后代的待更新变换
         Transform* parentTransform = currentWorld.GetTransform(transform->parent);
         matrix4x4 parentMatrix = parentTransform ? parentTransform->worldMatrix : matrix4x4();
         quaternion parentRotation = parentTransform ? parentTransform->worldRotation : quaternion();

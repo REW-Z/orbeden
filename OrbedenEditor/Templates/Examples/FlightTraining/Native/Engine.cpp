@@ -2,6 +2,7 @@
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/RigidBody.h"
 #include "Runtime/Object/Transform.h"
+#include "Runtime/World.h"
 #include "InputManager/InputManager.h"
 #include <algorithm>
 #include <cmath>
@@ -56,30 +57,60 @@ void Engine::OnFixedUpdate(float32 deltaTime)
 {
     Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
-    if (!transform || !body || !body->enabled) return;
+    if (!transform || !body || !body->enabled)
+    {
+        return;
+    }
 
     //按油门键调整油门
     float32 step = std::max(deltaTime, 0.0f);
     float32 throttleInput = (Input::Key(KeyEnum::LSHIFT) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::LCTRL) ? 1.0f : 0.0f);
-    throttle = std::clamp(throttle + throttleInput * throttleRate * step, 0.0f, 1.0f);
+    SetThrottle(throttle + throttleInput * throttleRate * step);
+
+    EvaluateForces();
+    body->AddForceAtPosition(thrustForce, propellerPosition);
+    body->AddForceAtPosition(windmillDragForce, propellerPosition);
+}
+
+//刷新螺旋桨受力与作用点
+void Engine::EvaluateForces()
+{
+    thrustForce = {};
+    windmillDragForce = {};
+    propellerPosition = {};
+    World* world = GetWorld();
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
+    Ens* propellerEns = world ? world->GetEns(propeller) : nullptr;
+    if (!transform || !body || !body->enabled || !propellerEns)
+    {
+        return;
+    }
+
+    //同步作用点与局部速度
+    transformCache.Update(*world);
+    propellerPosition = propellerEns->Transform()->GetWorldPosition();
+    vector3 offset = Add(propellerPosition, Scale(transform->GetWorldPosition(), -1.0f));
+    vector3 velocity = Add(body->linearVelocity, Cross(body->angularVelocity, offset));
 
     //推力随前向空速衰减
-    vector3 forward = Rotate(transform->GetLocalRotation(), { 0, 0, -1 });
-    float32 forwardSpeed = Dot(body->linearVelocity, forward);
+    vector3 forward = Rotate(transform->GetWorldRotation(), { 0, 0, -1 });
+    float32 forwardSpeed = Dot(velocity, forward);
     float32 thrust = maxThrust * throttle * std::clamp(1.0f - std::max(forwardSpeed, 0.0f) / std::max(thrustFadeSpeed, 1.0f), 0.0f, 1.0f);
     thrustForce = Scale(forward, thrust);
-    body->AddForce(thrustForce);
 
     //风车状态螺旋桨沿桨轴产生阻力
     float32 windmillDrag = 0.5f * AirDensity * forwardSpeed * forwardSpeed
         * std::max(windmillDragArea, 0.0f) * (1.0f - throttle);
     windmillDragForce = std::abs(forwardSpeed) > 0.01f
         ? Scale(forward, -std::copysign(windmillDrag, forwardSpeed)) : vector3();
-    body->AddForce(windmillDragForce);
 }
 
 /// <summary>读取油门。</summary>
 float32 Engine::GetThrottle() { return throttle; }
+
+//设置油门位置
+void Engine::SetThrottle(float32 value) { throttle = std::clamp(value, 0.0f, 1.0f); }
 
 /// <summary>读取推力牛顿数。</summary>
 float32 Engine::GetThrustNewtons() { return Length(thrustForce); }
@@ -93,10 +124,14 @@ float32 Engine::GetWindmillDragNewtons() { return Length(windmillDragForce); }
 /// <summary>读取风车阻力向量。</summary>
 vector3 Engine::GetWindmillDragForce() { return windmillDragForce; }
 
+//读取螺旋桨世界坐标
+vector3 Engine::GetPropellerPosition() { return propellerPosition; }
+
 /// <summary>清空油门和推力。</summary>
 void Engine::ResetThrottle()
 {
     throttle = 0.0f;
     thrustForce = {};
     windmillDragForce = {};
+    propellerPosition = {};
 }

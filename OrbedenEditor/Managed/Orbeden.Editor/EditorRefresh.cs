@@ -179,14 +179,19 @@ internal static class EditorRefresh
         standardOutput = null;
         standardError = null;
 
-        compiledScripts = exitCode == 0;
         ForwardBuildOutput(output, error);
+        if (exitCode == 0)
+        {
+            EditorScriptFiles.UpdateBuild(ScriptBuildOperation.Complete, false);
+            compiledScripts = true;
+        }
         Finish(exitCode == 0, false);
     }
 
     //启动 dotnet build 子进程并接上两路异步输出
     private static void StartBuild()
     {
+        EditorScriptFiles.UpdateBuild(ScriptBuildOperation.Begin, false);
         ProcessStartInfo start = new("dotnet")
         {
             UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden,
@@ -195,6 +200,7 @@ internal static class EditorRefresh
         };
         start.ArgumentList.Add("build");
         start.ArgumentList.Add(scriptProject);
+        start.ArgumentList.Add("-t:Rebuild");
         start.ArgumentList.Add("-c");
         start.ArgumentList.Add("Debug");
         start.ArgumentList.Add("/p:OrbedenEditorBuild=true");

@@ -6,6 +6,7 @@
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Transform.h"
+#include "Profiler/Profiler.h"
 
 #include <algorithm>
 #include <cmath>
@@ -67,9 +68,19 @@ Material* HeightField::GetSurfaceMaterial() const
 //按当前参数重建高度场、渲染网格与噪声贴图。
 void HeightField::Regenerate()
 {
-    RebuildHeights();
-    RebuildNoiseTexture();
-    RebuildRenderMesh();
+    PROFILE("Terrain/Regenerate");
+    {
+        PROFILE("Terrain/Heights");
+        RebuildHeights();
+    }
+    {
+        PROFILE("Terrain/NoiseTexture");
+        RebuildNoiseTexture();
+    }
+    {
+        PROFILE("Terrain/RenderMesh");
+        RebuildRenderMesh();
+    }
 }
 
 //双线性采样世界 XZ 处的高度。

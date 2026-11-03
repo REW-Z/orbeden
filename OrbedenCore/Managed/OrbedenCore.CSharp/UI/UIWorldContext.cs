@@ -37,6 +37,13 @@ public sealed class UIWorldContext : IManagedFrameSystem
     private readonly HashSet<UIElement> inputDirty = [];
     private readonly List<UISceneChange> pendingChanges = [];
 
+    //复用按父子顺序排列的变换快照缓冲
+    private readonly List<UINode> transformNodes = [];
+    private EnsId[] transformEns = [];
+    private matrix4x4[] localMatrices = [];
+    private matrix4x4[] worldMatrices = [];
+    private ulong transformMatrixRevision;
+
     //本帧的画布顺序：离屏画布按输出纹理依赖排在前，其余按 sortOrder 跟随。
     private readonly List<Canvas> frameOrder = [];
     private readonly List<Canvas> offscreenCanvases = [];
@@ -239,6 +246,11 @@ public sealed class UIWorldContext : IManagedFrameSystem
     //写入解析用的显示尺寸并让整棵子树重排。
     private void ApplyCanvasViewport(Canvas canvas, vector2 pixelSize)
     {
+        if (canvasViewports.TryGetValue(canvas, out vector2 previous)
+            && previous.x == pixelSize.x && previous.y == pixelSize.y)
+        {
+            return;
+        }
         canvasViewports[canvas] = pixelSize;
         if (canvas.GetLayout() is UILayout layout) layoutDirty.Add(layout);
     }
@@ -314,6 +326,11 @@ public sealed class UIWorldContext : IManagedFrameSystem
 
         UILayoutRegistry.Clear(nodes.Values);
         nodes.Clear();
+        transformNodes.Clear();
+        transformEns = [];
+        localMatrices = [];
+        worldMatrices = [];
+        transformMatrixRevision = 0;
         canvasViewports.Clear();
         explicitCanvasViewports.Clear();
         HandlerCache.Clear();
@@ -454,7 +471,26 @@ public sealed class UIWorldContext : IManagedFrameSystem
         //顺序固定：先结构、再布局，最后图形——几何依赖这一帧的解析矩形。
         foreach (UINode node in nodes.Values)
             UIGraphicRegistry.MarkInvalidatedGeometry(node, geometryDirty);
+        if (layoutDirty.Count != 0)
+        {
+            transformMatrixRevision = 0;
+        }
         UILayoutRegistry.Rebuild(this, layoutDirty);
+
+        //按本帧轨道矩形更新滑块并应用驱动布局
+        foreach (UINode node in nodes.Values)
+        {
+            if (node.GetElement<Slider>() is Slider slider && slider.IsUIActive())
+            {
+                slider.DriveVisuals();
+            }
+        }
+        if (layoutDirty.Count != 0)
+        {
+            transformMatrixRevision = 0;
+        }
+        UILayoutRegistry.Rebuild(this, layoutDirty);
+
         foreach (UINode node in nodes.Values)
         {
             (node.Visual as UIVisual)?.RefreshMeshModifiers();
@@ -764,6 +800,80 @@ public sealed class UIWorldContext : IManagedFrameSystem
         fullResync = true;
     }
 
+    //按变换版本刷新节点矩阵
+    internal bool RefreshTransformMatrices()
+    {
+        if (bridge == null)
+        {
+            return false;
+        }
+        ulong revision = bridge.GetTransformRevision();
+        if (revision == 0)
+        {
+            return false;
+        }
+        if (revision == transformMatrixRevision)
+        {
+            return true;
+        }
+
+        //按父到子的顺序收集节点
+        transformNodes.Clear();
+        foreach (UINode node in nodes.Values)
+        {
+            if (node.Parent == null)
+            {
+                transformNodes.Add(node);
+            }
+        }
+        for (int index = 0; index < transformNodes.Count; ++index)
+        {
+            transformNodes.AddRange(transformNodes[index].Children);
+        }
+
+        //批量读取原生矩阵
+        int count = transformNodes.Count;
+        if (transformEns.Length < count)
+        {
+            int capacity = Math.Max(count, transformEns.Length * 2);
+            Array.Resize(ref transformEns, capacity);
+            Array.Resize(ref localMatrices, capacity);
+            Array.Resize(ref worldMatrices, capacity);
+        }
+        for (int index = 0; index < count; ++index)
+        {
+            transformEns[index] = transformNodes[index].Ens;
+        }
+        if (!bridge.ReadTransformMatrices(transformEns.AsSpan(0, count), localMatrices.AsSpan(0, count),
+            worldMatrices.AsSpan(0, count)))
+        {
+            return false;
+        }
+
+        //合成画布空间与逻辑世界空间矩阵
+        for (int index = 0; index < count; ++index)
+        {
+            UINode node = transformNodes[index];
+            UINode? parent = node.Parent;
+            matrix4x4 local = localMatrices[index];
+            if (parent?.Canvas is Canvas canvas && parent.Layout is UILayout canvasLayout
+                && canvas.GetRenderMode() != CanvasRenderMode.WorldSpace)
+            {
+                vector2 size = canvasLayout.GetResolvedRect().size;
+                vector2 pivot = canvasLayout.GetPivot();
+                local[12] += pivot.x * size.x;
+                local[13] += pivot.y * size.y;
+            }
+
+            node.CachedCanvasMatrix = parent == null || parent.Canvas != null ? local
+                : matrix4x4.Multiply(parent.CachedCanvasMatrix, local);
+            node.CachedWorldMatrix = node.Canvas != null || parent == null ? worldMatrices[index]
+                : matrix4x4.Multiply(parent.CachedWorldMatrix, local);
+        }
+        transformMatrixRevision = revision;
+        return true;
+    }
+
     /// <summary>按 Ens 句柄取节点。</summary>
     public UINode? FindNode(EnsId ens) => nodes.TryGetValue(ens, out UINode? node) ? node : null;
 
@@ -780,8 +890,12 @@ public sealed class UIWorldContext : IManagedFrameSystem
     public static void MarkLayoutDirty(UILayout? layout)
     {
         UIWorldContext? context = Current;
-        if (context == null || layout == null) return;
+        if (context == null || layout == null)
+        {
+            return;
+        }
         context.layoutDirty.Add(layout);
+        context.transformMatrixRevision = 0;
     }
 
     /// <summary>标记几何脏。</summary>
@@ -817,8 +931,15 @@ public sealed class UIWorldContext : IManagedFrameSystem
     public static void MarkCanvasDirty(Canvas canvas)
     {
         UIWorldContext? context = Current;
-        if (context == null) return;
-        if (canvas.GetLayout() is UILayout layout) context.layoutDirty.Add(layout);
+        if (context == null)
+        {
+            return;
+        }
+        if (canvas.GetLayout() is UILayout layout)
+        {
+            context.layoutDirty.Add(layout);
+        }
+        context.transformMatrixRevision = 0;
     }
 
     /// <summary>节点的层级或 ignoreLayout 变化：父组要重排。</summary>
@@ -888,6 +1009,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
     //把一个 UIElement 收进索引；同节点第二个元素只追加不进树。
     private void AddElement(UIElement element)
     {
+        transformMatrixRevision = 0;
         EnsId ens = element.EnsId;
         if (ens.IsNull) return;
 
@@ -913,6 +1035,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
     //撤销登记；节点上还有别的元素时保留节点。
     private void RemoveElement(UIElement element)
     {
+        transformMatrixRevision = 0;
         if (!nodes.TryGetValue(element.EnsId, out UINode? node)) return;
         node.Elements.Remove(element);
         if (element is Canvas canvas)
@@ -940,6 +1063,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
     //整表重建：按当前世界的托管宿主重新建立索引与父子关系。
     private void RebuildIndex()
     {
+        transformMatrixRevision = 0;
         HandlerCache.Clear();
         nodes.Clear();
         canvases.Clear();
@@ -1097,6 +1221,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
             case UISceneChangeKind.FieldsChanged:
                 if (nodes.TryGetValue(change.ens, out UINode? changed) && changed.Layout != null)
                 {
+                    ValidateNode(changed);
                     EnqueueLayout(changed.Layout);
                     //刷新检视面板直接写入的图形与交互配置
                     foreach (UIElement element in changed.Elements)
@@ -1117,8 +1242,6 @@ public sealed class UIWorldContext : IManagedFrameSystem
         }
         pendingChanges.Clear();
 
-        //父子关系只在结构类记录出现时重算，字段变化不触发。
-        foreach (UINode node in nodes.Values) ValidateNode(node);
     }
 
     private void EnqueueLayout(UILayout layout) => layoutDirty.Add(layout);

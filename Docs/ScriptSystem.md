@@ -462,6 +462,8 @@ NativeField.Set 相对动态字段入口耗时减少约 58%。字段与上述 ge
 
 ## 9. 重载、CLR 与 NativeAOT
 
+C# 与 C++ 脚本不生成 `.resinfo`，mtime 和内容哈希（SHA-256，CRLF 按 LF 计算）统一保存到本机 `ResourceCache/ScriptBuild/Observed-v1.json`。Ctrl+R 先按每个文件的 mtime 筛选，新增或 mtime 变化的候选再读取内容并计算哈希；内容指纹相同则更新观察时间并跳过编译，mtime 未变的内容修改不会被筛选发现。文件集合变化继续覆盖新增、删除与重命名。观察记录独立于各语言的成功构建快照，资源目录刷新及编辑器重启后继续复用；失败、取消或构建期间检测到输入变化不更新成功快照。资源目录扫描清理旧版脚本伴生文件，可导入资源仍保留自己的 `.resinfo`。C++ 沿用同步 MSBuild 与模块重载，C# 后台构建；手动构建按钮强制构建并更新成功快照。
+
 Editor 使用 CLR 和可卸载的游戏程序集上下文；Player 使用生成的 NativeAOT 静态导出薄层。两者都调用 `GameScriptRuntime`，使用同一套宿主模型、生命周期和互操作函数表。
 
 初始化顺序为：结束现有 Wrapper → 连接原生函数表 → 清理成员缓存和 generation → 注册托管函数表 → 枚举现存宿主并构造 Wrapper → 构建阶段表。关闭时先 End 和断开 Wrapper，再清空 Registry/托管函数表/元数据，最后卸载程序集。宿主由 World 持有。

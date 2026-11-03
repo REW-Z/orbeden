@@ -1,5 +1,6 @@
 #include "Editor/EditorPlayMode.h"
 #include "Editor/ManagedEditorBridge.h"
+#include "Profiler/Profiler.h"
 
 #include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
@@ -97,22 +98,26 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
         return false;
     }
 
-    std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, InteropText::PathFromUtf8(shadowDirectory));
-    std::filesystem::path sourcePdb = std::filesystem::path(sourceAssembly).replace_extension(".pdb");
-    std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
-    std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");
-    std::filesystem::path shadowDeps = std::filesystem::path(shadowAssembly).replace_extension(".deps.json");
-    if (!CopyManagedDirectoryFiles(sourceAssembly.parent_path(), shadowAssembly.parent_path())
-        || !CopyManagedDependencyDirectories(managedDependencyDirectories, shadowAssembly.parent_path())
-        || !CopyManagedFileIfExists(sourceAssembly, shadowAssembly)
-        || !CopyManagedFileIfExists(sourcePdb, shadowPdb)
-        || !CopyManagedFileIfExists(sourceDeps, shadowDeps))
+    std::filesystem::path shadowAssembly;
     {
-        lastError = "Game assembly shadow copy failed.";
-        Log::Error(lastError.c_str());
-        return false;
-    }
+        PROFILE("Editor/PIE/ShadowCopy");
+        shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, InteropText::PathFromUtf8(shadowDirectory));
+        std::filesystem::path sourcePdb = std::filesystem::path(sourceAssembly).replace_extension(".pdb");
+        std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
+        std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");
+        std::filesystem::path shadowDeps = std::filesystem::path(shadowAssembly).replace_extension(".deps.json");
+        if (!CopyManagedDirectoryFiles(sourceAssembly.parent_path(), shadowAssembly.parent_path())
+            || !CopyManagedDependencyDirectories(managedDependencyDirectories, shadowAssembly.parent_path())
+            || !CopyManagedFileIfExists(sourceAssembly, shadowAssembly)
+            || !CopyManagedFileIfExists(sourcePdb, shadowPdb)
+            || !CopyManagedFileIfExists(sourceDeps, shadowDeps))
+        {
+            lastError = "Game assembly shadow copy failed.";
+            Log::Error(lastError.c_str());
+            return false;
+        }
 
+    }
     shadowAssemblyPath = ToCleanPath(shadowAssembly);
     ScriptEntryPoints entryPoints;
     if (!bridge.FillScriptRuntimeEntryPoints(entryPoints))
@@ -123,18 +128,24 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
         return false;
     }
 
-    if (!entryPoints.loadAssembly(reinterpret_cast<const uint8*>(shadowAssemblyPath.data()), static_cast<int32>(shadowAssemblyPath.size())))
     {
-        lastError = "Script runtime could not load the game assembly: " + shadowAssemblyPath;
-        ClearBindings();
-        return false;
+        PROFILE("Editor/PIE/LoadAssembly");
+        if (!entryPoints.loadAssembly(reinterpret_cast<const uint8*>(shadowAssemblyPath.data()), static_cast<int32>(shadowAssemblyPath.size())))
+        {
+            lastError = "Script runtime could not load the game assembly: " + shadowAssemblyPath;
+            ClearBindings();
+            return false;
+        }
     }
 
-    if (!scripts.SetClrEntryPoints(entryPoints) || !scripts.Initialize(ScriptExecutionMode::Play))
     {
-        lastError = "ScriptSystem failed to initialize CLR game entry points.";
-        ClearBindings();
-        return false;
+        PROFILE("Editor/PIE/InitializeRuntime");
+        if (!scripts.SetClrEntryPoints(entryPoints) || !scripts.Initialize(ScriptExecutionMode::Play))
+        {
+            lastError = "ScriptSystem failed to initialize CLR game entry points.";
+            ClearBindings();
+            return false;
+        }
     }
 
     scriptSystem = &scripts;

@@ -12,7 +12,7 @@
 struct RetainedGuiApi
 {
 public:
-    uint32 version = 3;
+    uint32 version = 4;
     uint32 structSize = sizeof(RetainedGuiApi);
 
     //0 创建上下文。返回 0 表示失败；句柄高 32 位为代次、低 32 位为槽位。
@@ -56,6 +56,11 @@ public:
     void* ReadDisplaySize = nullptr;
     //19 读取字体预烘焙载荷；容量不足只返回所需字节数。
     void* ReadPrebakedAtlas = nullptr;
+
+    //20 读取变换版本。
+    void* GetTransformRevision = nullptr;
+    //21 批量读取节点的局部矩阵与世界矩阵。
+    void* ReadTransformMatrices = nullptr;
 
     //创建完整函数表。
     static RetainedGuiApi Create();
@@ -113,6 +118,6 @@ namespace RetainedGuiFrame
     void SetDepthReader(DepthReader reader);
 }
 
-//表头 8 字节（version 与 structSize），其后是 20 个 Cdecl 槽位。
+//表头 8 字节（version 与 structSize），其后是 22 个 Cdecl 槽位。
 //托管侧按同一顺序构造委托，两侧尺寸不符会在各自构建期拦下。
-static_assert(sizeof(RetainedGuiApi) == 8 + sizeof(void*) * 20, "RetainedGuiApi ABI slot count changed.");
+static_assert(sizeof(RetainedGuiApi) == 8 + sizeof(void*) * 22, "RetainedGuiApi ABI slot count changed.");

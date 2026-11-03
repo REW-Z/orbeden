@@ -16,6 +16,8 @@
 #include "Runtime/Fonts/FontRasterizer.h"
 #include "Runtime/Object/Font.h"
 #include "Runtime/Object/Transform.h"
+#include "Rendering/TransformCache.h"
+#include "Profiler/Profiler.h"
 #include "Runtime/World.h"
 
 namespace
@@ -47,6 +49,9 @@ namespace
         uint64 worldRevision = 0;
         uint64 managedGeneration = 0;
         World* world = nullptr;
+        //保存变换通知与矩阵读取版本
+        TransformCache transforms;
+        uint64 transformRevision = 1;
 
         std::unordered_map<uint64, MeshRecord> meshes;
         List<CanvasRecord> staged;
@@ -88,16 +93,39 @@ namespace
         //队列上限；溢出后改为整表重建，不再逐条累积。
         static constexpr usize MaxPendingChanges = 65536;
 
-        void OnEnsCreated(EnsId ens) override { Push(ens, EnsId(), 0, UISceneChangeKind::Added); }
-        void OnEnsReparented(EnsId ens, EnsId parent) override { Push(ens, parent, 0, UISceneChangeKind::Reparented); }
-        void OnEnsDestroyed(EnsId ens) override { Push(ens, EnsId(), 0, UISceneChangeKind::Removed); }
+        void OnEnsCreated(EnsId ens) override
+        {
+            ++context.transformRevision;
+            Push(ens, EnsId(), 0, UISceneChangeKind::Added);
+        }
+
+        void OnEnsReparented(EnsId ens, EnsId parent) override
+        {
+            ++context.transformRevision;
+            Push(ens, parent, 0, UISceneChangeKind::Reparented);
+        }
+
+        void OnEnsDestroyed(EnsId ens) override
+        {
+            ++context.transformRevision;
+            Push(ens, EnsId(), 0, UISceneChangeKind::Removed);
+        }
         void OnEnsWorldActiveChanged(EnsId ens, bool) override { Push(ens, EnsId(), 0, UISceneChangeKind::ActiveChanged); }
 
         //派生写入不会再回写布局，因此只登记作者写入。
         void OnTransformChanged(World& world, EnsId ens, TransformChangeSource source) override
         {
-            if (source == TransformChangeSource::Derived) return;
-            if (&world != context.world) return;
+            if (&world != context.world)
+            {
+                return;
+            }
+
+            //登记作者位置与布局派生位置的变化
+            ++context.transformRevision;
+            if (source == TransformChangeSource::Derived)
+            {
+                return;
+            }
             Push(ens, EnsId(), 0, UISceneChangeKind::TransformChanged);
         }
 
@@ -511,6 +539,53 @@ namespace
         }
     }
 
+    //读取上下文的变换版本
+    uint64 ORBEDEN_NATIVE_CALL GuiGetTransformRevision(uint64 handle)
+    {
+        UIContext* context = Resolve(handle);
+        return context ? context->transformRevision : 0;
+    }
+
+    //刷新并批量读取节点矩阵
+    uint8 ORBEDEN_NATIVE_CALL GuiReadTransformMatrices(uint64 handle, const EnsId* nodes, int32 count,
+        matrix4x4* localMatrices, matrix4x4* worldMatrices)
+    {
+        PROFILE("UI/TransformMatrices");
+        try
+        {
+            UIContext* context = Resolve(handle);
+            if (!context || !context->world || !CheckSpan(nodes, count)
+                || !CheckSpan(localMatrices, count) || !CheckSpan(worldMatrices, count))
+            {
+                return 0;
+            }
+
+            //校验节点身份
+            for (int32 index = 0; index < count; ++index)
+            {
+                if (!context->world->GetTransform(nodes[index]))
+                {
+                    return 0;
+                }
+            }
+
+            //更新变换并复制矩阵
+            context->transforms.Update(*context->world);
+            for (int32 index = 0; index < count; ++index)
+            {
+                Transform* transform = context->world->GetTransform(nodes[index]);
+                localMatrices[index] = transform->localMatrix;
+                worldMatrices[index] = transform->worldMatrix;
+            }
+            return 1;
+        }
+        catch (const std::exception& exception)
+        {
+            Log::Error((std::string("RetainedGui ReadTransformMatrices failed: ") + exception.what()).c_str());
+            return 0;
+        }
+    }
+
     //深度回读需要渲染目标，随渲染阶段接入。
     uint8 ORBEDEN_NATIVE_CALL GuiReadDepth(uint64 handle, uint64 viewId, uint64 viewerId, uint64 presentedFrame,
         int32 x, int32 y, float32* depth)
@@ -883,5 +958,7 @@ RetainedGuiApi RetainedGuiApi::Create()
     api.ReadChanges = reinterpret_cast<void*>(&GuiReadChanges);
     api.ReadDisplaySize = reinterpret_cast<void*>(&GuiReadDisplaySize);
     api.ReadPrebakedAtlas = reinterpret_cast<void*>(&GuiReadPrebakedAtlas);
+    api.GetTransformRevision = reinterpret_cast<void*>(&GuiGetTransformRevision);
+    api.ReadTransformMatrices = reinterpret_cast<void*>(&GuiReadTransformMatrices);
     return api;
 }

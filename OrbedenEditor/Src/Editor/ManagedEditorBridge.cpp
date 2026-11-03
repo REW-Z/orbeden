@@ -2292,6 +2292,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestPasteSelectedMethod, &RequestPasteSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestToggleActiveSelectedMethod, &RequestToggleActiveSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestScriptBuildMethod, &RequestScriptBuildFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, "UpdateScriptBuild", &UpdateScriptBuildFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorGetInitializationErrorMethod, reinterpret_cast<void**>(&getInitializationError)))
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
@@ -2452,6 +2453,7 @@ void ManagedEditorBridge::Shutdown()
     RequestPasteSelectedFunction = nullptr;
     RequestToggleActiveSelectedFunction = nullptr;
     RequestScriptBuildFunction = nullptr;
+    UpdateScriptBuildFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
@@ -2665,6 +2667,17 @@ void ManagedEditorBridge::RequestReimportAll()
     if (!initialized || !RequestReimportAllFunction) return;
     ManagedDrawEditorFn requestReimportAll = reinterpret_cast<ManagedDrawEditorFn>(RequestReimportAllFunction);
     requestReimportAll();
+}
+
+//检查脚本内容指纹或记录构建输入
+bool ManagedEditorBridge::UpdateScriptBuild(ScriptBuildOperation operation, bool native) const
+{
+    if (!initialized || !UpdateScriptBuildFunction)
+    {
+        return operation == ScriptBuildOperation::Check;
+    }
+    using Function = uint8(CORECLR_DELEGATE_CALLTYPE*)(uint8, uint8);
+    return reinterpret_cast<Function>(UpdateScriptBuildFunction)(static_cast<uint8>(operation), native ? 1 : 0) != 0;
 }
 
 void ManagedEditorBridge::RequestScriptBuild(const std::string& scriptProject, bool reimport, bool outdated)

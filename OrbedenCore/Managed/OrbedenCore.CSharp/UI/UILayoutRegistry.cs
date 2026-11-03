@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Orbeden;
 
 /// <summary>
-/// 布局重建。脏请求先提升到受影响的最高根并按根去重，再按
+/// 布局重建。脏请求提升到受影响的测量容器并按子树去重，再按
 /// 自底向上测宽 → 自顶向下排 X/宽 → 自底向上测高 → 自顶向下排 Y/高 遍历，
 /// 最后把全部派生位置合成一次批量提交。重建期间产生的新请求留到下一次刷新。
 /// </summary>
@@ -14,7 +14,7 @@ internal static class UILayoutRegistry
     private static readonly Dictionary<UINode, float> measuredWidths = [];
     private static readonly Dictionary<UINode, float> measuredHeights = [];
 
-    /// <summary>把脏请求提升到画布根后重建，并批量提交派生位置。</summary>
+    /// <summary>重建受影响的布局子树，并批量提交派生位置。</summary>
     internal static void Rebuild(UIWorldContext context, HashSet<UILayout> dirty)
     {
         if (dirty.Count == 0) return;
@@ -27,17 +27,24 @@ internal static class UILayoutRegistry
 
         foreach (UINode root in roots)
         {
-            //按画布目标初始化根矩形
-            if (root.Canvas == null || root.Layout == null || root.ConfigurationError.Length != 0) continue;
-            vector2 size = context.ResolveCanvasLogicalSize(root.Canvas);
-            vector2 pivot = root.Layout.GetPivot();
-            vector2 min = root.Canvas.GetRenderMode() == CanvasRenderMode.WorldSpace
-                ? new vector2(-pivot.x * size.x, -pivot.y * size.y) : default;
-            root.Layout.SetResolvedRect(new UIRect(min, size), default);
-            MeasureWidths(root);
+            if (root.Layout == null || root.ConfigurationError.Length != 0)
+            {
+                continue;
+            }
 
+            //按画布目标或已解析的父矩形初始化子树
+            if (root.Canvas != null)
+            {
+                vector2 size = context.ResolveCanvasLogicalSize(root.Canvas);
+                vector2 pivot = root.Layout.GetPivot();
+                vector2 min = root.Canvas.GetRenderMode() == CanvasRenderMode.WorldSpace
+                    ? new vector2(-pivot.x * size.x, -pivot.y * size.y) : default;
+                root.Layout.SetResolvedRect(new UIRect(min, size), default);
+            }
+            MeasureWidths(root);
+            UIRect parentRect = root.Parent?.Layout?.GetResolvedRect() ?? default;
+            ArrangeWidths(root, root.Canvas != null, parentRect.min, parentRect.size);
             float availableWidth = RootAvailableWidth(context, root);
-            ArrangeWidths(root, true, default, default);
             MeasureHeights(root, availableWidth);
             ArrangeHeights(root, true, default, default);
         }
@@ -56,7 +63,7 @@ internal static class UILayoutRegistry
         foreach (UINode node in nodes) node.Layout?.ClearResolvedRect();
     }
 
-    //把每个脏节点提升到它所属的画布根，并去掉被其他根覆盖的后代。
+    //把脏节点提升到依赖其测量的容器，并去掉已覆盖的后代
     private static List<UINode> Promote(UIWorldContext context, HashSet<UILayout> dirty)
     {
         List<UINode> roots = [];
@@ -66,8 +73,18 @@ internal static class UILayoutRegistry
             if (node == null) continue;
 
             UINode root = node;
-            while (root.Parent != null) root = root.Parent;
-            if (!roots.Contains(root)) roots.Add(root);
+            for (UINode? ancestor = node.Parent; ancestor != null; ancestor = ancestor.Parent)
+            {
+                if (ancestor.GetElement<UILayoutGroup>() != null
+                    || ancestor.Layout is { } ancestorLayout && (ancestorLayout.GetFitWidth() || ancestorLayout.GetFitHeight()))
+                {
+                    root = ancestor;
+                }
+            }
+            if (!roots.Contains(root))
+            {
+                roots.Add(root);
+            }
         }
 
         //祖先已经在队列里时，后代的重建由祖先的遍历覆盖。
@@ -185,8 +202,18 @@ internal static class UILayoutRegistry
     //画布根的可用宽度：屏幕画布用量出的逻辑尺寸，世界空间用根自身的尺寸增量。
     private static float RootAvailableWidth(UIWorldContext context, UINode root)
     {
-        if (root.Canvas == null || root.Layout == null) return 0.0f;
-        if (root.Canvas.GetRenderMode() == CanvasRenderMode.WorldSpace) return root.Layout.GetSizeDelta().x;
+        if (root.Layout == null)
+        {
+            return 0.0f;
+        }
+        if (root.Canvas == null)
+        {
+            return root.Layout.GetResolvedRect().Width;
+        }
+        if (root.Canvas.GetRenderMode() == CanvasRenderMode.WorldSpace)
+        {
+            return root.Layout.GetSizeDelta().x;
+        }
         return context.ResolveCanvasLogicalSize(root.Canvas).x;
     }
 

@@ -2,6 +2,7 @@
 
 #include "Runtime/Object/Script.h"
 #include "Runtime/EngineTypes.h"
+#include "Rendering/TransformCache.h"
 
 //飞机发动机：处理油门输入、计算推力并施加到刚体。
 class Engine final : public Script
@@ -9,6 +10,7 @@ class Engine final : public Script
     OBJECT_TYPE_DECLARE(Engine)
 
 public:
+    EnsId propeller;
     float32 throttleRate = 1.0f;
     float32 maxThrust = 15000.0f;
     float32 thrustFadeSpeed = 90.0f;
@@ -16,17 +18,23 @@ public:
     float32 windmillDragArea = 0.6f;
 
     float32 GetThrottle();
+    void SetThrottle(float32 value);
     float32 GetThrustNewtons();
     vector3 GetThrustForce();
     float32 GetWindmillDragNewtons();
     vector3 GetWindmillDragForce();
+    void EvaluateForces();
+    vector3 GetPropellerPosition();
     void ResetThrottle();
 
 protected:
     void OnFixedUpdate(float32 deltaTime);
 
 private:
+    ORBEDEN_BIND_IGNORE
+    TransformCache transformCache;
     float32 throttle = 0.0f;
     vector3 thrustForce;
     vector3 windmillDragForce;
+    vector3 propellerPosition;
 };

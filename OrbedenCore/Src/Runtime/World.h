@@ -6,6 +6,7 @@
 #include "Runtime/ITransformListener.h"
 #include "Runtime/RenderSettings.h"
 
+#include <functional>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -233,11 +234,12 @@ public:
     //获取父级
     Ens* GetParent(EnsId child) const;
 
-    //添加组件
-    Component* AddComponent(EnsId ens, Type* type);
+    //添加组件并在挂载前配置新实例
+    Component* AddComponent(EnsId ens, Type* type, const std::function<void(Component&)>& configure = {});
 
-    //添加同类型的独立组件实例
-    Component* AddComponentInstance(EnsId ens, Type* type, const std::string& stablePath = "");
+    //添加同类型独立实例并在挂载前配置参数
+    Component* AddComponentInstance(EnsId ens, Type* type, const std::string& stablePath = "",
+        const std::function<void(Component&)>& configure = {});
 
     //获取组件
     Component* GetComponent(EnsId ens, Type* type) const;

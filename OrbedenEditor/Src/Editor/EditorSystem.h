@@ -82,6 +82,7 @@ private:
         int32 reimportedCount = 0;
     };
     bool scriptBuildRunning = false;
+    bool refreshBuiltNative = false;
     //托管侧改完编辑器外观配置后的重建请求；帧边界处理
     bool editorGuiConfigPending = false;
     WindowGraphicsApi pendingGraphicsApi = WindowGraphicsApi::None;

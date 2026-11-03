@@ -238,79 +238,6 @@ namespace
         return !path.empty() && std::filesystem::exists(InteropText::PathFromUtf8(path));
     }
 
-    //扫描一棵源码树，判断有没有比给定时间更新的脚本源；excludedPrefixes 里的子树整体跳过。
-    bool HasNewerScriptSource(const std::filesystem::path& root,
-        std::filesystem::file_time_type threshold,
-        const List<std::string>& excludedPrefixes)
-    {
-        std::error_code error;
-        std::filesystem::recursive_directory_iterator iterator(root, error);
-        std::filesystem::recursive_directory_iterator end;
-        while (!error && iterator != end)
-        {
-            const std::filesystem::directory_entry& entry = *iterator;
-            std::string relative = ToCleanPath(entry.path().lexically_relative(root)) + "/";
-
-            bool excluded = false;
-            for (const std::string& prefix : excludedPrefixes)
-            {
-                if (relative.compare(0, prefix.size(), prefix) == 0)
-                {
-                    excluded = true;
-                    break;
-                }
-            }
-
-            if (excluded)
-            {
-                if (entry.is_directory()) iterator.disable_recursion_pending();
-            }
-            else if (entry.is_regular_file())
-            {
-                std::filesystem::path extension = entry.path().extension();
-                if (extension == ".cs" || extension == ".csproj" || extension == ".props" || extension == ".targets")
-                {
-                    std::filesystem::file_time_type sourceTime = std::filesystem::last_write_time(entry.path(), error);
-                    if (error) return true;
-                    if (sourceTime > threshold) return true;
-                }
-            }
-
-            iterator.increment(error);
-        }
-
-        return false;
-    }
-
-    //判断脚本源是否比程序集更新。脚本可以放在项目下任何目录，因此以项目根为扫描范围；
-    //生成目录里的时间戳变化不代表脚本源变化，整棵子树直接跳过。
-    bool IsProjectScriptBuildOutdated(const std::string& projectRoot,
-        const std::string& assemblyPath)
-    {
-        if (projectRoot.empty() || assemblyPath.empty()) return false;
-        std::filesystem::path assembly = InteropText::PathFromUtf8(assemblyPath);
-        if (!std::filesystem::exists(assembly)) return true;
-
-        std::error_code error;
-        std::filesystem::file_time_type assemblyTime = std::filesystem::last_write_time(assembly, error);
-        if (error) return true;
-
-        //编辑扩展与运行时程序集同批产出：缺了就说明这次构建不完整，按过期处理。
-        std::filesystem::path editorAssembly = assembly.parent_path()
-            / InteropText::PathFromUtf8(InteropText::PathToUtf8(assembly.stem()) + ".Editor.dll");
-        if (!std::filesystem::exists(editorAssembly)) return true;
-        std::filesystem::file_time_type editorTime = std::filesystem::last_write_time(editorAssembly, error);
-        if (error) return true;
-        assemblyTime = std::min(assemblyTime, editorTime);
-
-        //内容根之外都是构建生成物或工程文件，时间戳变化不代表脚本源变化。
-        static const List<std::string> excludedPrefixes =
-        {
-            "Build/", "Lib/", "Legacy/", ".vs/", ".git/", "Content/RawContent/",
-        };
-        return HasNewerScriptSource(InteropText::PathFromUtf8(projectRoot), assemblyTime, excludedPrefixes);
-    }
-
     bool ScriptProjectUsesLocalRuntimeDll(const std::string& csproj)
     {
         std::string content = ReadTextFile(InteropText::PathFromUtf8(csproj));
@@ -1147,8 +1074,9 @@ void EditorSystem::RequestBuildScripts()
     }
 
     scriptBuildRunning = true;
+    refreshBuiltNative = false;
     projectStatus = "Building Game C#...";
-    //这个入口的语义就是"现在就编"，过期判断交给托管侧跳过，与旧的无条件构建一致
+    //手动构建无条件编译并更新成功快照
     managedBridge.RequestScriptBuild(csproj, false, true);
     RequestRepaint();
 }
@@ -1185,10 +1113,17 @@ void EditorSystem::RequestRefresh()
         return;
     }
 
+    //先重建并重载有改动的原生模块
+    refreshBuiltNative = managedBridge.UpdateScriptBuild(ScriptBuildOperation::Check, true);
+    if (refreshBuiltNative && !BuildNativeGameModule(true))
+    {
+        return;
+    }
+
     scriptBuildRunning = true;
     projectStatus = "Refreshing project...";
     managedBridge.RequestScriptBuild(csproj, true,
-        IsProjectScriptBuildOutdated(project.GetProjectRoot(), GetProjectGameAssemblyPath()));
+        managedBridge.UpdateScriptBuild(ScriptBuildOperation::Check, false));
     RequestRepaint();
 }
 
@@ -1213,6 +1148,8 @@ void EditorSystem::ApplyCompletedScriptBuild()
     scriptBuildRunning = false;
     ScriptBuildResult result = pendingScriptBuildResult;
     pendingScriptBuildResult = {};
+    bool builtNative = refreshBuiltNative;
+    refreshBuiltNative = false;
 
     if (result.cancelled)
     {
@@ -1225,7 +1162,8 @@ void EditorSystem::ApplyCompletedScriptBuild()
         if (result.compiled) RefreshInspectorGameAssembly();
         //条件重导下"什么都没改"是常态，单独给一条文案，与 Unity 的 "Nothing changed" 对应
         projectStatus = result.compiled
-            ? "Built Game C#: " + GetProjectGameAssemblyPath()
+            ? (builtNative ? "Built Game C++ and Game C#: " : "Built Game C#: ") + GetProjectGameAssemblyPath()
+            : builtNative ? "Refresh complete. Built Game C++; reimported " + std::to_string(result.reimportedCount) + " source file(s)."
             : result.reimportedCount == 0 ? "Refresh complete. Nothing changed."
             : "Refresh complete. Reimported " + std::to_string(result.reimportedCount) + " source file(s).";
     }
@@ -1240,7 +1178,7 @@ void EditorSystem::ApplyCompletedScriptBuild()
         pendingPlayAfterScriptBuild = false;
         std::string assemblyPath = GetProjectGameAssemblyPath();
         if (result.succeeded && FileExists(assemblyPath)
-            && !IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
+            && !managedBridge.UpdateScriptBuild(ScriptBuildOperation::Check, false))
         {
             StartPlayMode();
             return;
@@ -1292,7 +1230,15 @@ bool EditorSystem::ReloadProjectContent()
     }
 
     std::string csproj = GetProjectScriptProjectPath();
-    if (!csproj.empty() && !RunCommand("dotnet build " + Quote(csproj) + " -c Debug /p:OrbedenEditorBuild=true", "Build Game C#")) return false;
+    if (!csproj.empty())
+    {
+        if (!managedBridge.UpdateScriptBuild(ScriptBuildOperation::Begin, false)
+            || !RunCommand("dotnet build " + Quote(csproj) + " -t:Rebuild -c Debug /p:OrbedenEditorBuild=true", "Build Game C#")
+            || !managedBridge.UpdateScriptBuild(ScriptBuildOperation::Complete, false))
+        {
+            return false;
+        }
+    }
     RefreshInspectorGameAssembly();
     RequestRepaint();
     return true;
@@ -1304,6 +1250,13 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     if (!project.HasProject())
     {
         projectStatus = "No project is open.";
+        return false;
+    }
+
+    if (scriptBuildRunning)
+    {
+        projectStatus = "Wait for the script build to finish before building Game C++.";
+        Log::Warning(projectStatus.c_str());
         return false;
     }
 
@@ -1397,10 +1350,16 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     std::string sdkRoot = ToCleanPath(sdkPath);
     std::string buildCommand = Quote(msbuildPath)
         + " " + Quote(ToCleanPath(vcxProject))
+        + " -t:Rebuild"
         + " -p:Configuration=" + BuildConfiguration + " -p:Platform=x64"
         + " -p:OrbedenSdkRoot=" + Quote(sdkRoot);
 
     //构建期间继续保留旧 shadow DLL，源输出可以直接覆盖
+    if (!managedBridge.UpdateScriptBuild(ScriptBuildOperation::Begin, true))
+    {
+        projectStatus = "Game C++ fingerprint capture failed. See the Console panel.";
+        return false;
+    }
     if (!RunCommand(buildCommand, "Build Game C++")) return false;
 
     std::string modulePath = ToCleanPath(buildDirectory
@@ -1423,6 +1382,12 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     {
         projectStatus = "Game C++ reload failed. " + reloadError;
         Log::Error(projectStatus.c_str());
+        return false;
+    }
+
+    if (!managedBridge.UpdateScriptBuild(ScriptBuildOperation::Complete, true))
+    {
+        projectStatus = "Game C++ fingerprint recording failed. Refresh to retry; see the Console panel.";
         return false;
     }
 
@@ -1452,7 +1417,7 @@ void EditorSystem::RequestPlay()
     }
 
     std::string assemblyPath = GetProjectGameAssemblyPath();
-    if (!FileExists(assemblyPath) || IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
+    if (!FileExists(assemblyPath) || managedBridge.UpdateScriptBuild(ScriptBuildOperation::Check, false))
     {
         //脚本过期时同样排队，构建成功后由 ApplyCompletedScriptBuild 进 Play
         pendingPlayAfterScriptBuild = true;
@@ -1468,6 +1433,7 @@ void EditorSystem::RequestPlay()
 //进入 Play-In-Editor；产物检查由调用方完成
 void EditorSystem::StartPlayMode()
 {
+    PROFILE("Editor/PIE/Start");
     if (project.IsTemporaryWorld()) return;
     std::string assemblyPath = GetProjectGameAssemblyPath();
     if (!FileExists(assemblyPath))
@@ -1477,10 +1443,13 @@ void EditorSystem::StartPlayMode()
         return;
     }
 
-    SaveEditorLayout();
-    if (!SaveCurrentWorld())
     {
-        return;
+        PROFILE("Editor/PIE/Save");
+        SaveEditorLayout();
+        if (!SaveCurrentWorld())
+        {
+            return;
+        }
     }
 
     //Play 期间的改动不落盘，进入前先关掉脏标记记录，避免同帧窗口漏标
@@ -1492,19 +1461,31 @@ void EditorSystem::StartPlayMode()
     ScriptSystem* scriptSystem = app.GetSystem<ScriptSystem>();
     //Unity 的 domain reload：进 Play 前把编辑态脚本域整体关闭，编辑态的托管静态状态
     //不会漏进 Play；随后 Play 按 Play 模式重建（Initialize 有 initialized 短路，必须先关）。
-    if (scriptSystem && scriptSystem->IsInitialized()) scriptSystem->Shutdown();
-    if (!scriptSystem
-        || !playMode.Start(*scriptSystem, managedBridge, assemblyPath, runtimeAssemblyPath,
-            ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
     {
-        projectStatus = playMode.GetLastError();
-        editorScene.RestoreCamera(app.GetWorld());
-        return;
+        PROFILE("Editor/PIE/ShutdownEditorDomain");
+        if (scriptSystem && scriptSystem->IsInitialized())
+        {
+            scriptSystem->Shutdown();
+        }
+    }
+    {
+        PROFILE("Editor/PIE/LoadPlayDomain");
+        if (!scriptSystem
+            || !playMode.Start(*scriptSystem, managedBridge, assemblyPath, runtimeAssemblyPath,
+                ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
+        {
+            projectStatus = playMode.GetLastError();
+            editorScene.RestoreCamera(app.GetWorld());
+            return;
+        }
     }
 
     //影子程序集在 playMode.Start 里已经由脚本域建立会话并登记了包装：这里只能让编辑器面板
     //接管同一份类型，不能再卸载重装会话，否则 Play 域里的组件查找会静默失配。
-    managedBridge.AttachGameAssembly(playMode.GetShadowAssemblyPath());
+    {
+        PROFILE("Editor/PIE/AttachInspectorAssembly");
+        managedBridge.AttachGameAssembly(playMode.GetShadowAssemblyPath());
+    }
     app.SetPaused(false);
     app.SetSimulationEnabled(true);
     InputManager::SetEnabled(true);
@@ -1981,8 +1962,8 @@ bool EditorSystem::RefreshInspectorGameAssembly()
     }
 
     std::string assemblyPath = GetProjectGameAssemblyPath();
-    //加载游戏脚本前同步过期的 SDK 源码包
-    if (IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
+    //加载游戏脚本前比较成功构建快照
+    if (managedBridge.UpdateScriptBuild(ScriptBuildOperation::Check, false))
     {
         ShutdownEditorScriptRuntime();
         managedBridge.UnloadGameAssembly();

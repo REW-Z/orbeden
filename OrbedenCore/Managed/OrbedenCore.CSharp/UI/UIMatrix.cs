@@ -11,10 +11,18 @@ internal static class UIMatrix
     /// <summary>节点到画布根的局部矩阵连乘；画布根本身不参与投影。</summary>
     internal static matrix4x4 Compose(UINode node)
     {
+        if (UIWorldContext.Current?.RefreshTransformMatrices() == true)
+        {
+            return node.CachedCanvasMatrix;
+        }
+
         matrix4x4 result = Local(node);
         for (UINode? current = node.Parent; current != null; current = current.Parent)
         {
-            if (current.Canvas != null) break;
+            if (current.Canvas != null)
+            {
+                break;
+            }
             result = matrix4x4.Multiply(Local(current), result);
         }
         return result;
@@ -23,6 +31,11 @@ internal static class UIMatrix
     /// <summary>节点到世界空间的矩阵：连画布节点自己的变换一起乘进去，世界空间命中要用它。</summary>
     internal static matrix4x4 ComposeIncludingCanvas(UINode node)
     {
+        if (UIWorldContext.Current?.RefreshTransformMatrices() == true)
+        {
+            return node.CachedWorldMatrix;
+        }
+
         matrix4x4 result = Local(node);
         UINode root = node;
         for (UINode? current = node.Parent; current != null; current = current.Parent)
@@ -31,7 +44,7 @@ internal static class UIMatrix
             root = current;
         }
         //叠加画布外部父级变换
-        EnsId parent = Ens.FromId(root.Ens).Transform.GetParent();
+        EnsId parent = root.OwnerTransform.GetParent();
         while (!parent.IsNull)
         {
             Transform transform = Ens.FromId(parent).Transform;
@@ -45,7 +58,7 @@ internal static class UIMatrix
     /// <summary>使用布局合成位置，旋转与缩放取作者值。</summary>
     internal static matrix4x4 Local(UINode node)
     {
-        Transform transform = Ens.FromId(node.Ens).Transform;
+        Transform transform = node.OwnerTransform;
         vector3 position = node.Layout?.GetResolvedLocalPosition() ?? transform.localPosition;
         return matrix4x4.Trs(position, transform.localRotation, transform.localScale);
     }

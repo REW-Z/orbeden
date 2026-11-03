@@ -250,6 +250,21 @@ public static class EditorRuntime
         }
     }
 
+    /// <summary>检查脚本构建指纹或记录构建前后的输入快照。</summary>
+    [UnmanagedCallersOnly]
+    public static byte UpdateScriptBuild(byte operation, byte native)
+    {
+        try
+        {
+            return EditorScriptFiles.UpdateBuild((ScriptBuildOperation)operation, native != 0) ? (byte)1 : (byte)0;
+        }
+        catch (Exception exception)
+        {
+            EditorConsole.Error("Script fingerprint update failed: " + exception.Message);
+            return operation == (byte)ScriptBuildOperation.Check ? (byte)1 : (byte)0;
+        }
+    }
+
     /// <summary>开始一次后台脚本构建；原生已完成工程准备与过期判断。</summary>
     [UnmanagedCallersOnly]
     public static unsafe void RequestScriptBuild(byte* scriptProject, int scriptProjectLength, byte reimport, byte outdated)

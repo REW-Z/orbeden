@@ -152,7 +152,7 @@ Windows x64 Editor/PIE 使用 CLR；Player 的 Core/Game C# 使用目标平台 N
 
    每次打开或新建项目时，Debug 和 Release Editor 都会验证当前 Editor 的 SDK，并自动刷新当前游戏工程 `Lib/OrbedenCore.CSharp.dll`、`Lib/Orbeden.Game.targets` 和 `Lib/OrbedenSdk.path`，同时将脚本工程导入迁移到新的共享游戏构建目标并删除旧转发文件；原生头文件、库与 MetaGen 工具继续通过 SDK 路径引用。也可在 Dev 面板点击 `Update SDK` 手动执行同一同步流程。同步还会生成或刷新 `.vscode/c_cpp_properties.json`，写入当前 SDK 和第三方头文件路径、C++20、Windows x64 MSVC 模式与 Debug 宏，编译器由微软 C/C++ 扩展自动检测。配置由引擎维护，首次覆盖自定义配置前备份为 `c_cpp_properties.json.bak`，内容未变时不重写路径和配置文件。同步保留 `Content/`，不执行内容重置；自动同步发生在项目加载后的原生模块检查之前，手动同步本身不执行编译。结果显示在项目状态和 Console，手动同步完成后通过 `Build Game C++`、`Build Game C#` 重建游戏模块。
 
-3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；当前 Editor 的 SDK 引用与 VSCode 配置会自动同步到项目，Release Editor 同样执行此检查。按 `Ctrl+R` 或点击 `Build Game C#` 生成 `{ProjectRoot}/Build/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。脚本构建在后台进程里跑，构建期间编辑器不冻结。
+3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；当前 Editor 的 SDK 引用与 VSCode 配置会自动同步到项目，Release Editor 同样执行此检查。按 `Ctrl+R` 检查脚本内容指纹，按需构建 C++ 模块与 C# 程序集；也可点击 `Build Game C#` 强制生成 `{ProjectRoot}/Build/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。C# 构建在后台进程里跑；C++ 沿用同步 MSBuild 与模块重载流程。
 
 4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 库，再以 MSBuild 构建 `OrbedenGame.vcxproj`：该工程编译游戏 C++ 源码，链接 SDK 预编译的 `OrbedenCoreStatic.lib`、第三方静态库与 AOT 导入库，并把 AOT DLL、`glfw3.dll` 拷贝到输出目录 `{ProjectRoot}/Build/windows-x64/bin/`。**Player 不编译 Core 源码**：SDK 静态库缺失时构建直接失败并提示重新构建 `OrbedenCore.vcxproj`，不会回退到源码编译。
 
@@ -523,7 +523,7 @@ MyGame/
 
 `ResourceCache/` 与 `Content/` 同级。`Imported/` 按 Content 目录结构保存带源文件名前缀的 `.orbo` 产物及模型的 `<源文件名>.prefab` 子树文档，Project/Inspector 读取伴生文件的清单，ObjectField 可按对象加载缓存；`Player/` 独立保存 cook 暂存产物并同步进发布目录，打包不会清空 Imported。产物**不纳入版本管理**，Reimport 原位置重建，不保留历史代次，进程交换结果不落盘。详见 [资源 Inspector 设计](AssetInspectorDesign.md)。
 
-**每个源文件有一个伴生 `.resinfo`**：与源文件同址同名、只多一个后缀，分两部分——
+**可导入资源的源文件有一个伴生 `.resinfo`**：与源文件同址同名、只多一个后缀，分两部分——
 
 | 部分 | 归属 | 生命周期 |
 | --- | --- | --- |
@@ -533,6 +533,14 @@ MyGame/
 伴生文件必须进版本管理：它是导入设置的唯一载体，丢了设置就没了。对象 `.orbo`、模型生成的 `.prefab` 及整个 `ResourceCache/` 都可以全量重建，因此不进版本管理。`*.resinfo.tmp` 是原子写入的中间文件，仍被忽略。
 
 `Dependencies` 只保存引用路径；同路径资源内容改变不修改该列表。`ImportStatus` 保存源文件自身的内容状态，完整依赖内容校验记录另存 `ResourceCache/Imported/*.import.status`。文本长度排除回车与换行，内容指纹把 CRLF 按 LF 计算；内容未变时保留 `Modified`，生成 JSON 相同时不写回。项目模板的 `.gitattributes` 使用 `text=auto eol=lf`，覆盖 `core.autocrlf` 的 LF 到 CRLF 检出转换；入库仍统一为 LF，二进制不转换。
+
+**代码脚本不生成 `.resinfo`**。mtime 与规范化文本的 SHA-256 内容指纹统一保存到本机 `ResourceCache/ScriptBuild/Observed-v1.json`；资源目录扫描时清理旧版生成的脚本 `.resinfo`。可导入资源仍使用各自的 `.resinfo` 保存导入设置与资源清单。
+
+Ctrl+R 先比较每个文件当前与上次观察到的 mtime：时间相同且存在状态未变时复用已知哈希，新增文件或 mtime 不同的候选才读取内容并计算哈希。mtime 比较使用是否相等，时间戳回退同样进入候选；mtime 保持不变的内容修改不会被这一筛选发现。文件集合参与比较，新增、删除、移动与重命名都会触发相应语言构建。仅 mtime 或 CRLF/LF 变化、内容指纹相同不触发构建。
+
+最近观察到的时间与哈希独立保存在 `ResourceCache/ScriptBuild/Observed-v1.json`，构建配置、SDK 输入与产物也复用这份观察记录。候选内容相同时仍更新观察时间，后续刷新及重启编辑器不再重复计算；目录索引和资源缓存刷新不会清空脚本观察记录。记录缺失或损坏时首次读取重算。各语言最近一次成功构建的快照仍单独存放在 `ResourceCache/ScriptBuild/`。这些本机缓存不提交版本管理。
+
+成功构建快照缺失或损坏时重新构建。构建开始前记录输入，失败、取消或构建期间检测到输入变化均不更新成功快照，下次刷新继续重试。确认需要编译后对对应语言工程执行 Rebuild，独立的 Editor 扩展程序集同样重新编译。手动 `Build Game C#`／`Build Game C++` 强制构建并更新同一份成功快照。
 
 ### 内容根与资源 Key
 
@@ -573,6 +581,24 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+#### 版本 124：移除脚本伴生文件
+
+移除 C#／C++ 脚本 `.resinfo` 的生成和扫描写入逻辑，文件的 mtime 与哈希统一保存在 `ResourceCache/ScriptBuild/Observed-v1.json`。成功构建快照继续独立保存，编译失败和取消后仍可重试。资源目录扫描会清理旧版生成的脚本 `.resinfo` 及其临时文件；RawContent 不参与清理，可导入资源的伴生设置保持原有流程。
+
+需重建 Core 发布项目版本号，重建原生与托管 Editor 后重启，通过 Update Project 同步版本。无需新增模板文件或迁移场景，无需重置 Builtin／Examples；已有脚本伴生文件在下次资源目录扫描或 Ctrl+R 时清理。本次不执行编译或测试。
+
+#### 版本 123：脚本刷新先筛选 mtime 再计算候选哈希
+
+脚本构建检查改为先比较当前 mtime 与上次观察时间，仅新增或 mtime 变化的候选重新计算哈希。mtime 相同的文件复用已知指纹；时间戳回退也进入候选。源码、配置、SDK 与构建产物共用持久化的 `Observed-v1.json`，与成功构建快照分开维护；仅触碰时间时更新观察记录，哈希相同不构建，编译失败仍保留待构建状态。内容根扫描和资源缓存刷新继续复用脚本观察记录，`.resinfo` 保持仅含 `ContentHash`。
+
+需重建 Core 发布项目版本号，重建原生与托管 Editor 并重启，通过 Update Project 同步版本；无需新增模板文件、迁移场景或重置 Builtin／Examples。首次运行补齐观察缓存，此后只对 mtime 候选计算哈希；mtime 未变的内容修改按该策略不检测。本次不执行编译或测试。
+
+#### 版本 122：脚本内容指纹与 Ctrl+R 双语言构建
+
+内容根的 C#／C++ 脚本自动生成仅含 `ContentHash` 的 `.resinfo`。删除按“源码是否晚于 DLL”判断的旧流程，Ctrl+R 分别比较各语言文件集合及内容指纹；C++ 有变更时构建并重载原生模块，C# 有变更时后台构建并重载游戏与 Editor 扩展程序集。成功构建的输入与产物快照保存到 `ResourceCache/ScriptBuild/`，失败、取消、输入中途变化及原生重载失败保留旧快照。仅时间戳变化不重编。
+
+需重建 Core 发布版本号及 `Tools/OrbedenMetaGen/Orbeden.Game.targets`，重建原生与托管 Editor 后重启，通过 Update Project 同步当前 SDK。共享游戏目标新增 Editor 扩展的 Rebuild；现有项目首次刷新会建立本机快照，不需要手动为脚本创建 `.resinfo`，无需迁移场景或重置 Builtin／Examples。本次不执行编译或测试。
 
 #### 版本 121：物理组件统一使用 Ens 层与碰撞矩阵
 
@@ -911,4 +937,4 @@ Vulkan 继续缓存连续绘制的管线、资源组合及原生绑定，在新�
 
 两种语言的脚本挂载和序列化字段都直接保存在项目的 `.world` 文件中，不再生成 `.world.scripts.json` sidecar。
 
-只改字段值不需要重新构建 C++ 或 C#。新增、删除或重命名 C# 脚本类型后，需要先按 `Ctrl+R`（或 `Build Game C#`）；修改 C++ 组件类型或字段后，需要执行 `Build Game C++`，让 MetaGen 和游戏模块反映最新代码。
+只改字段值不需要重新构建 C++ 或 C#。修改、新增、删除或重命名任一语言的脚本后，按 `Ctrl+R`，编辑器按内容指纹重建有变动的 C#／C++ 工程；也可分别使用 `Build Game C#`／`Build Game C++` 强制构建，让程序集、MetaGen 和游戏模块反映最新代码。

@@ -1,10 +1,294 @@
+using System.Text.Json;
+using System.Xml.Linq;
 using Orbeden;
 
 namespace OrbedenEditor;
 
-/// <summary>把脚本类型解析到它在内容根里的源文件：托管脚本找 .cs，原生脚本找 .h/.cpp。</summary>
+internal enum ScriptBuildOperation : byte { Check, Begin, Complete }
+
+/// <summary>索引脚本源文件、维护内容指纹并记录成功构建的输入。</summary>
 internal static class EditorScriptFiles
 {
+#if DEBUG
+    private const string NativeConfiguration = "Debug";
+#else
+    private const string NativeConfiguration = "Release";
+#endif
+    private static readonly HashSet<string> generatedDirectories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Build", "ResourceCache", "Lib", "Legacy", "bin", "obj", "Content/RawContent",
+    };
+    private static readonly Dictionary<bool, (string Root, Dictionary<string, EditorAssetCache.Stamp> Inputs)> pendingBuilds = [];
+    private static Dictionary<string, EditorAssetCache.Stamp> observedStamps = new(StringComparer.OrdinalIgnoreCase);
+    private static string observedRoot = string.Empty;
+    private static bool observationsChanged;
+
+    /// <summary>识别托管与原生脚本源文件。</summary>
+    internal static bool IsSource(string path) => Path.GetExtension(path).ToLowerInvariant() is
+        ".cs" or ".cpp" or ".cc" or ".cxx" or ".c" or ".h" or ".hpp" or ".inl";
+
+    /// <summary>检查构建输入，或在构建前后记录成功快照。</summary>
+    internal static bool UpdateBuild(ScriptBuildOperation operation, bool native)
+    {
+        string root = EditorApplication.GetProjectText(EditorProjectField.Root);
+        if (root.Length == 0)
+        {
+            return false;
+        }
+
+        if (native && !Directory.EnumerateFiles(root, "*.vcxproj").Any())
+        {
+            return false;
+        }
+
+        LoadObservedStamps(root);
+        try
+        {
+            Dictionary<string, EditorAssetCache.Stamp> inputs = ReadBuildInputs(root, native);
+            string cache = GetBuildStatusPath(root, native);
+            switch (operation)
+            {
+                case ScriptBuildOperation.Check:
+                    AddBuildOutputs(root, native, inputs);
+                    Dictionary<string, EditorAssetCache.Stamp>? built = null;
+                    try
+                    {
+                        if (File.Exists(cache))
+                        {
+                            built = JsonSerializer.Deserialize<Dictionary<string, EditorAssetCache.Stamp>>(File.ReadAllText(cache));
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        //重建损坏的本机快照
+                    }
+                    return built == null || inputs.Values.Any(stamp => stamp.ContentHash == "-") || !SameContent(inputs, built);
+
+                case ScriptBuildOperation.Begin:
+                    pendingBuilds[native] = (root, inputs);
+                    return true;
+
+                case ScriptBuildOperation.Complete:
+                    if (!pendingBuilds.Remove(native, out var pending) || pending.Root != root || !SameContent(inputs, pending.Inputs))
+                    {
+                        throw new IOException("Script inputs changed during the build. Refresh to retry.");
+                    }
+                    AddBuildOutputs(root, native, inputs);
+                    if (inputs.Values.Any(stamp => stamp.ContentHash == "-"))
+                    {
+                        throw new IOException("Script build outputs are incomplete. Refresh to retry.");
+                    }
+                    Directory.CreateDirectory(Path.GetDirectoryName(cache)!);
+                    WriteFingerprintFile(cache, JsonSerializer.Serialize(inputs) + "\n");
+                    return true;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(operation));
+            }
+        }
+        finally
+        {
+            SaveObservedStamps();
+        }
+    }
+
+    //读取当前项目的文件观察记录
+    private static void LoadObservedStamps(string root)
+    {
+        if (string.Equals(root, observedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        SaveObservedStamps();
+        observedRoot = root;
+        observedStamps.Clear();
+        observationsChanged = false;
+        string file = Path.Combine(root, "ResourceCache", "ScriptBuild", "Observed-v1.json");
+        if (!File.Exists(file))
+        {
+            return;
+        }
+        try
+        {
+            Dictionary<string, EditorAssetCache.Stamp>? saved = JsonSerializer.Deserialize<Dictionary<string, EditorAssetCache.Stamp>>(File.ReadAllText(file));
+            if (saved != null)
+            {
+                observedStamps = new(saved, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        catch (JsonException)
+        {
+            //重新扫描损坏的观察记录
+        }
+    }
+
+    //保存文件观察记录
+    private static void SaveObservedStamps()
+    {
+        if (!observationsChanged || observedRoot.Length == 0)
+        {
+            return;
+        }
+        string directory = Path.Combine(observedRoot, "ResourceCache", "ScriptBuild");
+        Directory.CreateDirectory(directory);
+        WriteFingerprintFile(Path.Combine(directory, "Observed-v1.json"), JsonSerializer.Serialize(observedStamps) + "\n");
+        observationsChanged = false;
+    }
+
+    //按修改时间筛选需要重新计算哈希的文件
+    private static EditorAssetCache.Stamp ReadObservedStamp(string path)
+    {
+        path = Path.GetFullPath(path);
+        FileInfo file = new(path);
+        bool exists = file.Exists;
+        long modified = exists ? file.LastWriteTimeUtc.Ticks : 0;
+        if (observedStamps.TryGetValue(path, out EditorAssetCache.Stamp? previous) && previous != null
+            && previous.Modified == modified && (previous.Length >= 0) == exists)
+        {
+            return previous;
+        }
+        EditorAssetCache.Stamp stamp = EditorAssetCache.ReadContentStamp(path, true);
+        observedStamps[path] = stamp;
+        observationsChanged = true;
+        return stamp;
+    }
+
+    //收集项目源码、构建配置和 SDK 输入
+    private static Dictionary<string, EditorAssetCache.Stamp> ReadBuildInputs(string root, bool native)
+    {
+        Dictionary<string, EditorAssetCache.Stamp> inputs = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string file in EnumerateBuildFiles(root))
+        {
+            string extension = Path.GetExtension(file).ToLowerInvariant();
+            bool source = IsSource(file) && (native ? extension != ".cs" : extension == ".cs");
+            bool configuration = extension is ".props" or ".targets" || extension == (native ? ".vcxproj" : ".csproj");
+            if (!source && !configuration)
+            {
+                continue;
+            }
+            inputs[Path.GetFullPath(file)] = ReadObservedStamp(file);
+        }
+
+        //收集当前项目实际引用的 SDK 文件
+        string sdkReference = Path.Combine(root, "Lib", "OrbedenSdk.path");
+        string sdk;
+        if (native)
+        {
+            sdk = Path.Combine(EditorApplication.GetProjectText(EditorProjectField.Repository), "OrbedenEditor", "Sdk");
+        }
+        else
+        {
+            inputs[sdkReference] = ReadObservedStamp(sdkReference);
+            sdk = File.ReadAllText(sdkReference).Trim();
+        }
+        string[] directories = native ? ["Native/Include", "Tools/OrbedenMetaGen"] : ["Tools/OrbedenMetaGen"];
+        foreach (string directory in directories)
+        {
+            foreach (string file in EnumerateBuildFiles(Path.Combine(sdk, directory)))
+            {
+                string extension = Path.GetExtension(file).ToLowerInvariant();
+                if (IsSource(file) || extension is ".dll" or ".json" or ".props" or ".targets" or ".csproj")
+                {
+                    inputs[file] = ReadObservedStamp(file);
+                }
+            }
+        }
+        string[] sdkFiles = native
+            ? ["Shared/GameModule.cpp", "Native/Orbeden.Native.props", "Native/Orbeden.Native.targets", "Native/Bindings.Manifest.json",
+                "Native/WindowsX64/" + NativeConfiguration + "/OrbedenCore.lib"]
+            : ["Shared/GameAotExports.cs", "Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll", "Managed/Orbeden.Editor/Orbeden.Editor.dll"];
+        foreach (string relative in sdkFiles)
+        {
+            string file = Path.GetFullPath(Path.Combine(sdk, relative));
+            inputs[file] = ReadObservedStamp(file);
+        }
+        if (!native)
+        {
+            string runtime = Path.Combine(root, "Lib", "OrbedenCore.CSharp.dll");
+            inputs[runtime] = ReadObservedStamp(runtime);
+        }
+        return inputs;
+    }
+
+    //枚举构建源文件并跳过生成目录与原始内容目录
+    private static IEnumerable<string> EnumerateBuildFiles(string root)
+    {
+        if (!Directory.Exists(root))
+        {
+            yield break;
+        }
+        Stack<string> pending = new();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            string directory = pending.Pop();
+            foreach (string child in Directory.EnumerateDirectories(directory))
+            {
+                string name = Path.GetFileName(child);
+                string relative = Path.GetRelativePath(root, child).Replace('\\', '/');
+                if (name.StartsWith('.') || generatedDirectories.Contains(relative)
+                    || (File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0)
+                {
+                    continue;
+                }
+                pending.Push(child);
+            }
+            foreach (string file in Directory.EnumerateFiles(directory).Order(StringComparer.Ordinal))
+            {
+                yield return Path.GetFullPath(file);
+            }
+        }
+    }
+
+    //将当前构建产物加入快照
+    private static void AddBuildOutputs(string root, bool native, Dictionary<string, EditorAssetCache.Stamp> inputs)
+    {
+        string name = EditorApplication.GetProjectText(EditorProjectField.Name);
+        if (native)
+        {
+            string output = Path.Combine(root, "Build", "Native", name + "Native.dll");
+            inputs[output] = ReadObservedStamp(output);
+            return;
+        }
+
+        string project = Path.Combine(root, name + ".csproj");
+        if (!File.Exists(project))
+        {
+            project = Directory.EnumerateFiles(root, "*.csproj").Order(StringComparer.Ordinal).First();
+        }
+        string? assembly = XDocument.Load(project).Descendants().FirstOrDefault(element => element.Name.LocalName == "AssemblyName")?.Value;
+        if (string.IsNullOrEmpty(assembly))
+        {
+            assembly = Path.GetFileNameWithoutExtension(project);
+        }
+        foreach (string suffix in new[] { ".dll", ".Editor.dll" })
+        {
+            string output = Path.Combine(root, "Build", "Managed", assembly + suffix);
+            inputs[output] = ReadObservedStamp(output);
+        }
+    }
+
+    //比较文件集合与内容指纹
+    private static bool SameContent(Dictionary<string, EditorAssetCache.Stamp> current, Dictionary<string, EditorAssetCache.Stamp> previous)
+    {
+        return current.Count == previous.Count && current.All(pair => previous.TryGetValue(pair.Key, out EditorAssetCache.Stamp? stamp)
+            && stamp != null && stamp.Length == pair.Value.Length && stamp.ContentHash == pair.Value.ContentHash);
+    }
+
+    //按构建语言与配置定位本机快照
+    private static string GetBuildStatusPath(string root, bool native)
+    {
+        string target = native ? "Native-" + NativeConfiguration : "Managed-Debug";
+        return Path.Combine(root, "ResourceCache", "ScriptBuild", target + "-v1.json");
+    }
+
+    //原子替换指纹文件
+    private static void WriteFingerprintFile(string path, string json)
+    {
+        File.WriteAllText(path + ".tmp", json, InteropText.CreateUtf8Encoding(false));
+        File.Move(path + ".tmp", path, true);
+    }
+
     //最近一次命中的解析结果。菜单开着时每帧都会问同一个类型，缓存命中就不必反复扫盘
     private static string cachedTypeName = string.Empty;
     private static bool cachedManaged;

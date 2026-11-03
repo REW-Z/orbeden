@@ -259,9 +259,9 @@ void Ens::CollectComponentsInDescendants(Type* type, List<Component*>& output, b
 }
 
 //添加组件
-Component* Ens::AddComponent(Type* type)
+Component* Ens::AddComponent(Type* type, const std::function<void(Component&)>& configure)
 {
-    return GetWorld() ? GetWorld()->AddComponent(ens, type) : nullptr;
+    return GetWorld() ? GetWorld()->AddComponent(ens, type, configure) : nullptr;
 }
 
 //添加同类型的独立组件实例

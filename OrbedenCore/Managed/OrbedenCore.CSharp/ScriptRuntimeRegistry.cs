@@ -117,16 +117,22 @@ public static class ScriptRuntimeRegistry
     public static int GetScriptCount(EnsId ens) =>
         scriptsByEns.TryGetValue(ens, out List<Script>? scripts) ? scripts.Count : 0;
 
-    /// <summary>获取指定 Ens 上的运行态脚本实例。</summary>
+    /// <summary>按挂载顺序获取指定 Ens 上已注册的托管脚本。</summary>
     public static IReadOnlyList<Script> GetScripts(EnsId ens)
     {
-        if (!scriptsByEns.TryGetValue(ens, out List<Script>? scripts)) return [];
-        List<Script> ordered = [];
-        foreach (IntPtr host in Script.GetManagedHosts())
+        if (!scriptsByEns.ContainsKey(ens))
         {
-            int id = Object.GetInstanceId(host);
-            if (scriptsBySlot.TryGetValue(unchecked((uint)id), out Script? script) && script.EnsId.Equals(ens))
+            return [];
+        }
+
+        List<Script> ordered = [];
+        foreach (int id in NativeBindingRuntime.GetComponentIds(ens, typeof(Script)))
+        {
+            if (scriptsBySlot.TryGetValue(unchecked((uint)id), out Script? script)
+                && script.EnsId.Equals(ens))
+            {
                 ordered.Add(script);
+            }
         }
         return ordered;
     }

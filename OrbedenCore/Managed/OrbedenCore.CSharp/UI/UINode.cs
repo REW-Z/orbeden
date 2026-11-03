@@ -11,6 +11,13 @@ public sealed class UINode
     /// <summary>节点所属 Ens。</summary>
     public EnsId Ens { get; }
 
+    //缓存节点的必备变换组件
+    internal Transform OwnerTransform { get; }
+
+    //保存当前版本的画布矩阵与逻辑世界矩阵
+    internal matrix4x4 CachedCanvasMatrix;
+    internal matrix4x4 CachedWorldMatrix;
+
     /// <summary>本节点上的布局组件；没有 UILayout 的节点不参与布局计算。</summary>
     public UILayout? Layout { get; internal set; }
 
@@ -35,6 +42,7 @@ public sealed class UINode
     internal UINode(EnsId ens)
     {
         Ens = ens;
+        OwnerTransform = Orbeden.Ens.FromId(ens).Transform;
     }
 
     /// <summary>本节点是否可用于渲染：有布局组件且没有配置错误。</summary>

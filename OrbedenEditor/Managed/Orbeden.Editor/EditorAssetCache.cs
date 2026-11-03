@@ -9,7 +9,7 @@ namespace OrbedenEditor;
 
 /// <summary>串行后台导入和可重建资源数据库，UI 只读取轻量清单。
 ///
-/// 每个源文件有一个伴生 `.resinfo`（与源文件同目录，随资源进版本管理），分两部分：
+/// 每个可导入源文件有一个伴生 `.resinfo`（与源文件同目录，随资源进版本管理），分两部分：
 /// 导入设置（用户可编辑，重新导入时保留）与内部隐含资源清单（每次导入重新生成）。
 /// 对象产物 `.orbo` 仍在可删除重建的 ResourceCache/Imported 下。 </summary>
 internal static class EditorAssetCache
@@ -60,19 +60,20 @@ internal static class EditorAssetCache
         return new(info.Exists ? info.Length : -1, info.Exists ? info.LastWriteTimeUtc.Ticks : 0);
     }
 
-    /// <summary>读取内容指纹，文本排除换行字节计长并将 CRLF 按 LF 计算哈希。</summary>
-    private static Stamp ReadStamp(string path, Stamp? previous = null)
+    /// <summary>读取文件内容指纹，文本将 CRLF 按 LF 计算哈希。</summary>
+    internal static Stamp ReadContentStamp(string path, bool refresh = false)
     {
         path = Path.GetFullPath(path);
         FileStamp file = ReadFileStamp(path);
-        if (!contentStamps.TryGetValue(path, out var cached) || cached.File != file)
+        if (!contentStamps.TryGetValue(path, out var cached) || cached.File != file || refresh)
         {
             long length = file.Length;
             string digest = "-";
             if (file.Length >= 0)
             {
                 bool text = EditorAssetCatalog.IsCodeFile(path) || EditorAssetCatalog.IsTextFile(path)
-                    || Path.GetExtension(path).ToLowerInvariant() is ".obj" or ".mtl" or ".gltf" or ".orbmat" or ".orbsky" or ".orbinc" or ".world" or ".fnt";
+                    || Path.GetExtension(path).ToLowerInvariant() is ".obj" or ".mtl" or ".gltf" or ".orbmat" or ".orbsky" or ".orbinc" or ".world" or ".fnt"
+                        or ".csproj" or ".vcxproj" or ".props" or ".targets";
                 using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, hashBuffer.Length, FileOptions.SequentialScan);
                 using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 length = 0;
@@ -99,13 +100,21 @@ internal static class EditorAssetCache
                 }
                 if (pendingReturn) hash.AppendData([(byte)'\r']);
                 digest = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
-                if (ReadFileStamp(path) != file) throw new IOException("Asset changed while reading its content.");
+                if (ReadFileStamp(path) != file) throw new IOException("File changed while reading its content: " + path);
             }
             cached = (file, length, digest);
             contentStamps[path] = cached;
         }
-        long modified = previous?.Length == cached.Length && previous.ContentHash == cached.Hash ? previous.Modified : file.Modified;
-        return new(GetRelativePath(path), cached.Length, modified, cached.Hash);
+        return new(path, cached.Length, file.Modified, cached.Hash);
+    }
+
+    /// <summary>读取资源指纹，内容相同时保留原有时间标记。</summary>
+    private static Stamp ReadStamp(string path, Stamp? previous = null)
+    {
+        Stamp current = ReadContentStamp(path);
+        long modified = previous?.Length == current.Length && previous.ContentHash == current.ContentHash
+            ? previous.Modified : current.Modified;
+        return current with { Path = GetRelativePath(path), Modified = modified };
     }
 
     /// <summary>伴生文件：与源文件同目录，承载导入设置与清单。</summary>
@@ -613,7 +622,7 @@ internal static class EditorAssetCache
     /// <summary>目录扫描只登记待索引文件，不在扫描阶段解析复合资源。</summary>
     internal static void BeginScan() => sources.Clear();
 
-    /// <summary>清除源文件已移走或删除的记录、伴生文件与对象产物。</summary>
+    /// <summary>清除已移走资源的产物与不再使用的脚本伴生文件。</summary>
     internal static void EndScan()
     {
         foreach (string path in entries.Keys.Where(path => !sources.Contains(path)).ToArray()) entries.Remove(path);
@@ -625,6 +634,12 @@ internal static class EditorAssetCache
             //伴生文件与源文件同名同址，只多一个后缀
             string source = metadata[..^MetadataExtension.Length];
             if (PathDefines.IsRawContentPath(GetRelativePath(source))) continue;
+            if (EditorScriptFiles.IsSource(source))
+            {
+                File.Delete(metadata);
+                File.Delete(metadata + ".tmp");
+                continue;
+            }
             if (!File.Exists(source)) DeleteAsset(source);
         }
     }

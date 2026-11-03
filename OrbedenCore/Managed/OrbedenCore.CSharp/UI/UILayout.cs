@@ -31,6 +31,7 @@ public class UILayout : Script, IManagedComponentLifecycle
     [SerializeField] private bool ignoreLayout;
 
     //解析缓存：由 UILayoutRegistry 在布局阶段写入，不持久化。
+    private readonly Transform ownerTransform;
     private UIRect resolvedRect;
     private vector2 resolvedAnchorPoint;
     private vector2 publishedSize;
@@ -47,6 +48,7 @@ public class UILayout : Script, IManagedComponentLifecycle
     /// <summary>创建布局组件包装。</summary>
     public UILayout(Ens ens) : base(ens)
     {
+        ownerTransform = ens.Transform;
     }
 
     //登记布局组件引起的节点结构变化
@@ -124,7 +126,7 @@ public class UILayout : Script, IManagedComponentLifecycle
     /// <summary>读取 Transform 局部 X/Y 作为锚点偏移。</summary>
     public vector2 GetOffset()
     {
-        vector3 position = Ens.Transform.localPosition;
+        vector3 position = ownerTransform.localPosition;
         return new vector2(position.x, position.y);
     }
 
@@ -132,7 +134,7 @@ public class UILayout : Script, IManagedComponentLifecycle
     public void SetOffset(vector2 value)
     {
         if (!UILayoutMath.IsFinite(value)) return;
-        Transform transform = Ens.Transform;
+        Transform transform = ownerTransform;
         vector3 position = transform.localPosition;
         if (position.x == value.x && position.y == value.y) return;
         transform.localPosition = new vector3(value.x, value.y, position.z);
@@ -142,8 +144,11 @@ public class UILayout : Script, IManagedComponentLifecycle
     //读取布局落点与 Transform 局部 Z
     internal vector3 GetResolvedLocalPosition()
     {
-        vector3 position = Ens.Transform.localPosition;
-        if (Ens.GetComponent<Canvas>() != null || !hasResolvedRect) return position;
+        vector3 position = ownerTransform.localPosition;
+        if (!hasResolvedRect || UIWorldContext.Current?.FindNode(EnsId)?.Canvas != null)
+        {
+            return position;
+        }
         return new vector3(resolvedAnchorPoint.x, resolvedAnchorPoint.y, position.z);
     }
 
@@ -252,6 +257,11 @@ public class UILayout : Script, IManagedComponentLifecycle
     public void SetDrivenRect(in UIRect rect, object owner)
     {
         ArgumentNullException.ThrowIfNull(owner);
+        if (hasDrivenRect && ReferenceEquals(drivenOwner, owner)
+            && Same(drivenRect.min, rect.min) && Same(drivenRect.size, rect.size))
+        {
+            return;
+        }
         drivenOwner = owner;
         drivenRect = rect;
         hasDrivenRect = true;

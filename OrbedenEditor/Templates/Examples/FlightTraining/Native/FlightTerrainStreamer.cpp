@@ -4,6 +4,7 @@
 #include "Runtime/World.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Object/Transform.h"
+#include "Profiler/Profiler.h"
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -13,22 +14,40 @@ OBJECT_TYPE_IMPLEMENT(FlightTerrainStreamer, Script)
 /// <summary>接管场景中的机场地形块，预加载最近邻。</summary>
 void FlightTerrainStreamer::OnStart()
 {
+    PROFILE("Terrain/Start");
     World* world = GetWorld();
-    if (!world) return;
+    if (!world)
+    {
+        return;
+    }
     activeChunkSize = std::clamp(chunkSize, 128.0f, 2048.0f);
     activeSamples = std::clamp(samplesPerSide, 17, 129);
     world->ForEachComponent<HeightField>([&](HeightField* terrain)
     {
-        if (terrain->GetEns()->GetName() == "Terrain") airportTerrain = terrain->GetEnsId();
+        if (terrain->GetEns()->GetName() == "Terrain")
+        {
+            airportTerrain = terrain->GetEnsId();
+        }
     });
     Ens* airport = world->GetEns(airportTerrain);
-    if (!airport) return;
+    if (!airport)
+    {
+        return;
+    }
     HeightField* terrain = airport->GetComponent<HeightField>();
-    terrain->sizeX = activeChunkSize;
-    terrain->sizeZ = activeChunkSize;
-    terrain->rowCount = activeSamples;
-    terrain->columnCount = activeSamples;
-    terrain->Regenerate();
+
+    //按配置变化重建机场地形
+    if (terrain->sizeX != activeChunkSize || terrain->sizeZ != activeChunkSize
+        || terrain->rowCount != activeSamples || terrain->columnCount != activeSamples
+        || terrain->GetGeneration() == 0)
+    {
+        terrain->sizeX = activeChunkSize;
+        terrain->sizeZ = activeChunkSize;
+        terrain->rowCount = activeSamples;
+        terrain->columnCount = activeSamples;
+        terrain->Regenerate();
+    }
+
     chunks.push_back({ 0, 0, airportTerrain });
     StreamChunks(8);
 }
@@ -52,13 +71,20 @@ void FlightTerrainStreamer::OnFixedUpdate(float32 deltaTime)
 /// <summary>连续采样相邻块，共享机场的噪声材质，保留一圈卸载缓冲。</summary>
 void FlightTerrainStreamer::StreamChunks(int32 budget)
 {
+    PROFILE("Terrain/StreamChunks");
     World* world = GetWorld();
     Ens* airport = world ? world->GetEns(airportTerrain) : nullptr;
-    if (!airport || !GetEns()) return;
+    if (!airport || !GetEns())
+    {
+        return;
+    }
     HeightField* source = airport->GetComponent<HeightField>();
     source->SyncPendingGeneration();
     Material* surface = source->GetSurfaceMaterial();
-    if (!surface) return;
+    if (!surface)
+    {
+        return;
+    }
     vector3 position = GetEns()->Transform()->GetLocalPosition();
     int32 centerX = static_cast<int32>(std::floor((originX + position.x) / activeChunkSize + 0.5));
     int32 centerZ = static_cast<int32>(std::floor((originZ + position.z) / activeChunkSize + 0.5));
@@ -72,7 +98,10 @@ void FlightTerrainStreamer::StreamChunks(int32 budget)
             world->DestroyEns(it->ens);
             it = chunks.erase(it);
         }
-        else ++it;
+        else
+        {
+            ++it;
+        }
     }
 
     for (int32 ring = 0; ring <= radius && budget > 0; ++ring)
@@ -81,38 +110,48 @@ void FlightTerrainStreamer::StreamChunks(int32 budget)
         {
             for (int32 dx = -ring; dx <= ring && budget > 0; ++dx)
             {
-                if (std::max(std::abs(dx), std::abs(dz)) != ring) continue;
+                if (std::max(std::abs(dx), std::abs(dz)) != ring)
+                {
+                    continue;
+                }
                 int32 x = centerX + dx;
                 int32 z = centerZ + dz;
                 if (std::any_of(chunks.begin(), chunks.end(), [&](const TerrainChunk& chunk)
-                    { return chunk.x == x && chunk.z == z; })) continue;
+                    { return chunk.x == x && chunk.z == z; }))
+                {
+                    continue;
+                }
                 Ens* ens = world->CreateEns("Terrain_" + std::to_string(x) + "_" + std::to_string(z));
                 ens->Transform()->SetLocalPosition({ static_cast<float32>(static_cast<double>(x) * activeChunkSize - originX),
                     0, static_cast<float32>(static_cast<double>(z) * activeChunkSize - originZ) });
                 StaticMeshRenderer* renderer = ens->AddComponent<StaticMeshRenderer>();
                 renderer->castShadows = false;
-                HeightField* terrain = ens->AddComponent<HeightField>();
-                terrain->seed = source->seed;
-                terrain->sampleTileX = x;
-                terrain->sampleTileZ = z;
-                terrain->sizeX = activeChunkSize;
-                terrain->sizeZ = activeChunkSize;
-                terrain->rowCount = activeSamples;
-                terrain->columnCount = activeSamples;
-                terrain->amplitude = source->amplitude;
-                terrain->frequency = source->frequency;
-                terrain->octaves = source->octaves;
-                terrain->flattenMinX = source->flattenMinX;
-                terrain->flattenMaxX = source->flattenMaxX;
-                terrain->flattenMinZ = source->flattenMinZ;
-                terrain->flattenMaxZ = source->flattenMaxZ;
-                terrain->flattenHeight = source->flattenHeight;
-                terrain->flattenBlendDistance = source->flattenBlendDistance;
                 ens->SetLayer(source->GetEns()->GetLayer());
-                terrain->tileSize = source->tileSize;
-                terrain->generateNoiseTexture = false;
-                terrain->material.Set(surface);
-                terrain->Regenerate();
+
+                //在挂载初始化前配置地形块
+                ens->AddComponent<HeightField>([&](HeightField& terrain)
+                {
+                    terrain.seed = source->seed;
+                    terrain.sampleTileX = x;
+                    terrain.sampleTileZ = z;
+                    terrain.sizeX = activeChunkSize;
+                    terrain.sizeZ = activeChunkSize;
+                    terrain.rowCount = activeSamples;
+                    terrain.columnCount = activeSamples;
+                    terrain.amplitude = source->amplitude;
+                    terrain.frequency = source->frequency;
+                    terrain.octaves = source->octaves;
+                    terrain.flattenMinX = source->flattenMinX;
+                    terrain.flattenMaxX = source->flattenMaxX;
+                    terrain.flattenMinZ = source->flattenMinZ;
+                    terrain.flattenMaxZ = source->flattenMaxZ;
+                    terrain.flattenHeight = source->flattenHeight;
+                    terrain.flattenBlendDistance = source->flattenBlendDistance;
+                    terrain.tileSize = source->tileSize;
+                    terrain.generateNoiseTexture = false;
+                    terrain.material.Set(surface);
+                });
+
                 chunks.push_back({ x, z, ens->GetId() });
                 --budget;
             }
