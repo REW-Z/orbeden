@@ -307,6 +307,10 @@ public static class EditorRuntime
     [UnmanagedCallersOnly]
     public static void UpdateScriptRuntime(float deltaTime) => GameScriptRuntime.Update(deltaTime);
 
+    /// <summary>在普通更新后推进托管协程</summary>
+    [UnmanagedCallersOnly]
+    public static void AdvanceCoScriptRuntime(float deltaTime) => GameScriptRuntime.AdvanceCo(deltaTime);
+
     [UnmanagedCallersOnly]
     public static void FixedUpdateScriptRuntime(float fixedDeltaTime) => GameScriptRuntime.FixedUpdate(fixedDeltaTime);
 

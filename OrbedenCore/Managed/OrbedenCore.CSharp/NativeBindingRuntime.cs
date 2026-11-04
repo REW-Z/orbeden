@@ -22,12 +22,13 @@ internal unsafe struct NativeBindingsApi
 /// <summary>连接生成的原生函数表、类型工厂和包装身份。</summary>
 public static unsafe class NativeBindingRuntime
 {
-    private sealed class Entry(Type type, string name, ulong signature, Func<Ens?, IntPtr, Object>? factory)
+    private sealed class Entry(Type type, string name, ulong signature, Func<Ens?, IntPtr, Object>? factory, int releaseSlot)
     {
         internal readonly Type Type = type;
         internal readonly string Name = name;
         internal readonly ulong Signature = signature;
         internal readonly Func<Ens?, IntPtr, Object>? Factory = factory;
+        internal readonly int ReleaseSlot = releaseSlot;
         internal uint Generation;
         internal uint TypeId;
         internal void** Functions;
@@ -38,16 +39,26 @@ public static unsafe class NativeBindingRuntime
     internal static uint Generation => api.GetGeneration == null ? 0 : api.GetGeneration();
 
     /// <summary>由生成模块注册自己的类型；不创建任何原生实例。</summary>
-    public static void Register(Type type, string name, ulong signature, Func<Ens?, IntPtr, Object>? factory)
+    public static void Register(Type type, string name, ulong signature, Func<Ens?, IntPtr, Object>? factory, int releaseSlot = -1)
     {
-        if (types.TryGetValue(type, out Entry? old))
+        lock (asyncGate)
         {
-            if (old.Name != name || old.Signature != signature) throw new TypeLoadException($"Conflicting binding for {type}.");
-            return;
+            if (types.TryGetValue(type, out Entry? old))
+            {
+                if (old.Name != name || old.Signature != signature)
+                {
+                    throw new TypeLoadException($"Conflicting binding for {type}.");
+                }
+                return;
+            }
+            if (names.TryGetValue(name, out Entry? named) && named.Signature != signature)
+            {
+                throw new TypeLoadException($"Conflicting native binding signature for '{name}'.");
+            }
+            Entry entry = new(type, name, signature, factory, releaseSlot);
+            types.Add(type, entry);
+            names.TryAdd(name, entry);
         }
-        if (names.TryGetValue(name, out Entry? named) && named.Signature != signature)
-            throw new TypeLoadException($"Conflicting native binding signature for '{name}'.");
-        Entry entry = new(type, name, signature, factory); types.Add(type, entry); names.TryAdd(name, entry);
     }
 
     /// <summary>为生成代码取得签名校验后的类型化函数指针。</summary>
@@ -178,6 +189,48 @@ public static unsafe class NativeBindingRuntime
         }
         return result;
     }
+    private static readonly object asyncGate = new();
+    private static AsyncOperationBindApi asyncApi;
+
+    //连接异步操作函数表
+    internal static void Initialize(AsyncOperationBindApi value)
+    {
+        lock (asyncGate)
+        {
+            asyncApi = value;
+        }
+    }
+
+    //通过生成的工厂启动资源加载
+    internal static ResourceLoadOperation LoadAsync<T>(string key) where T : Object
+    {
+        return ResourceLoadOperation.Load(Resolve(typeof(T)).TypeId, key)!;
+    }
+
+    /// <summary>释放生成包装持有的原生共享句柄</summary>
+    public static void ReleaseHandle(Type type, ulong id)
+    {
+        lock (asyncGate)
+        {
+            if (types.TryGetValue(type, out Entry? entry) && entry.ReleaseSlot >= 0 && entry.Functions != null)
+            {
+                ((delegate* unmanaged[Cdecl]<ulong, void>)entry.Functions[entry.ReleaseSlot])(id);
+            }
+        }
+    }
+
+    //唤醒主线程事件循环
+    internal static void WakeMainThread()
+    {
+        lock (asyncGate)
+        {
+            if (asyncApi.WakeMainThread != null)
+            {
+                asyncApi.WakeMainThread();
+            }
+        }
+    }
+
     internal static T? Load<T>(string key) where T : Object
     {
         byte[] bytes = InteropText.EncodeUtf8(key);
@@ -186,8 +239,20 @@ public static unsafe class NativeBindingRuntime
     }
     internal static void Initialize(NativeBindingsApi value)
     {
-        api = value;
-        foreach (Entry entry in types.Values) { entry.Generation = 0; entry.Functions = null; }
+        lock (asyncGate)
+        {
+            //释放上一会话的共享句柄
+            foreach (Entry entry in types.Values)
+            {
+                if (entry.ReleaseSlot >= 0 && entry.Functions != null)
+                {
+                    ((delegate* unmanaged[Cdecl]<ulong, void>)entry.Functions[entry.ReleaseSlot])(0);
+                }
+                entry.Generation = 0;
+                entry.Functions = null;
+            }
+            api = value;
+        }
     }
     /// <summary>让运行中的游戏程序集提供基类查询所需的默认派生工厂。</summary>
     internal static void ActivateAssembly(Assembly assembly)
@@ -199,15 +264,21 @@ public static unsafe class NativeBindingRuntime
     /// <summary>卸载程序集前释放生成工厂及类型引用。</summary>
     public static void UnregisterAssembly(Assembly assembly)
     {
-        Object.DisconnectAssembly(assembly);
-        foreach (Entry entry in types.Values.Where(entry => entry.Type.Assembly == assembly).ToArray())
+        lock (asyncGate)
         {
-            types.Remove(entry.Type);
-            if (names.TryGetValue(entry.Name, out Entry? current) && ReferenceEquals(current, entry))
+            Object.DisconnectAssembly(assembly);
+            foreach (Entry entry in types.Values.Where(entry => entry.Type.Assembly == assembly).ToArray())
             {
-                names.Remove(entry.Name);
-                Entry? remaining = types.Values.LastOrDefault(candidate => candidate.Name == entry.Name);
-                if (remaining != null) names.Add(entry.Name, remaining);
+                types.Remove(entry.Type);
+                if (names.TryGetValue(entry.Name, out Entry? current) && ReferenceEquals(current, entry))
+                {
+                    names.Remove(entry.Name);
+                    Entry? remaining = types.Values.LastOrDefault(candidate => candidate.Name == entry.Name);
+                    if (remaining != null)
+                    {
+                        names.Add(entry.Name, remaining);
+                    }
+                }
             }
         }
     }

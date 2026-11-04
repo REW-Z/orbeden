@@ -10,6 +10,7 @@
 namespace Orbeden { class Object; }
 using Orbeden::Object;
 class ResourceManager;
+class ResourceLoadOperation;
 class ReflectionGeneratedAccess;
 class Component;
 class Type;
@@ -73,6 +74,7 @@ class Type
 {
     friend class Orbeden::Object;
     friend class ::ComponentStorage;
+    friend class ::ResourceLoadOperation;
 
 private:
     TypeRuntimeId id = 0;//运行时临时ID（依赖静态初始化顺序）
@@ -85,6 +87,7 @@ private:
     ObjectDestructorFunction destructor = nullptr;
     IChunk* commonChunk = nullptr;
     List<IChunk*> worldChunks;
+    List<IChunk*> resourceChunks;
     void* moduleOwner = nullptr;
 
     //访问当前类型的所有存活对象
@@ -103,6 +106,15 @@ private:
     void VisitChunkObjects(IChunk* chunk, ObjectVisitorFunction visitor, void* userData) const;
 
 public:
+    //创建后台独占的资源分配区
+    IChunk* CreateResourceChunk();
+
+    //接管已完成构建的资源分配区
+    void AdoptResourceChunk(IChunk* chunk);
+
+    //释放尚未移交的资源分配区
+    void DestroyResourceChunk(IChunk*& chunk);
+
     Type(const char* typeName, Type* base, uint32 size, uint32 alignment, ObjectConstructorFunction ctor, ObjectDestructorFunction dtor);
     Type(const Type&) = delete;
     Type& operator=(const Type&) = delete;
@@ -282,15 +294,30 @@ private:
     ManagedWrapperReleaseCallback managedWrapperRelease = nullptr;
     World* ownerWorld = nullptr;
     Ownership ownership = Ownership::None;
+    bool published = true;
+    bool indexed = true;
     IChunk* allocationChunk = nullptr;
 
     friend class ::World;
     friend class ::WorldSerializer;
     friend class ::CookedAssetSerializer;
     friend class ::ResourceManager;
+    friend class ::ResourceLoadOperation;
     friend class ::AssetPipelineObjectFactory;
     friend class ::ComponentStorage;
     friend class ::Type;
+
+    //创建尚未发布的资源对象
+    static Object* CreateUnpublishedResource(Type* type, const std::string& key, IChunk* chunk);
+
+    //把完整对象写入主线程索引
+    static bool RegisterResourceInstance(Object* object);
+
+    //开放已登记资源的正常查询
+    static void PublishResourceInstances(const List<Object*>& objects);
+
+    //清理尚未发布的资源对象
+    static void DestroyUnpublishedResource(Object* object);
 
     //设置所属世界
     void SetWorld(World* world);
@@ -319,6 +346,10 @@ private:
     static bool DestroyDetachedInstance(Object* object);
 
 public:
+    //查询对象是否已发布
+    ORBEDEN_BIND_IGNORE
+    bool IsPublished() const;
+
     //获取实例ID
     const StringId& GetInstanceId() const;
 

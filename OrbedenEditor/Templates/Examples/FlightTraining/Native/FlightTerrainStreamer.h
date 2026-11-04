@@ -15,7 +15,7 @@ public:
     float32 chunkSize = 512.0f;
     int32 samplesPerSide = 65;
     int32 loadRadius = 3;
-    int32 chunksPerStep = 2;
+    int32 chunksPerBatch = 2;
     float32 rebaseDistance = 4096.0f;
 
     /// <summary>回到机场坐标系，供飞机重置使用。</summary>
@@ -38,8 +38,8 @@ private:
     float32 activeChunkSize = 512.0f;
     int32 activeSamples = 65;
 
-    /// <summary>按离飞机的距离补齐地形块，并卸载远处块。</summary>
-    void StreamChunks(int32 budget);
+    //后台生成附近地形并逐帧提交
+    CoRoutine StreamChunks();
 
     /// <summary>平移世界根节点，保持飞机附近坐标较小。</summary>
     void RebaseWorld(const vector3& shift);

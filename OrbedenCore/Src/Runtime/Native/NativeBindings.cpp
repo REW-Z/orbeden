@@ -5,6 +5,7 @@ namespace
 {
     struct BindingEntry { uint64 signature; std::vector<void*> functions; };
     std::unordered_map<Type*, BindingEntry>& Entries() { static std::unordered_map<Type*, BindingEntry> entries; return entries; }
+    std::unordered_map<std::string, BindingEntry> handleEntries;
     uint32 generation = 1;
 }
 
@@ -18,6 +19,16 @@ void NativeBindings::Register(Type* type, uint64 signature, std::span<void* cons
         return;
     }
     Entries().emplace(type, BindingEntry{ signature, { functions.begin(), functions.end() } });
+}
+
+//按普通类名称登记共享句柄函数表
+void NativeBindings::Register(const char* typeName, uint64 signature, std::span<void* const> functions)
+{
+    auto [entry, inserted] = handleEntries.try_emplace(typeName, BindingEntry{ signature, { functions.begin(), functions.end() } });
+    if (!inserted && entry->second.signature != signature)
+    {
+        throw std::invalid_argument("Conflicting handle binding signature");
+    }
 }
 
 //判断原生类型是否提供托管绑定
@@ -39,6 +50,17 @@ NativeBindingStatus NativeBindings::Resolve(const char* typeName, int32 length, 
     if (!typeName || length <= 0 || !typeId || !functions) return NativeBindingStatus::InvalidArgument;
     Type* type = Object::FindType(std::string(typeName, length));
     auto found = Entries().find(type);
+    if (!type)
+    {
+        auto handle = handleEntries.find(std::string(typeName, length));
+        if (handle == handleEntries.end() || handle->second.signature != signature)
+        {
+            return NativeBindingStatus::TypeMismatch;
+        }
+        *typeId = 0;
+        *functions = const_cast<const void**>(handle->second.functions.data());
+        return NativeBindingStatus::Ok;
+    }
     if (found == Entries().end() || found->second.signature != signature) return NativeBindingStatus::TypeMismatch;
     *typeId = type->GetId(); *functions = const_cast<const void**>(found->second.functions.data());
     return NativeBindingStatus::Ok;

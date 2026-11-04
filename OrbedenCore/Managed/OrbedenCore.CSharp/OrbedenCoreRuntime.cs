@@ -21,6 +21,7 @@ internal unsafe struct OrbedenEngineNativeApi
     public RuntimeGuiCurveApi GuiCurve;
     public IntPtr GetRetainedGuiApi;
     public FileSystemBindApi FileSystem;
+    public AsyncOperationBindApi AsyncOperations;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -45,6 +46,7 @@ internal unsafe struct OrbedenNativeApi
     public FileSystemBindApi FileSystem;
     public NativeTypedMethodsApi* TypedMethods;
     public NativeTypedFieldsApi* TypedFields;
+    public AsyncOperationBindApi AsyncOperations;
 }
 #pragma warning restore CS0649
 
@@ -73,7 +75,7 @@ public static unsafe class OrbedenCoreRuntime
             return;
         }
 
-        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi), 9);
+        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi), 10);
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
         RetainedGuiApi = api.GetRetainedGuiApi;
         //原生表已就位，UI 才能接入并登记帧系统；早于世界附着。
@@ -101,7 +103,8 @@ public static unsafe class OrbedenCoreRuntime
             FileSystem.InitializeNativeApi(default);
             Ens.InitializeEnsNativeApi(default);
             Object.InitializeNativeApi(default, default);
-            NativeBindingRuntime.Initialize(default);
+            NativeBindingRuntime.Initialize(default(NativeBindingsApi));
+            NativeBindingRuntime.Initialize(default(AsyncOperationBindApi));
             GUI.InitializeNativeApi(default, default, default);
             GUI.InitializeCurveApi(default);
             return;
@@ -124,6 +127,7 @@ public static unsafe class OrbedenCoreRuntime
         Ens.InitializeEnsNativeApi(api.Ens);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
         NativeBindingRuntime.Initialize(api.Bindings);
+        NativeBindingRuntime.Initialize(api.AsyncOperations);
         GUI.InitializeNativeApi(api.Gui, api.GuiExtension, api.GuiAdvanced);
         GUI.InitializeCurveApi(api.GuiCurve);
     }
@@ -137,10 +141,11 @@ public static unsafe class OrbedenCoreRuntime
         Ens.InitializeEnsNativeApi(api.Ens);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
         NativeBindingRuntime.Initialize(api.Bindings);
+        NativeBindingRuntime.Initialize(api.AsyncOperations);
     }
 
     /// <summary>读取函数表前拒绝旧 ABI 或不同尺寸的引擎模块。</summary>
-    private static void ValidateNativeApiHeader(IntPtr pointer, int expectedSize, uint expectedVersion = 7)
+    private static void ValidateNativeApiHeader(IntPtr pointer, int expectedSize, uint expectedVersion = 8)
     {
         uint* header = (uint*)pointer;
         if (header[0] != expectedVersion || header[1] != expectedSize)
@@ -167,6 +172,7 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<FileSystemBindApi>(nameof(FileSystemBindApi), 1);
         ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 16);
         ValidateFunctionTable<ObjectBindApi>(nameof(ObjectBindApi), 7);
+        ValidateFunctionTable<AsyncOperationBindApi>(nameof(AsyncOperationBindApi), 1);
         ValidateFunctionTable<NativeBindingsApi>(nameof(NativeBindingsApi), 10);
         ValidateFunctionTable<ObjectExtensionBindApi>(nameof(ObjectExtensionBindApi), 1);
         ValidateFunctionTable<RuntimeGuiCurveApi>(nameof(RuntimeGuiCurveApi), 2);
@@ -179,8 +185,8 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
         ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 17);
-        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 79 * IntPtr.Size);
-        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 122 * IntPtr.Size);
+        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 80 * IntPtr.Size);
+        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 123 * IntPtr.Size);
 
         nativeAbiValidated = true;
     }

@@ -362,7 +362,7 @@ public sealed class FlightHud : Script
         Text title = CreateText(tape, "Title", new vector2(0, 4), new vector2(0, 16), altitude ? "ALT" : "IAS", 10, ColorGrey);
         title.GetLayout()!.SetAnchors(new vector2(0, 1), new vector2(1, 1));
         title.SetHorizontalAlignment(UITextAlignment.Center);
-        Text units = CreateText(tape, "Units", default, new vector2(0, 17), altitude ? "m" : "m/s", 10, ColorGrey);
+        Text units = CreateText(tape, "Units", default, new vector2(0, 17), altitude ? "ft" : "kt", 10, ColorGrey);
         units.GetLayout()!.SetAnchors(default, new vector2(1, 0));
         units.GetLayout()!.SetPivot(default);
         units.SetHorizontalAlignment(UITextAlignment.Center);
@@ -527,8 +527,9 @@ public sealed class FlightHud : Script
             statusLabel!.SetText($"V/S {climbRateMethod():+0.0;-0.0;0.0} m/s   SLIP {sideslipMethod():+0.0;-0.0;0.0} deg");
 
             //更新空速与高度刻度
-            float airspeed = airspeedMethod();
-            float altitude = altitudeMethod();
+            //换算显示单位：空速 m/s → kt，高度 m → ft
+            float airspeed = airspeedMethod() * 1.943844f;
+            float altitude = altitudeMethod() * 3.280840f;
             speedLabel!.SetText($"{airspeed:F0}");
             altitudeLabel!.SetText($"{altitude:F0}");
             altitudeLabel.SetFontSize(altitude >= 10000 || altitude <= -1000 ? 12 : 16);

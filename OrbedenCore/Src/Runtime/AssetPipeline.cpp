@@ -1,3 +1,4 @@
+#include "ResourceManager/ResourceLoadOperation.h"
 #include <algorithm>
 #include <cctype>
 #include <charconv>
@@ -323,6 +324,10 @@ namespace
     std::string GetAssetFilePath(const std::string& path)
     {
         std::string cleanPath = ToCleanPath(path);
+        if (auto* state = ResourceLoadOperation::Current())
+        {
+            return state->GetFilePath(cleanPath);
+        }
         if (PathDefines::HasContentRoot()) return PathDefines::GetContentFilePath(cleanPath);
 
         //未打开项目时才退回进程工作目录相对路径。
@@ -1023,7 +1028,7 @@ namespace
         }
         material->SetShader(shader);
         ResourceManager::RegisterDependency(materialKey, shaderKey);
-        collection.AddSourceFile(PathDefines::GetContentFilePath(shaderKey));
+        collection.AddSourceFile(GetAssetFilePath(shaderKey));
     }
 
     //导入图片到指定ObjectKey。inferredColorSpace 是按语义推断的值，用户设置优先于它。
@@ -2087,6 +2092,11 @@ AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
 //按主文件路径选择导入器
 AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportSettings& settings)
 {
+    if (!ResourceLoadOperation::Current())
+    {
+        ResourceManager::InvalidateLoads(path, false);
+    }
+
     std::string sourceKey = ResourceManager::GetSourceKey(path);
 
     //按源文件应用设置，模型子贴图按用途选择颜色空间

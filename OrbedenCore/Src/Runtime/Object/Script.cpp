@@ -6,8 +6,50 @@
 #include "Scripting/ScriptInterop.h"
 
 #include <unordered_map>
+#include <stdexcept>
 
 OBJECT_TYPE_IMPLEMENT(Script, Component)
+
+CoRoutine Script::RunCo(CoRoutine routine)
+{
+    ScriptSystem* system = ScriptSystem::Current();
+    if (!system || system->shuttingDown || !system->IsNativeScriptRunnable(this))
+    {
+        throw std::logic_error("RunCo requires an active native script.");
+    }
+
+    //执行协程首段
+    CoRoutine result;
+    system->DispatchExternalCallbacks([&]()
+    {
+        result = system->coScheduler.Start(GetObjectId(), std::move(routine));
+    });
+    return result;
+}
+
+void Script::StopCo(const CoRoutine& routine)
+{
+    ScriptSystem* system = ScriptSystem::Current();
+    if (system)
+    {
+        system->DispatchExternalCallbacks([&]()
+        {
+            system->coScheduler.Stop(GetObjectId(), routine);
+        });
+    }
+}
+
+void Script::StopAllCo()
+{
+    ScriptSystem* system = ScriptSystem::Current();
+    if (system)
+    {
+        system->DispatchExternalCallbacks([&]()
+        {
+            system->coScheduler.StopOwner(GetObjectId());
+        });
+    }
+}
 
 namespace
 {

@@ -5,10 +5,25 @@
 
 #include <string>
 #include <unordered_set>
+#include <memory>
+
+class ResourceLoadOperation;
 
 //运行时资源管理器，按资源 Key 保存已加载对象
 class ResourceManager : public IEngineSystem
 {
+    //创建或复用资源加载请求
+    static void StartLoad(const std::shared_ptr<ResourceLoadOperation>& operation);
+
+    //消费后台资源加载队列
+    static void LoadingLoop();
+
+    //等待并完成已有请求
+    static void CompleteLoad(const std::shared_ptr<ResourceLoadOperation>& operation);
+
+    //关闭资源加载线程
+    static void StopLoading();
+
 public:
     struct ResourceRecord
     {
@@ -27,6 +42,25 @@ public:
 
     //加载资源对象
     static Object* Load(Type* type, const std::string& key);
+
+    //异步加载指定类型的资源
+    static std::shared_ptr<ResourceLoadOperation> LoadAsync(Type* type, const std::string& key);
+
+    //异步加载指定类型的资源
+    template<typename T>
+    static std::shared_ptr<ResourceLoadOperation> LoadAsync(const std::string& key);
+
+    //推进主线程资源发布，预算单位为毫秒
+    static void ProcessLoads(float64 budgetMilliseconds = 2.0);
+
+    //等待后台准备结束并处理结果
+    static void DrainLoads();
+
+    //使指定源路径的旧请求失效
+    static void InvalidateLoads(const std::string& key, bool prefix);
+
+    //标记仍由加载句柄持有的资源结果
+    static void MarkLoadResults(std::unordered_set<int32>& marked);
 
     //尝试加载字段引用；目标缺失或类型不符时返回空，由反序列化调用方报告
     static Object* TryLoad(Type* type, const std::string& key);
@@ -89,3 +123,5 @@ public:
     //获取Key中的子资源ID
     static std::string GetSubId(const std::string& key);
 };
+
+#include "ResourceManager/ResourceLoadOperation.h"

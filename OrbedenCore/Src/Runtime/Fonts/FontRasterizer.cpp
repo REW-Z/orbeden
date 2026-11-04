@@ -25,8 +25,8 @@ namespace
     //字形位图四周各留一个 texel，线性过滤时边缘不会采到相邻字形。
     constexpr int32 BitmapPadding = 1;
 
-    FT_Library library = nullptr;
-    bool libraryReady = false;
+    thread_local FT_Library library = nullptr;
+    thread_local bool libraryReady = false;
 
     //一个字体对象对应的字体面；revision 变化时重新打开。
     struct FaceRecord
@@ -35,9 +35,9 @@ namespace
         uint64 revision = 0;
     };
 
-    std::unordered_map<int32, FaceRecord> faces;
+    thread_local std::unordered_map<int32, FaceRecord> faces;
     //字形位图的复用缓冲，所有权在 FontRasterizer。
-    List<uint8> scratch;
+    thread_local List<uint8> scratch;
 
     //按需初始化 FreeType；进程内只初始化一次。
     bool EnsureLibrary()

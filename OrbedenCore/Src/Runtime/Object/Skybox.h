@@ -19,6 +19,10 @@ private:
     int32 gpuSkyboxStorageIndex = -1;
 
 public:
+    //校验六个面纹理的尺寸、像素和颜色空间
+    ORBEDEN_BIND_IGNORE
+    bool ValidateFaces(std::string& error) const;
+
     Ref<Texture2D> right;
     Ref<Texture2D> left;
     Ref<Texture2D> top;

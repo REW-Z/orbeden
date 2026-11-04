@@ -1009,6 +1009,14 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return (float)reader.Scalar<float>();
     }
+    internal static void Write_float64(NativeBindingWriter writer, double value)
+    {
+        writer.Scalar((double)value);
+    }
+    internal static double Read_float64(ref NativeBindingReader reader)
+    {
+        return (double)reader.Scalar<double>();
+    }
     internal static void Write_int32(NativeBindingWriter writer, int value)
     {
         writer.Scalar((int)value);
@@ -1035,6 +1043,15 @@ internal static unsafe class GeneratedBindingCodecs
         int length = reader.Count(); var value = new global::Orbeden.EnsId[length];
         for (int index = 0; index < length; ++index) value[index] = Read_EnsId(ref reader);
         return value;
+    }
+    internal static void Write_std__shared_ptr_ResourceLoadOperation_(NativeBindingWriter writer, global::Orbeden.ResourceLoadOperation? value)
+    {
+        writer.Scalar(value?.NativeId ?? 0UL);
+    }
+    internal static global::Orbeden.ResourceLoadOperation? Read_std__shared_ptr_ResourceLoadOperation_(ref NativeBindingReader reader)
+    {
+        ulong id = reader.Scalar<ulong>();
+        return id == 0 ? null : new global::Orbeden.ResourceLoadOperation(id);
     }
     internal static void Write_std__string(NativeBindingWriter writer, string value)
     {
@@ -1128,6 +1145,7 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.ConvexMeshCollider), "ConvexMeshCollider", 4227940251415473256UL, (ens, pointer) => new global::Orbeden.ConvexMeshCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.SphereCollider), "SphereCollider", 13173887832813750021UL, (ens, pointer) => new global::Orbeden.SphereCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.TriangleMeshCollider), "TriangleMeshCollider", 16886362217598776389UL, (ens, pointer) => new global::Orbeden.TriangleMeshCollider(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.ResourceLoadOperation), "ResourceLoadOperation", 14895700534675878464UL, null, 6);
     }
 }
 }
@@ -5804,6 +5822,106 @@ public sealed unsafe partial class TriangleMeshCollider : global::Orbeden.Collid
         var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.TriangleMeshCollider), 2, this);
         NativeBindingRuntime.Check(callback(InstanceId, NativeBindingRuntime.GetObjectId(@value)));
         }
+    }
+}
+}
+namespace Orbeden
+{
+[NativeBinding("ResourceLoadOperation")]
+public sealed unsafe partial class ResourceLoadOperation : global::Orbeden.CoOperation
+{
+    //保存原生共享句柄
+    internal ulong NativeId { get; }
+    internal ResourceLoadOperation(ulong nativeId)
+    {
+        NativeId = nativeId;
+    }
+
+    //释放原生共享句柄
+    ~ResourceLoadOperation()
+    {
+        NativeBindingRuntime.ReleaseHandle(typeof(global::Orbeden.ResourceLoadOperation), NativeId);
+    }
+    /// <summary>读取加载错误</summary>
+    public string @Error
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<ulong, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ResourceLoadOperation), 0);
+        NativeBindingRuntime.Check(callback(NativeId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_std__string(ref reader); reader.Complete();
+            GC.KeepAlive(this);
+            return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+    }
+    /// <summary>取得仍然存活的加载结果</summary>
+    public global::Orbeden.Object? @Result
+    {
+        get
+        {
+        int result = default;
+        var callback = (delegate* unmanaged[Cdecl]<ulong, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ResourceLoadOperation), 1);
+        NativeBindingRuntime.Check(callback(NativeId, &result));
+        var decoded = NativeBindingRuntime.Wrap<global::Orbeden.Object>(result);
+        GC.KeepAlive(this);
+        return decoded;
+        }
+    }
+    /// <summary>查询请求是否结束</summary>
+    public bool @IsFinished
+    {
+        get
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<ulong, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ResourceLoadOperation), 2);
+        NativeBindingRuntime.Check(callback(NativeId, &result));
+        var decoded = result != 0;
+        GC.KeepAlive(this);
+        return decoded;
+        }
+    }
+    /// <summary>查询请求是否成功</summary>
+    public bool @Succeeded
+    {
+        get
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<ulong, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ResourceLoadOperation), 5);
+        NativeBindingRuntime.Check(callback(NativeId, &result));
+        var decoded = result != 0;
+        GC.KeepAlive(this);
+        return decoded;
+        }
+    }
+    /// <summary>按原生资源类型编号启动加载</summary>
+    public static global::Orbeden.ResourceLoadOperation? @Load(uint @typeId, string @key)
+    {
+        var writer_key = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_std__string(writer_key, @key);
+        byte[] bytes_key = writer_key.ToArray();
+        fixed (byte* pointer_key = bytes_key)
+        {
+        ulong result = default;
+        var callback = (delegate* unmanaged[Cdecl]<ulong, uint, NativeBindingSlice, ulong*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ResourceLoadOperation), 3);
+        NativeBindingRuntime.Check(callback(0, @typeId, new NativeBindingSlice(pointer_key, bytes_key.Length), &result));
+        return result == 0 ? null : new global::Orbeden.ResourceLoadOperation(result);
+        }
+    }
+    /// <summary>等待资源完成发布</summary>
+    public override bool @ShouldWait(double @elapsedSeconds)
+    {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<ulong, double, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ResourceLoadOperation), 4);
+        NativeBindingRuntime.Check(callback(NativeId, @elapsedSeconds, &result));
+        var decoded = result != 0;
+        GC.KeepAlive(this);
+        return decoded;
     }
 }
 }

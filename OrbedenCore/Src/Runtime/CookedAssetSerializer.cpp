@@ -1,3 +1,4 @@
+#include "ResourceManager/ResourceLoadOperation.h"
 #include "Runtime/CookedAssetSerializer.h"
 
 #include "FileSystem/PathDefines.h"
@@ -570,6 +571,10 @@ std::string CookedAssetSerializer::GetBlobFileName(const std::string& resourceKe
 std::string CookedAssetSerializer::GetBlobPath(const std::string& resourceKey)
 {
     std::string fileName = GetBlobFileName(resourceKey);
+    if (auto* state = ResourceLoadOperation::Current())
+    {
+        return state->GetFilePath(fileName);
+    }
     if (PathDefines::HasContentRoot()) return PathDefines::GetContentFilePath(fileName);
 
     return fileName;

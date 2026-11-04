@@ -53,6 +53,13 @@ public static unsafe class GameModule
         ScriptRuntime.Update(deltaTime);
     }
 
+    /// <summary>在普通更新后推进托管协程</summary>
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    public static void OrbedenGame_AdvanceCo(float deltaTime)
+    {
+        ScriptRuntime.AdvanceCo(deltaTime);
+    }
+
     /// <summary>固定步长更新已挂载脚本。</summary>
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     public static void OrbedenGame_FixedUpdate(float fixedDeltaTime)

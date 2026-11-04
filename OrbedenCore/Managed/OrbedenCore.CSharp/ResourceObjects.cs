@@ -310,6 +310,10 @@ public static class Resources
 {
     /// <summary>按原生类型加载资源并选择实际派生包装。</summary>
     public static T? Load<T>(string key) where T : Object => NativeBindingRuntime.Load<T>(key);
+
+    /// <summary>异步加载指定类型的资源</summary>
+    public static ResourceLoadOperation LoadAsync<T>(string key) where T : Object => NativeBindingRuntime.LoadAsync<T>(key);
+
     /// <summary>释放未使用对象。</summary>
     public static uint UnloadUnusedObjects()
     {

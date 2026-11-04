@@ -15,7 +15,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\Runtime\Coroutines\ThreadOperation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ResourceManager\ResourceLoadOperation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Application.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Runtime\Coroutines\CoOperation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Runtime\Coroutines\CoRoutine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Runtime\Coroutines\CoScheduler.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Scripting\ScriptSystem.h">
@@ -312,7 +327,22 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Src\Runtime\Coroutines\ThreadOperation.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\ResourceManager\ResourceLoadOperation.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Application.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Runtime\Coroutines\CoOperation.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Runtime\Coroutines\CoRoutine.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Runtime\Coroutines\CoScheduler.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Scripting\ScriptSystem.cpp">

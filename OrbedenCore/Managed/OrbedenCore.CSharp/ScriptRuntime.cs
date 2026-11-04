@@ -59,6 +59,7 @@ internal static class ScriptRuntime
     private static readonly List<TimedCall> fixedUpdates = [];
     private static readonly List<TimedCall> lateUpdates = [];
     private static readonly List<Call> guiCalls = [];
+    private static readonly CoScheduler coScheduler = new();
     private static bool callsDirty;
     private static bool rebuilding;
     private static int dispatchDepth;
@@ -101,10 +102,93 @@ internal static class ScriptRuntime
     }
 
     /// <summary>处理托管输入阶段；不受模拟暂停门控。</summary>
-    public static void ProcessInput(float deltaTime) => ManagedFrameSystems.ProcessInput(deltaTime);
+    public static void ProcessInput(float deltaTime)
+    {
+        coScheduler.BeginFrame();
+        ManagedFrameSystems.ProcessInput(deltaTime);
+    }
+
+    /// <summary>在普通更新后推进活动脚本的协程</summary>
+    public static void AdvanceCo(float deltaTime)
+    {
+        if (SkipsGameLifecycle)
+        {
+            return;
+        }
+
+        PreparePhase();
+        ++dispatchDepth;
+        try
+        {
+            coScheduler.Update(deltaTime, static owner => IsRunnable((ScriptInstance)owner));
+        }
+        finally
+        {
+            --dispatchDepth;
+        }
+    }
+
+    //登记脚本协程并执行首段
+    internal static CoRoutine RunCo(Script owner, IEnumerator<CoOperation?> routine)
+    {
+        if (shuttingDown || SkipsGameLifecycle
+            || !scriptsByHost.TryGetValue(owner.NativePtr, out ScriptInstance? instance)
+            || !ReferenceEquals(instance.Script, owner) || !IsRunnable(instance))
+        {
+            throw new InvalidOperationException("RunCo requires an active managed script.");
+        }
+
+        ++dispatchDepth;
+        try
+        {
+            return coScheduler.Start(instance, routine);
+        }
+        finally
+        {
+            --dispatchDepth;
+        }
+    }
+
+    //停止脚本的指定协程
+    internal static void StopCo(Script owner, CoRoutine routine)
+    {
+        if (scriptsByHost.TryGetValue(owner.NativePtr, out ScriptInstance? instance))
+        {
+            ++dispatchDepth;
+            try
+            {
+                coScheduler.Stop(instance, routine);
+            }
+            finally
+            {
+                --dispatchDepth;
+            }
+        }
+    }
+
+    //停止脚本的全部协程
+    internal static void StopAllCo(Script owner)
+    {
+        if (scriptsByHost.TryGetValue(owner.NativePtr, out ScriptInstance? instance))
+        {
+            ++dispatchDepth;
+            try
+            {
+                coScheduler.StopOwner(instance);
+            }
+            finally
+            {
+                --dispatchDepth;
+            }
+        }
+    }
 
     /// <summary>准备托管渲染阶段；不受暂停门控，编辑模式同样执行。</summary>
-    public static void PrepareRender(float deltaTime) => ManagedFrameSystems.PrepareRender(deltaTime);
+    public static void PrepareRender(float deltaTime)
+    {
+        ThreadOperation.ProcessFinished();
+        ManagedFrameSystems.PrepareRender(deltaTime);
+    }
 
     //编辑模式不执行游戏生命周期：只保留包装与帧系统。
     private static bool SkipsGameLifecycle => executionMode == ScriptExecutionMode.Editor;
@@ -264,6 +348,7 @@ internal static class ScriptRuntime
     /// <summary>结束全部 Wrapper；原生宿主仍由 World 负责销毁。</summary>
     public static void Shutdown()
     {
+        ThreadOperation.WaitAll();
         //帧系统先释放：UI 上下文要在包装断开之前撤销输入与缓存引用。
         ManagedFrameSystems.DetachWorld();
         ShutdownScripts();
@@ -282,6 +367,7 @@ internal static class ScriptRuntime
     /// <summary>会话卸载前清空工厂与元数据缓存；脚本实例在此之前已经断开。</summary>
     internal static void OnAssemblySessionUnloaded()
     {
+        ThreadOperation.WaitAll();
         //注册表里保存的是游戏程序集提供的工厂与实例，必须先清空才允许释放加载上下文。
         ManagedFrameSystems.Clear();
         factories.Clear();
@@ -593,8 +679,15 @@ internal static class ScriptRuntime
     //已附着实例先收到活动取消再收到分离，两者各至多一次；扩展异常不阻止释放。
     private static void DestroyScript(ScriptInstance instance)
     {
-        if (instance.Destroyed) return;
+        if (instance.Destroyed)
+        {
+            return;
+        }
+
+        //停止宿主协程
         instance.Destroyed = true;
+        coScheduler.StopOwner(instance);
+
         //顺序固定为取消活动、结束游戏生命周期、分离扩展，各自至多一次。
         if (instance.Attached) SendActive(instance, false);
         if (instance.Started) Invoke(instance, instance.End, "OnEnd");
@@ -662,7 +755,11 @@ internal static class ScriptRuntime
     {
         shuttingDown = true;
         pendingAdds.Clear();
-        foreach (ScriptInstance instance in scripts.ToArray().Reverse()) DestroyScript(instance);
+        foreach (ScriptInstance instance in scripts.ToArray().Reverse())
+        {
+            DestroyScript(instance);
+        }
+        coScheduler.StopAll();
         scripts.Clear();
         scriptsByHost.Clear();
         scriptsByEns.Clear();

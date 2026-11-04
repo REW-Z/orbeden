@@ -4694,6 +4694,113 @@
           "Arities": []
         }
       ]
+    },
+    {
+      "Name": "ResourceLoadOperation",
+      "QualifiedName": "ResourceLoadOperation",
+      "ManagedName": "Orbeden.ResourceLoadOperation",
+      "BaseName": "CoOperation",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "IsComponent": false,
+      "Doc": "\u8D44\u6E90\u52A0\u8F7D\u7B49\u5F85\u9879\u53CA\u5171\u4EAB\u6784\u5EFA\u72B6\u6001",
+      "Members": [
+        {
+          "Name": "Error",
+          "Doc": "\u8BFB\u53D6\u52A0\u8F7D\u9519\u8BEF",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "const std::string\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "Result",
+          "Doc": "\u53D6\u5F97\u4ECD\u7136\u5B58\u6D3B\u7684\u52A0\u8F7D\u7ED3\u679C",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "Object*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "IsFinished",
+          "Doc": "\u67E5\u8BE2\u8BF7\u6C42\u662F\u5426\u7ED3\u675F",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "Succeeded",
+          "Doc": "\u67E5\u8BE2\u8BF7\u6C42\u662F\u5426\u6210\u529F",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "Load",
+          "Doc": "\u6309\u539F\u751F\u8D44\u6E90\u7C7B\u578B\u7F16\u53F7\u542F\u52A8\u52A0\u8F7D",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "std::shared_ptr\u003CResourceLoadOperation\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "typeId",
+              "Type": "uint32",
+              "Default": ""
+            },
+            {
+              "Name": "key",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "ShouldWait",
+          "Doc": "\u7B49\u5F85\u8D44\u6E90\u5B8C\u6210\u53D1\u5E03",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "elapsedSeconds",
+              "Type": "float64",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        }
+      ]
     }
   ],
   "Values": [

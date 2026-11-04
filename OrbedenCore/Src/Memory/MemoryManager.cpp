@@ -43,7 +43,7 @@ HeapAllocator* Memory::GetHeapAllocator()
     return &instance;
 }
 
-Block* HeapAllocator::lastInsertBlock = nullptr;
+thread_local Block* HeapAllocator::lastInsertBlock = nullptr;
 
 //堆分配内存
 void* HeapAllocator::Allocate(uint32 size, uint32 alignment, bool isArray)
@@ -131,6 +131,7 @@ void HeapAllocator::Deallocate(std::byte* addr, uint32, bool)
 //写入最近一次分配的内存块注释
 void HeapAllocator::WriteInfo(const char* cstr)
 {
+    std::lock_guard lock(Memory::GetHeapAllocator()->blockMutex);
     Block* lastInsert = HeapAllocator::lastInsertBlock;
     if (!lastInsert || !cstr) return;
 
@@ -150,6 +151,7 @@ void HeapAllocator::WriteInfo(const char* cstr)
 //插入内存块节点
 void HeapAllocator::Insert(Block* blockPtr)
 {
+    std::lock_guard lock(blockMutex);
     assert(blockPtr);
 
     //插入链表尾部
@@ -172,6 +174,11 @@ void HeapAllocator::Insert(Block* blockPtr)
 //移除内存块节点
 void HeapAllocator::Remove(Block* blockPtr)
 {
+    std::lock_guard lock(blockMutex);
+    if (lastInsertBlock == blockPtr)
+    {
+        lastInsertBlock = nullptr;
+    }
     assert(blockPtr);
 
     //连接前后节点
@@ -200,6 +207,7 @@ void HeapAllocator::Remove(Block* blockPtr)
 //获取当前内存块数量
 uint32 HeapAllocator::GetBlockCount()
 {
+    std::lock_guard lock(blockMutex);
     uint32 count = 0;
     Block* block = headBlock;
 
@@ -215,23 +223,22 @@ uint32 HeapAllocator::GetBlockCount()
 //输出当前内存分配情况
 void HeapAllocator::Analysis()
 {
-    Log::Info("分析内存分配情况...");
-
-    //从尾部向前输出分配块
-    Block* block = tailBlock;
-    while (block)
+    //保存分配记录快照
+    List<std::string> entries;
     {
-        std::string str = "\n[Block]";
-        str += "\ninfo:";
-        str += block->info;
+        std::lock_guard lock(blockMutex);
+        for (Block* block = tailBlock; block; block = block->prevBlock)
+        {
+            entries.push_back("\n[Block]" + std::string(block->info)
+                + "\n size: " + std::to_string(block->dataSize) + "\n");
+        }
+    }
 
-        str += "\n size: ";
-        str += std::to_string(block->dataSize);
-        str += "\n";
-
-        Log::Info(str.c_str());
-
-        block = block->prevBlock;
+    //输出快照
+    Log::Info("分析内存分配情况...");
+    for (const std::string& entry : entries)
+    {
+        Log::Info(entry.c_str());
     }
 }
 
@@ -241,8 +248,8 @@ HeapAllocator::~HeapAllocator()
     Log::Info("分析内存泄露...");
 
     //输出分配统计
-    std::string allocateText = "总分配次数：" + std::to_string(allocateCount);
-    std::string deallocateText = "总释放次数：" + std::to_string(deallocateCount);
+    std::string allocateText = "总分配次数：" + std::to_string(allocateCount.load());
+    std::string deallocateText = "总释放次数：" + std::to_string(deallocateCount.load());
     Log::Info(allocateText.c_str());
     Log::Info(deallocateText.c_str());
 

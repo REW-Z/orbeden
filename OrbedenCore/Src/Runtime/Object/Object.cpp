@@ -12,6 +12,10 @@
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Reflection.h"
 #include "ResourceManager/ResourceManager.h"
+#include "ResourceManager/ResourceLoadOperation.h"
+#include <atomic>
+#include <limits>
+#include <stdexcept>
 #include "Runtime/World.h"
 #include "Runtime/Object/Script.h"
 #include "Scripting/ScriptInterop.h"
@@ -41,7 +45,7 @@ namespace
         List<Object*> orphanObjects;
         List<IObjectDestroyListener*> destroyListeners;
         List<World*> worlds;
-        int32 nextObjectId = 1;
+        std::atomic<uint64> nextObjectId = 1;
         void* currentModuleOwner = nullptr;
         List<Type*> pendingModuleTypes;
         bool moduleTypeRegistrationFailed = false;
@@ -85,12 +89,12 @@ namespace
     //分配运行时对象ID
     int32 AllocateObjectId(ObjectRuntime& runtime)
     {
-        while (runtime.nextObjectId <= 0 || runtime.objectById.find(runtime.nextObjectId) != runtime.objectById.end())
+        uint64 id = runtime.nextObjectId.fetch_add(1, std::memory_order_relaxed);
+        if (id > static_cast<uint64>(std::numeric_limits<int32>::max()))
         {
-            runtime.nextObjectId++;
+            throw std::overflow_error("Object ID space is exhausted.");
         }
-
-        return runtime.nextObjectId++;
+        return static_cast<int32>(id);
     }
 }
 
@@ -452,6 +456,28 @@ IChunk* Type::GetOrCreateCommonChunk()
     return commonChunk;
 }
 
+//创建后台独占的资源分配区
+IChunk* Type::CreateResourceChunk()
+{
+    return NEW(CommonObjectChunk)CommonObjectChunk(objectSize, objectAlignment);
+}
+
+//接管已完成构建的资源分配区
+void Type::AdoptResourceChunk(IChunk* chunk)
+{
+    resourceChunks.push_back(chunk);
+}
+
+//释放尚未移交的资源分配区
+void Type::DestroyResourceChunk(IChunk*& chunk)
+{
+    if (chunk)
+    {
+        chunk->DestroyChunk();
+        chunk = nullptr;
+    }
+}
+
 //创建World拥有的对象Chunk
 IChunk* Type::CreateWorldObjectChunk()
 {
@@ -546,6 +572,14 @@ void Type::DeallocateMemory(IChunk* chunk, std::byte* address)
     bool deallocated = chunk->Deallocate(address);
     assert(deallocated);
 
+    auto resource = std::find(resourceChunks.begin(), resourceChunks.end(), chunk);
+    if (deallocated && resource != resourceChunks.end() && chunk->GetAliveObjectCount() == 0)
+    {
+        resourceChunks.erase(resource);
+        chunk->DestroyChunk();
+        return;
+    }
+
     if (deallocated && chunk == commonChunk && commonChunk->GetAliveObjectCount() == 0)
     {
         ReleaseStorage();
@@ -569,6 +603,11 @@ void Type::VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const
     if (commonChunk)
     {
         commonChunk->VisitLiveObjects(visitor, userData);
+    }
+
+    for (IChunk* chunk : resourceChunks)
+    {
+        chunk->VisitLiveObjects(visitor, userData);
     }
 
     for (IChunk* chunk : worldChunks)
@@ -813,6 +852,12 @@ Type* Object::FindType(TypeRuntimeId typeRuntimeId)
 //查找类型
 Type* Object::FindType(const std::string& typeName)
 {
+    if (auto* state = ResourceLoadOperation::Current())
+    {
+        auto found = state->types.find(typeName);
+        return found == state->types.end() ? nullptr : found->second;
+    }
+
     ObjectRuntime& runtime = GetObjectRuntime();
     auto it = runtime.typeByName.find(typeName);
     if (it == runtime.typeByName.end()) return nullptr;
@@ -849,13 +894,25 @@ void Object::RemoveDestroyListener(IObjectDestroyListener* listener)
 //查找对象
 Object* Object::FindObject(uint64 hash)
 {
+    if (auto* state = ResourceLoadOperation::Current())
+    {
+        for (const auto& [key, object] : state->objects)
+        {
+            if (object->GetInstanceId().GetHash() == hash)
+            {
+                return object;
+            }
+        }
+        return nullptr;
+    }
+
     if (hash == 0) return nullptr;
 
     ObjectRuntime& runtime = GetObjectRuntime();
     for (const auto& pair : runtime.objectByPath)
     {
         Object* object = pair.second;
-        if (object && object->GetInstanceId().GetHash() == hash)
+        if (object && object->published && object->GetInstanceId().GetHash() == hash)
         {
             return object;
         }
@@ -867,23 +924,41 @@ Object* Object::FindObject(uint64 hash)
 //查找对象
 Object* Object::FindObject(const StringId& id)
 {
+    if (auto* state = ResourceLoadOperation::Current())
+    {
+        auto found = state->objects.find(id.GetPath());
+        return found == state->objects.end() ? nullptr : found->second;
+    }
+
     if (!id.IsValid()) return nullptr;
 
     ObjectRuntime& runtime = GetObjectRuntime();
     auto it = runtime.objectByPath.find(id.GetPath());
     if (it == runtime.objectByPath.end()) return nullptr;
 
-    return it->second;
+    return it->second->published ? it->second : nullptr;
 }
 
 //按运行时对象ID查找对象
 Object* Object::FindObjectById(int32 id)
 {
+    if (auto* state = ResourceLoadOperation::Current())
+    {
+        for (const auto& [key, object] : state->objects)
+        {
+            if (object->GetObjectId() == id)
+            {
+                return object;
+            }
+        }
+        return nullptr;
+    }
+
     if (id <= 0) return nullptr;
 
     ObjectRuntime& runtime = GetObjectRuntime();
     auto it = runtime.objectById.find(id);
-    return it == runtime.objectById.end() ? nullptr : it->second;
+    return it == runtime.objectById.end() || !it->second->published ? nullptr : it->second;
 }
 
 //判断运行时对象ID是否仍然存活
@@ -1021,6 +1096,22 @@ Object* Object::CreateInstance(Type* type)
 //创建待注册资源对象
 Object* Object::CreateResourceInstance(Type* type, const std::string& instancePath)
 {
+    if (auto* state = ResourceLoadOperation::Current())
+    {
+        auto& chunk = state->chunks[type];
+        if (!chunk)
+        {
+            chunk = type->CreateResourceChunk();
+        }
+        Object* object = CreateUnpublishedResource(type, instancePath, chunk);
+        if (object)
+        {
+            state->objects[instancePath] = object;
+            state->ownedObjects.push_back(object);
+        }
+        return object;
+    }
+
     if (!type) return nullptr;
     if (type->Is(Component::StaticType()))
     {
@@ -1099,6 +1190,12 @@ bool Object::DestroyObjectFromBinding(Object* object)
 bool Object::DeleteInstance(Object* object)
 {
     if (!object) return false;
+    if (!object->published)
+    {
+        DestroyUnpublishedResource(object);
+        return true;
+    }
+
     if (Ens* ens = object->Cast<Ens>())
         return ens->GetWorld() && ens->GetWorld()->DestroyEns(ens->GetId());
 
@@ -1211,6 +1308,7 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
         });
     }
 
+    ResourceManager::MarkLoadResults(marked);
     uint32 removedCount = ResourceManager::ReleaseUnmarkedObjects(marked);
 
     //运行时创建的非组件对象按可达性释放。
@@ -1220,7 +1318,7 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
     for (const auto& pair : runtime.objectById)
     {
         Object* object = pair.second;
-        if (!object || object->Is(Component::StaticType())) continue;
+        if (!object || !object->published || object->Is(Component::StaticType())) continue;
         if (object->GetOwnership() == Ownership::ResourceOwned) continue;
         if (marked.find(object->GetObjectId()) != marked.end()) continue;
 
@@ -1231,7 +1329,7 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
     {
         //前面的销毁可能已经把这个对象一并带走了
         Object* object = FindObjectById(objectId);
-        if (!object || object->Is(Component::StaticType())) continue;
+        if (!object || !object->published || object->Is(Component::StaticType())) continue;
 
         if (DeleteInstance(object))
         {
@@ -1258,4 +1356,75 @@ void Object::SetOwnership(Ownership value)
 Object::Ownership Object::GetOwnership() const
 {
     return ownership;
+}
+
+//查询对象是否已发布
+bool Object::IsPublished() const
+{
+    return published;
+}
+
+//创建尚未发布的资源对象
+Object* Object::CreateUnpublishedResource(Type* type, const std::string& key, IChunk* chunk)
+{
+    Object* object = type->CreateObject(chunk);
+    if (object)
+    {
+        object->published = false;
+        object->indexed = false;
+        object->objectId = AllocateObjectId(GetObjectRuntime());
+        object->instanceId = StringId(key);
+    }
+    return object;
+}
+
+//把完整对象写入主线程索引
+bool Object::RegisterResourceInstance(Object* object)
+{
+    auto& runtime = GetObjectRuntime();
+    const std::string& key = object->instanceId.GetPath();
+    auto found = runtime.objectByPath.find(key);
+    if (found != runtime.objectByPath.end() && found->second != object)
+    {
+        return false;
+    }
+    object->indexed = true;
+    runtime.objectByPath[key] = object;
+    runtime.objectById[object->objectId] = object;
+    return true;
+}
+
+//开放已登记资源的正常查询
+void Object::PublishResourceInstances(const List<Object*>& objects)
+{
+    for (Object* object : objects)
+    {
+        object->ownership = Ownership::ResourceOwned;
+        object->published = true;
+    }
+}
+
+//清理尚未发布的资源对象
+void Object::DestroyUnpublishedResource(Object* object)
+{
+    if (auto* state = ResourceLoadOperation::Current())
+    {
+        std::erase(state->ownedObjects, object);
+        state->objects.erase(object->instanceId.GetPath());
+        state->records.erase(object->instanceId.GetPath());
+    }
+    else if (object->indexed)
+    {
+        auto& runtime = GetObjectRuntime();
+        auto found = runtime.objectByPath.find(object->instanceId.GetPath());
+        if (found != runtime.objectByPath.end() && found->second == object)
+        {
+            runtime.objectByPath.erase(found);
+            runtime.objectById.erase(object->objectId);
+        }
+    }
+    Type* type = object->GetType();
+    IChunk* chunk = object->allocationChunk;
+    type->destructor(object);
+    chunk->Deallocate(reinterpret_cast<std::byte*>(object));
 }

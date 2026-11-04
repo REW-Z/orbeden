@@ -17,3 +17,6 @@
 //跨语言合同的枚举：即使没有被绑定成员引用，也要导出到托管侧。
 //用于 RetainedGui ABI 这类按值直接使用枚举、没有绑定成员引用点的场合。
 #define ORBEDEN_BIND_EXPORT
+
+//通过共享句柄生成普通类的托管绑定
+#define ORBEDEN_BIND_HANDLE

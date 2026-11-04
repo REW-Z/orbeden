@@ -1,3 +1,4 @@
+#include "Runtime/Coroutines/ThreadOperation.h"
 #include "Scripting/ScriptSystem.h"
 
 #include "Log/Log.h"
@@ -64,7 +65,9 @@ bool ScriptEntryPoints::IsValid() const
         && lateUpdate
         && ensWorldActiveChanged
         && ensDestroyed
-        && drawGui;
+        && drawGui
+        && processInput
+        && advanceCo;
 }
 
 bool ScriptSystem::SetAotEntryPoints(const ScriptEntryPoints& value)
@@ -184,6 +187,11 @@ bool ScriptSystem::Initialize(ScriptExecutionMode mode)
 void ScriptSystem::Shutdown()
 {
     shuttingDown = true;
+    ThreadOperation::WaitAll();
+    DispatchExternalCallbacks([this]()
+    {
+        coScheduler.StopAll();
+    });
     if (initialized)
     {
         ApplyDeferredMutations();
@@ -379,6 +387,7 @@ void ScriptSystem::DetachNativeScript(Script* script)
     if (!script || !script->runtimeRegistered) return;
 
     script->runtimeRegistered = false;
+    coScheduler.StopOwner(script->GetObjectId());
     nativeScriptIds.erase(std::remove(nativeScriptIds.begin(), nativeScriptIds.end(), script->GetObjectId()), nativeScriptIds.end());
     TombstoneNativeInvocations(script);
 
@@ -526,12 +535,41 @@ void ScriptSystem::ManagedDrawGuiDomain(void* context)
 
 void ScriptSystem::ProcessManagedInput(float32 deltaTime)
 {
-    //输入阶段在 FixedUpdate 之前跑；暂停与编辑模式都不中断它，编辑模式只跳过交互路由。
-    if (!initialized || !entryPoints.processInput) return;
-    if (executionMode == ScriptExecutionMode::Editor) return;
+    //在固定更新前开启协程新帧并处理输入
+    if (!initialized || executionMode != ScriptExecutionMode::Play)
+    {
+        return;
+    }
 
+    coScheduler.BeginFrame();
     PROFILE("Script/ProcessInput");
     entryPoints.processInput(deltaTime);
+}
+
+void ScriptSystem::AdvanceCo(float32 deltaTime)
+{
+    if (!initialized || executionMode != ScriptExecutionMode::Play)
+    {
+        return;
+    }
+
+    PROFILE("Script/CoRoutines");
+    ApplyDeferredMutations();
+
+    //推进原生协程
+    DispatchExternalCallbacks([this, deltaTime]()
+    {
+        coScheduler.Update(deltaTime, [this](int32 owner)
+        {
+            return IsNativeScriptRunnable(ResolveNativeScript(owner));
+        });
+    });
+
+    //推进托管协程
+    DispatchExternalCallbacks([this, deltaTime]()
+    {
+        entryPoints.advanceCo(deltaTime);
+    });
 }
 
 void ScriptSystem::PrepareManagedRender(float32 deltaTime)
@@ -557,7 +595,10 @@ void ScriptSystem::DispatchExternalCallbacks(const std::function<void()>& callba
     } scope(domainDispatching);
 
     callback();
-    ApplyDeferredMutations();
+    if (!scope.previous)
+    {
+        ApplyDeferredMutations();
+    }
 }
 
 void ScriptSystem::Update(World& currentWorld, float32 deltaTime)

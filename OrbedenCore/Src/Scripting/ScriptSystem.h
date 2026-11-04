@@ -4,6 +4,7 @@
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Object/Script.h"
+#include "Runtime/Coroutines/CoScheduler.h"
 
 #include <functional>
 
@@ -37,9 +38,11 @@ public:
     EnsWorldActiveChangedFunction ensWorldActiveChanged = nullptr;
     EnsDestroyedFunction ensDestroyed = nullptr;
     DrawGuiFunction drawGui = nullptr;
-    //尾部追加：渲染前的托管 UI 阶段；旧宿主不提供时为空，按无 UI 处理。
+    //托管输入与渲染准备阶段
     UpdateFunction processInput = nullptr;
     UpdateFunction prepareRender = nullptr;
+    //普通更新后的托管协程阶段
+    UpdateFunction advanceCo = nullptr;
 
     //判断运行所需的托管脚本入口是否完整。
     bool IsValid() const;
@@ -85,6 +88,9 @@ struct NativeScriptInvocation
 class ScriptSystem final : public IEngineSystem, public IRenderOverlay, public IWorldLifecycleListener
 {
 private:
+    friend class Script;
+
+    CoScheduler coScheduler;
     ScriptEntryPoints entryPoints;
     List<ScriptDomainEntry> domains;
     List<int32> nativeScriptIds;
@@ -187,6 +193,9 @@ public:
 
     //在 FixedUpdate 之前处理托管输入阶段；不受模拟暂停门控，编辑模式不执行交互路由。
     void ProcessManagedInput(float32 deltaTime);
+
+    //在全部 Update 之后推进 C++ 与 C# 协程
+    void AdvanceCo(float32 deltaTime);
 
     //在全部 LateUpdate 之后、渲染消费之前准备托管渲染；不受暂停门控。
     void PrepareManagedRender(float32 deltaTime);

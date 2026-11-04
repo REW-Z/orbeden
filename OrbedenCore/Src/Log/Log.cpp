@@ -56,6 +56,7 @@ namespace
     {
         void (*handler)(void*) = nullptr;
         void* context = nullptr;
+        std::mutex mutex;
     };
 
     // 获取唤醒回调
@@ -69,7 +70,11 @@ namespace
     void NotifyWake()
     {
         WakeHandler& handler = GetWakeHandler();
-        if (handler.handler) handler.handler(handler.context);
+        std::lock_guard lock(handler.mutex);
+        if (handler.handler)
+        {
+            handler.handler(handler.context);
+        }
     }
 
     // 初始化控制台 UTF-8 输出。
@@ -169,7 +174,7 @@ namespace
             AppendLocked(window, value, str);
         }
 
-        // 在锁外唤醒：回调里若再写日志也不会自锁
+        //唤醒界面消息循环
         NotifyWake();
     }
 }
@@ -205,6 +210,7 @@ void Log::Append(LogLevel level, const char* str)
 void Log::SetWakeHandler(void (*handler)(void* context), void* context)
 {
     WakeHandler& value = GetWakeHandler();
+    std::lock_guard lock(value.mutex);
     value.handler = handler;
     value.context = context;
 }

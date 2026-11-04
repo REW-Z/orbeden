@@ -32,6 +32,16 @@ public:
 };
 
 
+//后台函数的主线程唤醒接口
+struct AsyncOperationBindApi
+{
+    void* WakeMainThread = nullptr;
+
+    //创建异步操作函数表
+    static AsyncOperationBindApi Create();
+};
+
 #pragma pack(pop)
+ORBEDEN_ASSERT_NATIVE_API_TABLE(AsyncOperationBindApi, 1);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectBind, 7);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectExtensionBind, 1);

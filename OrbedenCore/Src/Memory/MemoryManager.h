@@ -4,6 +4,8 @@
 
 #include <cstddef>
 #include <new>
+#include <atomic>
+#include <mutex>
 
 class HeapAllocator;
 
@@ -40,8 +42,9 @@ public:
 class HeapAllocator
 {
 private:
-    uint32 allocateCount = 0;
-    uint32 deallocateCount = 0;
+    std::atomic<uint32> allocateCount = 0;
+    std::atomic<uint32> deallocateCount = 0;
+    std::mutex blockMutex;
 
 public:
     enum
@@ -52,7 +55,7 @@ public:
 
     Block* headBlock = nullptr;
     Block* tailBlock = nullptr;
-    static Block* lastInsertBlock;
+    static thread_local Block* lastInsertBlock;
 
     //堆分配内存
     void* Allocate(uint32 size, uint32 alignment = 0, bool isArray = false);

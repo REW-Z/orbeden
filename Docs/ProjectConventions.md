@@ -206,6 +206,7 @@ MetaGen 扫描头文件宏与注解，不解析实现。Core 生成 C# 绑定；
 
 | 注解 | 作用 |
 |---|---|
+| `ORBEDEN_BIND_HANDLE` | 标记通过 `std::shared_ptr<T>` 传递的普通类，自动生成句柄管理及托管包装 |
 | `ORBEDEN_BIND_IGNORE` | 不向托管 API 公开；不影响反射与序列化 |
 | `ORBEDEN_BIND_ACCESSORS(GETTER, SETTER)` | 字段读写必须经显式 getter/setter（`None` 表示只读/只写） |
 | `ORBEDEN_BIND_PROPERTY(NAME)` | 把访问方法导出为同名 C# 属性；无参非 void 方法是 getter，单参 void 方法是 setter；同一属性的类型及 static 状态必须一致，不接受默认参数或重载访问方法 |

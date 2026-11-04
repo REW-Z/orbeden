@@ -156,6 +156,11 @@
   -->
   <ItemGroup>
     <ClInclude Include="Src\Application.h" />
+    <ClInclude Include="Src\Runtime\Coroutines\ThreadOperation.h" />
+    <ClInclude Include="Src\ResourceManager\ResourceLoadOperation.h" />
+    <ClInclude Include="Src\Runtime\Coroutines\CoOperation.h" />
+    <ClInclude Include="Src\Runtime\Coroutines\CoRoutine.h" />
+    <ClInclude Include="Src\Runtime\Coroutines\CoScheduler.h" />
     <ClInclude Include="Src\Defines\Version.h" />
     <ClInclude Include="Src\Defines\types.h" />
     <ClInclude Include="Src\FileSystem\FileSystem.h" />
@@ -266,6 +271,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Application.cpp" />
+    <ClCompile Include="Src\Runtime\Coroutines\ThreadOperation.cpp" />
+    <ClCompile Include="Src\ResourceManager\ResourceLoadOperation.cpp" />
+    <ClCompile Include="Src\Runtime\Coroutines\CoOperation.cpp" />
+    <ClCompile Include="Src\Runtime\Coroutines\CoRoutine.cpp" />
+    <ClCompile Include="Src\Runtime\Coroutines\CoScheduler.cpp" />
     <ClCompile Include="Src\FileSystem\FileSystem.cpp" />
     <ClCompile Include="Src\Log\Log.cpp" />
     <ClCompile Include="Src\Memory\MemoryManager.cpp" />

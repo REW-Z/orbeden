@@ -8,11 +8,23 @@
 #include "ResourceManager/ResourceManager.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <string>
 
 namespace
 {
+    std::atomic<IWindow*> wakeWindow = nullptr;
+
+    //唤醒主线程事件循环
+    void ORBEDEN_NATIVE_CALL NativeWakeMainThread()
+    {
+        if (IWindow* window = wakeWindow.load(std::memory_order_acquire))
+        {
+            window->WakeEventLoop();
+        }
+    }
+
     //从 UTF-8 字节创建字符串
     std::string ReadUtf8Text(const uint8* text, int32 length)
     {
@@ -119,3 +131,12 @@ ObjectExtensionBind ObjectExtensionBind::Create()
     return bind;
 }
 
+
+//创建异步操作函数表
+AsyncOperationBindApi AsyncOperationBindApi::Create()
+{
+    wakeWindow.store(Application::Current() ? Application::Current()->GetWindow() : nullptr, std::memory_order_release);
+    AsyncOperationBindApi api;
+    api.WakeMainThread = reinterpret_cast<void*>(&NativeWakeMainThread);
+    return api;
+}

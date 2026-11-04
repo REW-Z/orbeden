@@ -19,7 +19,7 @@ internal static class DocProjection
         {
             SchemaVersion = SchemaVersion,
             Namespace = model.ManagedNamespace,
-            Types = [.. model.ObjectTypes.Select(type => ProjectType(type, model, calls, isComponent))],
+            Types = [.. calls.Keys.Select(type => ProjectType(type, model, calls, isComponent))],
             Values = [.. types.Values.Values
                 .Where(value => value.Declaration != null && value.Kind is "record" or "enum")
                 .DistinctBy(value => value.Cpp)

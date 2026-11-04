@@ -38,6 +38,7 @@ private:
     void* ShutdownScriptRuntimeFunction = nullptr;
     void* LoadScriptAssemblyFunction = nullptr;
     void* UpdateScriptRuntimeFunction = nullptr;
+    void* AdvanceCoScriptRuntimeFunction = nullptr;
     void* FixedUpdateScriptRuntimeFunction = nullptr;
     void* LateUpdateScriptRuntimeFunction = nullptr;
     void* EnsWorldActiveChangedScriptRuntimeFunction = nullptr;

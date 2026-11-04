@@ -12,7 +12,7 @@
 struct OrbedenEngineNativeApi
 {
 public:
-    uint32 abiVersion = 7;
+    uint32 abiVersion = 8;
     uint32 structSize = sizeof(OrbedenEngineNativeApi);
     WorldBind World;
     PathDefinesBind PathDefines;
@@ -28,12 +28,14 @@ public:
     void* GetRetainedGuiApi = nullptr;
     FileSystemBind FileSystem;
 
+    AsyncOperationBindApi AsyncOperations;
+
     //创建引擎原生 API 函数表。
     static OrbedenEngineNativeApi Create();
 };
 
 #pragma pack(pop)
 
-static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 79);
+static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 80);
 static_assert(offsetof(OrbedenEngineNativeApi, World) == 8);
 static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 33);

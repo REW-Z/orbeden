@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 OBJECT_TYPE_IMPLEMENT(HeightField, Component)
 
@@ -42,7 +43,10 @@ namespace
 //挂载时生成初始地形。
 void HeightField::OnAttach()
 {
-    Regenerate();
+    if (generation == 0)
+    {
+        Regenerate();
+    }
 }
 
 /// <summary>卸载地形块时释放专属资源，避免无限飞行累积 CPU/GPU 内存。</summary>
@@ -65,14 +69,57 @@ Material* HeightField::GetSurfaceMaterial() const
     return runtimeMaterial ? runtimeMaterial : material.Get();
 }
 
-//按当前参数重建高度场、渲染网格与噪声贴图。
-void HeightField::Regenerate()
+//复制当前几何参数
+HeightField::GeometryData HeightField::CaptureGeometry() const
 {
-    PROFILE("Terrain/Regenerate");
-    {
-        PROFILE("Terrain/Heights");
-        RebuildHeights();
-    }
+    GeometryData data;
+    data.seed = seed;
+    data.sampleTileX = sampleTileX;
+    data.sampleTileZ = sampleTileZ;
+    data.sizeX = sizeX;
+    data.sizeZ = sizeZ;
+    data.rowCount = rowCount;
+    data.columnCount = columnCount;
+    data.amplitude = amplitude;
+    data.frequency = frequency;
+    data.octaves = octaves;
+    data.flattenMinX = flattenMinX;
+    data.flattenMaxX = flattenMaxX;
+    data.flattenMinZ = flattenMinZ;
+    data.flattenMaxZ = flattenMaxZ;
+    data.flattenHeight = flattenHeight;
+    data.flattenBlendDistance = flattenBlendDistance;
+    data.tileSize = tileSize;
+    return data;
+}
+
+//在主线程接收几何数据并更新地形
+void HeightField::ApplyGeometry(GeometryData&& data)
+{
+    PROFILE("Terrain/ApplyGeometry");
+
+    //同步几何参数与高度数据
+    seed = data.seed;
+    sampleTileX = data.sampleTileX;
+    sampleTileZ = data.sampleTileZ;
+    sizeX = data.sizeX;
+    sizeZ = data.sizeZ;
+    rowCount = data.rowCount;
+    columnCount = data.columnCount;
+    amplitude = data.amplitude;
+    frequency = data.frequency;
+    octaves = data.octaves;
+    flattenMinX = data.flattenMinX;
+    flattenMaxX = data.flattenMaxX;
+    flattenMinZ = data.flattenMinZ;
+    flattenMaxZ = data.flattenMaxZ;
+    flattenHeight = data.flattenHeight;
+    flattenBlendDistance = data.flattenBlendDistance;
+    tileSize = data.tileSize;
+    geometry = std::move(data);
+    ++generation;
+
+    //更新材质与渲染网格
     {
         PROFILE("Terrain/NoiseTexture");
         RebuildNoiseTexture();
@@ -83,10 +130,25 @@ void HeightField::Regenerate()
     }
 }
 
+//按当前参数重建地形
+void HeightField::Regenerate()
+{
+    PROFILE("Terrain/Regenerate");
+    GeometryData data = CaptureGeometry();
+    {
+        PROFILE("Terrain/GenerateGeometry");
+        GenerateGeometry(data);
+    }
+    ApplyGeometry(std::move(data));
+}
+
 //双线性采样世界 XZ 处的高度。
 float32 HeightField::GetHeightAtWorldXZ(float32 x, float32 z) const
 {
-    if (heights.empty()) return 0.0f;
+    if (geometry.heights.empty())
+    {
+        return 0.0f;
+    }
 
     int32 rows = std::max(rowCount, 2);
     int32 columns = std::max(columnCount, 2);
@@ -102,17 +164,17 @@ float32 HeightField::GetHeightAtWorldXZ(float32 x, float32 z) const
     int32 column = std::clamp(static_cast<int32>(gridZ), 0, columns - 2);
     float32 tx = std::clamp(gridX - row, 0.0f, 1.0f);
     float32 tz = std::clamp(gridZ - column, 0.0f, 1.0f);
-    float32 h00 = heights[static_cast<size_t>(row) * columns + column];
-    float32 h10 = heights[static_cast<size_t>(row) * columns + column + 1];
-    float32 h01 = heights[static_cast<size_t>(row + 1) * columns + column];
-    float32 h11 = heights[static_cast<size_t>(row + 1) * columns + column + 1];
+    float32 h00 = geometry.heights[static_cast<size_t>(row) * columns + column];
+    float32 h10 = geometry.heights[static_cast<size_t>(row) * columns + column + 1];
+    float32 h01 = geometry.heights[static_cast<size_t>(row + 1) * columns + column];
+    float32 h11 = geometry.heights[static_cast<size_t>(row + 1) * columns + column + 1];
     return origin.y + Lerp(Lerp(h00, h10, tz), Lerp(h01, h11, tz), tx);
 }
 
 //获取当前高度采样。
 const std::vector<float32>& HeightField::GetHeights() const
 {
-    return heights;
+    return geometry.heights;
 }
 
 //获取高度场行间距（X 方向）。
@@ -133,18 +195,18 @@ uint32 HeightField::GetGeneration() const
     return generation;
 }
 
-//物理固定步兜底：material 解析后完整重建（噪声贴图和运行时材质依赖它）。
+//材质就绪后应用已计算数据
 void HeightField::SyncPendingGeneration()
 {
     if (meshPending && material.Get())
     {
-        meshPending = false;
-        Regenerate();
+        RebuildNoiseTexture();
+        RebuildRenderMesh();
     }
 }
 
 //确定性二维 value noise，输出 [0,1]。
-float32 HeightField::SampleNoise(double x, double z, int32 noiseSeed) const
+float32 HeightField::SampleNoise(double x, double z, int32 noiseSeed)
 {
     int64 xi = static_cast<int64>(std::floor(x));
     int64 zi = static_cast<int64>(std::floor(z));
@@ -171,106 +233,85 @@ float32 HeightField::SampleNoise(double x, double z, int32 noiseSeed) const
 }
 
 /// <summary>按统一全局坐标采样，并在机场周围平滑过渡到平整地面。</summary>
-float32 HeightField::SampleHeight(double x, double z) const
+float32 HeightField::SampleHeight(const GeometryData& data, double x, double z)
 {
     float32 total = 0.0f;
     float32 weight = 0.0f;
-    double layerFrequency = frequency;
+    double layerFrequency = data.frequency;
     float32 layerAmplitude = 1.0f;
-    for (int32 octave = 0; octave < std::max(octaves, 1); ++octave)
+    for (int32 octave = 0; octave < std::max(data.octaves, 1); ++octave)
     {
-        total += SampleNoise(x * layerFrequency, z * layerFrequency, seed + octave * 101) * layerAmplitude;
+        total += SampleNoise(x * layerFrequency, z * layerFrequency, data.seed + octave * 101) * layerAmplitude;
         weight += layerAmplitude;
         layerAmplitude *= 0.5f;
         layerFrequency *= 2.0;
     }
-    float32 height = total / weight * amplitude;
-    if (flattenMinX < flattenMaxX && flattenMinZ < flattenMaxZ)
+    float32 height = total / weight * data.amplitude;
+    if (data.flattenMinX < data.flattenMaxX && data.flattenMinZ < data.flattenMaxZ)
     {
-        double dx = std::max({ static_cast<double>(flattenMinX) - x, 0.0, x - flattenMaxX });
-        double dz = std::max({ static_cast<double>(flattenMinZ) - z, 0.0, z - flattenMaxZ });
-        float32 blend = flattenBlendDistance > 0.0f
-            ? Smoothstep(static_cast<float32>(std::clamp(std::max(dx, dz) / flattenBlendDistance, 0.0, 1.0)))
+        double dx = std::max({ static_cast<double>(data.flattenMinX) - x, 0.0, x - data.flattenMaxX });
+        double dz = std::max({ static_cast<double>(data.flattenMinZ) - z, 0.0, z - data.flattenMaxZ });
+        float32 blend = data.flattenBlendDistance > 0.0f
+            ? Smoothstep(static_cast<float32>(std::clamp(std::max(dx, dz) / data.flattenBlendDistance, 0.0, 1.0)))
             : (dx == 0.0 && dz == 0.0 ? 0.0f : 1.0f);
-        height = Lerp(flattenHeight, height, blend);
+        height = Lerp(data.flattenHeight, height, blend);
     }
     return height;
 }
 
-/// <summary>重建地形块采样，边界使用相同全局坐标。</summary>
-void HeightField::RebuildHeights()
+//按快照生成独立几何数据
+void HeightField::GenerateGeometry(GeometryData& data)
 {
-    int32 rows = std::max(rowCount, 2);
-    int32 columns = std::max(columnCount, 2);
-    heights.resize(static_cast<size_t>(rows) * columns);
-    double originX = static_cast<double>(sampleTileX) * sizeX - sizeX * 0.5;
-    double originZ = static_cast<double>(sampleTileZ) * sizeZ - sizeZ * 0.5;
+    //计算高度采样
+    int32 rows = std::max(data.rowCount, 2);
+    int32 columns = std::max(data.columnCount, 2);
+    data.heights.resize(static_cast<size_t>(rows) * columns);
+    double originX = static_cast<double>(data.sampleTileX) * data.sizeX - data.sizeX * 0.5;
+    double originZ = static_cast<double>(data.sampleTileZ) * data.sizeZ - data.sizeZ * 0.5;
     for (int32 row = 0; row < rows; ++row)
     {
-        double x = originX + static_cast<double>(row) * sizeX / (rows - 1);
+        double x = originX + static_cast<double>(row) * data.sizeX / (rows - 1);
         for (int32 column = 0; column < columns; ++column)
         {
-            double z = originZ + static_cast<double>(column) * sizeZ / (columns - 1);
-            heights[static_cast<size_t>(row) * columns + column] = SampleHeight(x, z);
+            double z = originZ + static_cast<double>(column) * data.sizeZ / (columns - 1);
+            data.heights[static_cast<size_t>(row) * columns + column] = SampleHeight(data, x, z);
         }
     }
-    ++generation;
-}
 
-//重建渲染网格并覆盖实际渲染，保留 StaticMeshRenderer 的源资源引用。
-void HeightField::RebuildRenderMesh()
-{
-    Ens* ens = GetEns();
-    StaticMeshRenderer* renderer = ens ? ens->GetComponent<StaticMeshRenderer>() : nullptr;
-    if (!renderer) return;
-
-    //material 尚未解析时保留占位网格，由 SyncPendingGeneration 兜底。
-    if (!material.Get())
-    {
-        meshPending = true;
-        return;
-    }
-
-    int32 rows = std::max(rowCount, 2);
-    int32 columns = std::max(columnCount, 2);
+    //计算顶点与法线
     int32 vertexCount = rows * columns;
-    if (heights.size() != static_cast<size_t>(vertexCount)) return;
-
-    Mesh* mesh = generatedMesh ? generatedMesh : Object::CreateInstance<Mesh>();
-    if (!mesh) return;
-
-    std::vector<vector3> vertices(static_cast<size_t>(vertexCount));
-    std::vector<vector2> texcoords(static_cast<size_t>(vertexCount));
-    std::vector<vector3> normals(static_cast<size_t>(vertexCount));
-    float32 halfX = sizeX * 0.5f;
-    float32 halfZ = sizeZ * 0.5f;
+    data.vertices.resize(static_cast<size_t>(vertexCount));
+    data.texcoords.resize(static_cast<size_t>(vertexCount));
+    data.normals.resize(static_cast<size_t>(vertexCount));
+    float32 halfX = data.sizeX * 0.5f;
+    float32 halfZ = data.sizeZ * 0.5f;
     for (int32 row = 0; row < rows; row++)
     {
         for (int32 column = 0; column < columns; column++)
         {
             size_t index = static_cast<size_t>(row) * columns + column;
-            float32 x = (rows > 1 ? static_cast<float32>(row) / (rows - 1) : 0.0f) * sizeX - halfX;
-            float32 z = (columns > 1 ? static_cast<float32>(column) / (columns - 1) : 0.0f) * sizeZ - halfZ;
-            vertices[index] = { x, heights[index], z };
-            double globalX = static_cast<double>(sampleTileX) * sizeX + x;
-            double globalZ = static_cast<double>(sampleTileZ) * sizeZ + z;
-            double textureSize = std::max(tileSize, 0.001f);
-            texcoords[index] = {
-                static_cast<float32>(std::fmod(static_cast<double>(sampleTileX) * sizeX / textureSize, 1.0) + x / textureSize),
-                static_cast<float32>(std::fmod(static_cast<double>(sampleTileZ) * sizeZ / textureSize, 1.0) + z / textureSize) };
-            float32 dx = std::max(GetRowScale(), 0.001f);
-            float32 dz = std::max(GetColumnScale(), 0.001f);
+            float32 x = (rows > 1 ? static_cast<float32>(row) / (rows - 1) : 0.0f) * data.sizeX - halfX;
+            float32 z = (columns > 1 ? static_cast<float32>(column) / (columns - 1) : 0.0f) * data.sizeZ - halfZ;
+            data.vertices[index] = { x, data.heights[index], z };
+            double globalX = static_cast<double>(data.sampleTileX) * data.sizeX + x;
+            double globalZ = static_cast<double>(data.sampleTileZ) * data.sizeZ + z;
+            double textureSize = std::max(data.tileSize, 0.001f);
+            data.texcoords[index] = {
+                static_cast<float32>(std::fmod(static_cast<double>(data.sampleTileX) * data.sizeX / textureSize, 1.0) + x / textureSize),
+                static_cast<float32>(std::fmod(static_cast<double>(data.sampleTileZ) * data.sizeZ / textureSize, 1.0) + z / textureSize) };
+            float32 dx = std::max(data.sizeX / std::max(data.rowCount - 1, 1), 0.001f);
+            float32 dz = std::max(data.sizeZ / std::max(data.columnCount - 1, 1), 0.001f);
             vector3 normal = {
-                (SampleHeight(globalX - dx, globalZ) - SampleHeight(globalX + dx, globalZ)) / (2 * dx),
+                (SampleHeight(data, globalX - dx, globalZ) - SampleHeight(data, globalX + dx, globalZ)) / (2 * dx),
                 1.0f,
-                (SampleHeight(globalX, globalZ - dz) - SampleHeight(globalX, globalZ + dz)) / (2 * dz) };
+                (SampleHeight(data, globalX, globalZ - dz) - SampleHeight(data, globalX, globalZ + dz)) / (2 * dz) };
             float32 length = std::sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-            normals[index] = { normal.x / length, normal.y / length, normal.z / length };
+            data.normals[index] = { normal.x / length, normal.y / length, normal.z / length };
         }
     }
 
     int32 quadCount = (rows - 1) * (columns - 1);
-    std::vector<uint32> indices(static_cast<size_t>(quadCount) * 6);
+    data.indices.resize(static_cast<size_t>(quadCount) * 6);
     size_t indexOffset = 0;
     for (int32 row = 0; row < rows - 1; row++)
     {
@@ -280,29 +321,58 @@ void HeightField::RebuildRenderMesh()
             uint32 b = a + 1;
             uint32 c = a + static_cast<uint32>(columns);
             uint32 d = c + 1;
-            indices[indexOffset++] = a;
-            indices[indexOffset++] = b;
-            indices[indexOffset++] = c;
-            indices[indexOffset++] = b;
-            indices[indexOffset++] = d;
-            indices[indexOffset++] = c;
+            data.indices[indexOffset++] = a;
+            data.indices[indexOffset++] = b;
+            data.indices[indexOffset++] = c;
+            data.indices[indexOffset++] = b;
+            data.indices[indexOffset++] = d;
+            data.indices[indexOffset++] = c;
         }
     }
+}
 
-    mesh->SetVertexPositions(vertices.data(), vertexCount);
-    mesh->SetVertexTexcoords(texcoords.data(), vertexCount);
-    mesh->SetIndexData(indices.data(), static_cast<int32>(indices.size()));
+//将已计算几何写入渲染网格
+void HeightField::RebuildRenderMesh()
+{
+    Ens* ens = GetEns();
+    StaticMeshRenderer* renderer = ens ? ens->GetComponent<StaticMeshRenderer>() : nullptr;
+    if (!renderer)
+    {
+        return;
+    }
+    if (!material.Get())
+    {
+        meshPending = true;
+        return;
+    }
+
+    //写入网格数据
+    Mesh* mesh = generatedMesh ? generatedMesh : Object::CreateInstance<Mesh>();
+    if (!mesh)
+    {
+        return;
+    }
+    int32 vertexCount = static_cast<int32>(geometry.vertices.size());
+    mesh->SetVertexPositions(geometry.vertices.data(), vertexCount);
+    mesh->SetVertexTexcoords(geometry.texcoords.data(), vertexCount);
+    mesh->SetIndexData(geometry.indices.data(), static_cast<int32>(geometry.indices.size()));
     mesh->ResizeSubMeshes(1);
-    mesh->ConfigureSubMesh(0, "Main", 0, static_cast<uint32>(indices.size()));
-    mesh->SetVertexNormals(normals.data(), vertexCount);
+    mesh->ConfigureSubMesh(0, "Main", 0, static_cast<uint32>(geometry.indices.size()));
+    mesh->SetVertexNormals(geometry.normals.data(), vertexCount);
 
+    //绑定地形材质
     renderer->SetRuntimeMesh(mesh);
-    //运行时材质创建失败时回退到源材质，保证地形始终可见。
     renderer->materials.resize(1);
     renderer->materials[0].Set(runtimeMaterial ? runtimeMaterial : material.Get());
     mesh->MarkDirty();
     meshPending = false;
     generatedMesh = mesh;
+
+    //释放已提交的网格暂存
+    std::vector<vector3>().swap(geometry.vertices);
+    std::vector<vector2>().swap(geometry.texcoords);
+    std::vector<vector3>().swap(geometry.normals);
+    std::vector<uint32>().swap(geometry.indices);
 }
 
 //重建噪声贴图并绑定到运行时材质。

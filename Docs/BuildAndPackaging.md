@@ -582,6 +582,24 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+#### 版本 127：并行资源准备与控制台退出
+
+资源加载线程池在首次需要后台加载时启动，线程数按硬件并发数取值，上限为 4。独立请求并行准备，同一资源或源文件继续合并后台构建；主线程优先完成已经开始的登记，再处理其他结果。Windows 后台任务通过线程消息唤醒主循环。退出时取消排队任务，等待执行中的任务并回收全部线程。
+
+编辑器关闭控制台、Ctrl+C 或 Ctrl+Break 时转入主线程退出流程，控制台处理线程等待窗口和引擎清理完成。日志唤醒回调的调用、注册与摘除使用同一把锁，切换渲染窗口时暂停日志唤醒。需重建 Core 与原生及托管 Editor，并通过 Update Project 同步 SDK 后重建游戏工程，Player 重新构建。无需同步内容模板或迁移资源格式。验证仅限编译，不运行测试。
+
+#### 版本 126：后台函数与异步资源加载
+
+新增 `ThreadOperation` 和非模板等待项 `ResourceLoadOperation`，C++ 使用 `ResourceManager::LoadAsync<T>`，C# 使用 `Resources.LoadAsync<T>`。后台资源加载复用同步导入与依赖加载逻辑，在私有分配区创建对象，主线程分批登记后统一开放查询。同步加载在当前主线程执行，直接复用相同的加载入口。请求状态和后台暂存状态集中在 `ResourceLoadOperation`，无独立加载上下文类型。新增 `ORBEDEN_BIND_HANDLE`，MetaGen 自动生成普通类的共享句柄绑定和 C# 包装，资源等待项的状态、错误、结果与等待接口均由声明生成。`LoadAsync<T>` 保留资源类型参数，结果通过 `Result`／`GetResult()` 读取并转换为具体类型。
+
+需重建 Core、原生及托管 Editor 并重启，通过 Update Project 刷新 SDK 后重建游戏 C++／C#，Player 需重新 Build Player。共享脚手架沿用版本 125 的协程入口；无需重置 Builtin／Examples，无资源或场景格式迁移。验证范围仅限编译，不执行测试。用法见 [主线程协程](Coroutines.md)。
+
+#### 版本 125：主线程协程
+
+C++ 与 C# 脚本新增 `RunCo`、`StopCo`、`StopAllCo`，等待项为 `CoOperation`、`Wait`、`WaitUntil`、`WaitWhile`，运行句柄为 `CoRoutine`。协程首段立即执行，后续在全部 Update 后、LateUpdate 前推进；脚本停用与游戏暂停时暂停，宿主销毁、场景退出及运行时关闭时释放。脚本宿主函数表新增 `advanceCo` 阶段，CLR 与 NativeAOT 使用相同的调度顺序。
+
+需重建 Core、原生及托管 Editor 并重启，通过 Update Project 刷新 SDK 与共享脚手架 `GameAotExports.cs`，随后重建游戏 C++／C#，Player 需重新 Build Player。无需重置 Builtin／Examples，不修改场景格式。验证范围仅限编译，不执行测试。用法见 [主线程协程](Coroutines.md)。
+
 #### 版本 124：移除脚本伴生文件
 
 移除 C#／C++ 脚本 `.resinfo` 的生成和扫描写入逻辑，文件的 mtime 与哈希统一保存在 `ResourceCache/ScriptBuild/Observed-v1.json`。成功构建快照继续独立保存，编译失败和取消后仍可重试。资源目录扫描会清理旧版生成的脚本 `.resinfo` 及其临时文件；RawContent 不参与清理，可导入资源的伴生设置保持原有流程。

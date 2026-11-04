@@ -24,6 +24,7 @@ extern "C"
     void ORBEDEN_NATIVE_CALL OrbedenGame_Initialize(void* nativeApi, uint32 executionMode);
     void ORBEDEN_NATIVE_CALL OrbedenGame_Shutdown();
     void ORBEDEN_NATIVE_CALL OrbedenGame_Update(float32 deltaTime);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_AdvanceCo(float32 deltaTime);
     void ORBEDEN_NATIVE_CALL OrbedenGame_FixedUpdate(float32 deltaTime);
     void ORBEDEN_NATIVE_CALL OrbedenGame_LateUpdate(float32 deltaTime);
     void ORBEDEN_NATIVE_CALL OrbedenGame_EnsWorldActiveChanged(EnsId ens, uint8 worldActive);
@@ -166,6 +167,7 @@ int main(int argc, char** argv)
     aotEntryPoints.initialize = &OrbedenGame_Initialize;
     aotEntryPoints.shutdown = &OrbedenGame_Shutdown;
     aotEntryPoints.update = &OrbedenGame_Update;
+    aotEntryPoints.advanceCo = &OrbedenGame_AdvanceCo;
     aotEntryPoints.fixedUpdate = &OrbedenGame_FixedUpdate;
     aotEntryPoints.lateUpdate = &OrbedenGame_LateUpdate;
     aotEntryPoints.ensWorldActiveChanged = &OrbedenGame_EnsWorldActiveChanged;

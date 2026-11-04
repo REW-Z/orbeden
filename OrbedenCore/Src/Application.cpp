@@ -1,3 +1,4 @@
+#include "Runtime/Coroutines/ThreadOperation.h"
 #include <algorithm>
 #include <chrono>
 #include <thread>
@@ -336,6 +337,8 @@ bool Application::SaveWorld(const std::string& path) const
 void Application::Tick(float deltaTime)
 {
     if (!Initialize()) return;
+    ThreadOperation::ProcessFinished();
+    ResourceManager::ProcessLoads();
     ProcessWorldLoad();
     dispatching = true;
 
@@ -400,6 +403,12 @@ void Application::Tick(float deltaTime)
         for (usize index = 0; index < updateSystemCount; index++)
         {
             systems[index].system->Update(world, deltaTime);
+        }
+
+        //推进主线程协程
+        if (ScriptSystem* scripts = GetSystem<ScriptSystem>())
+        {
+            scripts->AdvanceCo(deltaTime);
         }
 
         /// *** Late Update ***
@@ -509,6 +518,7 @@ void Application::RequestQuit()
 //退出应用并解除当前 World
 void Application::Quit()
 {
+    ThreadOperation::WaitAll();
     CancelWorldLoad();
     if (currentApplication == this) currentApplication = nullptr;
     running = false;

@@ -52,6 +52,8 @@ internal sealed class CppType
     public bool IsExported { get; set; }
     //相对源码根的包含路径。清单要跨模块传递类型，导入方没有本地文件路径可用。
     public string Include { get; set; } = "";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsHandle { get; set; }
     public bool IsObject { get; set; }
     public bool IsAbstract { get; set; }
     public bool IsUnique { get; set; }
@@ -129,10 +131,11 @@ internal static class CppDeclarations
 
     private static void ParseScope(List<CppToken> tokens, int start, int end, string scope, string file, string[] lines, List<CppType> result)
     {
-        bool exported = false;
+        bool exported = false, handle = false;
         for (int index = start; index < end; ++index)
         {
             string keyword = tokens[index].Text;
+            if (keyword == "ORBEDEN_BIND_HANDLE") { handle = true; continue; }
             if (keyword == "ORBEDEN_BIND_EXPORT") { exported = true; continue; }
             if (keyword == "namespace")
             {
@@ -156,15 +159,16 @@ internal static class CppDeclarations
             while (brace < end && tokens[brace].Text is not ("{" or ";" or "(")) ++brace;
             if (brace >= end || tokens[brace].Text != "{") continue;
             int closing = Match(tokens, brace, "{", "}");
+
             CppType type = new()
             {
                 Name = tokens[nameIndex].Text, QualifiedName = Qualify(scope, tokens[nameIndex].Text),
                 File = file, Line = tokens[index].Line, Kind = keyword,
                 Doc = DocAbove(lines, tokens[index].Line),
-                IsExported = exported,
+                IsExported = exported, IsHandle = handle,
                 IsFinal = tokens.GetRange(nameIndex + 1, brace - nameIndex - 1).Any(value => value.Text == "final")
             };
-            exported = false;
+            exported = handle = false;
             int colon = tokens.FindIndex(nameIndex + 1, brace - nameIndex - 1, value => value.Text == ":");
             if (colon >= 0)
             {

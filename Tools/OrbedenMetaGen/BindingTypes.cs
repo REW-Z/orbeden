@@ -40,6 +40,16 @@ internal sealed class BindingTypes(BindingModel model)
             if (element.Kind == "event") throw new InvalidDataException("OrbEvent must be declared as an individual field");
             return Remember(new("array", type, element.Managed + "[]", "NativeBindingSlice", "NativeBindingSlice", Element: element));
         }
+        //共享指针按普通类句柄传递
+        if (type.StartsWith("std::shared_ptr<", StringComparison.Ordinal) && type.EndsWith('>'))
+        {
+            CppType? handle = model.Resolve(type[16..^1], owner);
+            if (handle?.IsHandle != true)
+            {
+                throw new InvalidDataException($"shared pointer requires ORBEDEN_BIND_HANDLE: '{text}'");
+            }
+            return Remember(new("handle", "std::shared_ptr<" + handle.QualifiedName + ">", model.ManagedName(handle) + "?", "uint64", "ulong", handle));
+        }
         bool reference = type.StartsWith("Ref<", StringComparison.Ordinal) && type.EndsWith('>');
         bool pointer = type.EndsWith('*');
         string targetName = reference ? type[4..^1] : pointer ? type[..^1] : type;

@@ -45,6 +45,9 @@ public static class GameScriptRuntime
     /// <summary>批量执行 Update delegate 表。</summary>
     public static void Update(float deltaTime) => ScriptRuntime.Update(deltaTime);
 
+    /// <summary>在普通更新后推进托管协程</summary>
+    public static void AdvanceCo(float deltaTime) => ScriptRuntime.AdvanceCo(deltaTime);
+
     /// <summary>批量执行 FixedUpdate delegate 表。</summary>
     public static void FixedUpdate(float fixedDeltaTime) => ScriptRuntime.FixedUpdate(fixedDeltaTime);
 

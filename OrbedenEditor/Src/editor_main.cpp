@@ -20,7 +20,146 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#include <atomic>
 #include <chrono>
+
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+namespace
+{
+    std::atomic_bool consoleCloseRequested = false;
+    std::atomic_bool consoleShutdownFinished = false;
+    DWORD editorThreadId = 0;
+
+    //请求主线程退出并等待编辑器清理完成
+    BOOL WINAPI HandleConsoleControl(DWORD event)
+    {
+        if (event != CTRL_CLOSE_EVENT && event != CTRL_C_EVENT && event != CTRL_BREAK_EVENT)
+        {
+            return FALSE;
+        }
+
+        consoleCloseRequested.store(true, std::memory_order_release);
+        PostThreadMessageW(editorThreadId, WM_NULL, 0, 0);
+        consoleShutdownFinished.wait(false, std::memory_order_acquire);
+        return TRUE;
+    }
+
+    //运行编辑器并在主线程释放窗口与引擎
+    int32 RunEditor(int32 argc, wchar_t** argv)
+    {
+        auto window = std::make_unique<GlfwWindow>();
+        WindowDesc windowDesc;
+        windowDesc.title = "Orbeden Editor";
+        windowDesc.graphicsApi = WindowGraphicsApi::OpenGL;
+        if (!window->Create(windowDesc))
+        {
+            Log::Error("Editor startup failed: window create failed.");
+            return 1;
+        }
+
+        Application app(ScriptRuntimeMode::CLR);
+        app.SetWindow(window.get());
+        app.SetTargetFrameRate(60);
+        app.SetSimulationEnabled(false);
+        if (!app.Initialize())
+        {
+            Log::Error("Editor startup failed: application initialize failed.");
+            return 1;
+        }
+
+        {
+            std::string executable = argc > 0 ? InteropText::PathToUtf8(std::filesystem::path(argv[0])) : "";
+            EditorSystem editorSystem(app, executable.c_str());
+
+            using Clock = std::chrono::steady_clock;
+            auto previousTime = Clock::now();
+
+            //请求过重绘的面板很可能还会周期性再请求。完全阻塞的等待会让「每秒刷新」的面板
+            //再也醒不过来，所以请求过后留一段宽限期，期间按秒超时唤醒；宽限期过后回到完全阻塞。
+            constexpr float64 IdleWakeSeconds = 1.0;
+            constexpr int32 IdleWakeGraceMilliseconds = 2100;
+            auto idleWakeDeadline = previousTime;
+
+            while (!consoleCloseRequested.load(std::memory_order_acquire))
+            {
+                if (!editorSystem.ApplyPendingGraphicsBackend(window))
+                {
+                    Log::Error("Editor backend switch failed: GUI could not be restored.");
+                    break;
+                }
+                if (window->ShouldClose())
+                {
+                    if (!editorSystem.GetProject().IsTemporaryWorld() || editorSystem.SaveCurrentWorld())
+                    {
+                        break;
+                    }
+                    glfwSetWindowShouldClose(window->GetGlfwWindow(), GLFW_FALSE);
+                }
+                bool continuousRepaint = editorSystem.NeedsContinuousRepaint();
+                bool repaintRequested = editorSystem.TakeRepaintRequest();
+                bool waitedForEvent = !continuousRepaint && !repaintRequested;
+                if (repaintRequested)
+                {
+                    idleWakeDeadline = Clock::now() + std::chrono::milliseconds(IdleWakeGraceMilliseconds);
+                }
+
+                //清理瞬时输入后按当前重绘状态轮询、限时等待或阻塞等待事件
+                if (consoleCloseRequested.load(std::memory_order_acquire))
+                {
+                    break;
+                }
+                InputManager::BeginFrame();
+                if (!waitedForEvent)
+                {
+                    window->PollEvents();
+                }
+                else if (Clock::now() < idleWakeDeadline)
+                {
+                    window->WaitEventsTimeout(IdleWakeSeconds);
+                }
+                else
+                {
+                    window->WaitEvents();
+                }
+                if (consoleCloseRequested.load(std::memory_order_acquire) || window->ShouldClose())
+                {
+                    continue;
+                }
+
+                //空闲唤醒帧不把等待时间传入 Simulation
+                auto frameStartTime = Clock::now();
+                float32 deltaTime = waitedForEvent
+                    ? 0.0f
+                    : std::chrono::duration<float32>(frameStartTime - previousTime).count();
+                previousTime = frameStartTime;
+
+                app.Tick(deltaTime);
+                editorSystem.Update(app.GetWorld(), deltaTime);
+                app.Render(deltaTime);
+                editorSystem.RenderEditorGUI();
+                app.Present();
+
+                //请求重绘的面板每帧都会再请求一次，这里必须按目标帧率等待，
+                //否则会变成不受限的满速重绘
+                if (continuousRepaint || repaintRequested)
+                {
+                    app.WaitForNextFrame(frameStartTime);
+                }
+
+                //节拍等完再收帧：帧耗时是这一帧自己的跨度，不借用模拟的 delta
+                Profiler::EndFrame();
+            }
+        }
+        app.Quit();
+
+        Memory::GetHeapAllocator()->Analysis();
+
+        return 0;
+    }
+}
 
 int wmain(int argc, wchar_t** argv)
 {
@@ -56,87 +195,21 @@ int wmain(int argc, wchar_t** argv)
         ResourceManager::Shutdown();
         return succeeded ? 0 : 1;
     }
-    auto window = std::make_unique<GlfwWindow>();
-    WindowDesc windowDesc;
-    windowDesc.title = "Orbeden Editor";
-    windowDesc.graphicsApi = WindowGraphicsApi::OpenGL;
-    if (!window->Create(windowDesc))
+    //注册控制台退出并建立主线程消息队列
+    editorThreadId = GetCurrentThreadId();
+    MSG message{};
+    PeekMessageW(&message, nullptr, 0, 0, PM_NOREMOVE);
+    if (!SetConsoleCtrlHandler(&HandleConsoleControl, TRUE))
     {
-        Log::Error("Editor startup failed: window create failed.");
+        Log::Error("Editor startup failed: console control handler registration failed.");
         return 1;
     }
 
-    Application app(ScriptRuntimeMode::CLR);
-    app.SetWindow(window.get());
-    app.SetTargetFrameRate(60);
-    app.SetSimulationEnabled(false);
-    if (!app.Initialize())
-    {
-        Log::Error("Editor startup failed: application initialize failed.");
-        return 1;
-    }
+    int32 result = RunEditor(argc, argv);
 
-    {
-        std::string executable = argc > 0 ? InteropText::PathToUtf8(std::filesystem::path(argv[0])) : "";
-        EditorSystem editorSystem(app, executable.c_str());
-
-        using Clock = std::chrono::steady_clock;
-        auto previousTime = Clock::now();
-
-        //请求过重绘的面板很可能还会周期性再请求。完全阻塞的等待会让「每秒刷新」的面板
-        //再也醒不过来，所以请求过后留一段宽限期，期间按秒超时唤醒；宽限期过后回到完全阻塞。
-        constexpr double IdleWakeSeconds = 1.0;
-        constexpr int32 IdleWakeGraceMilliseconds = 2100;
-        auto idleWakeDeadline = previousTime;
-
-        while (true)
-        {
-            if (!editorSystem.ApplyPendingGraphicsBackend(window))
-            {
-                Log::Error("Editor backend switch failed: GUI could not be restored.");
-                break;
-            }
-            if (window->ShouldClose())
-            {
-                if (!editorSystem.GetProject().IsTemporaryWorld() || editorSystem.SaveCurrentWorld()) break;
-                glfwSetWindowShouldClose(window->GetGlfwWindow(), GLFW_FALSE);
-            }
-            bool continuousRepaint = editorSystem.NeedsContinuousRepaint();
-            bool repaintRequested = editorSystem.TakeRepaintRequest();
-            bool waitedForEvent = !continuousRepaint && !repaintRequested;
-            if (repaintRequested) idleWakeDeadline = Clock::now() + std::chrono::milliseconds(IdleWakeGraceMilliseconds);
-
-            //清理瞬时输入后按当前重绘状态轮询、限时等待或阻塞等待事件
-            InputManager::BeginFrame();
-            if (!waitedForEvent) window->PollEvents();
-            else if (Clock::now() < idleWakeDeadline) window->WaitEventsTimeout(IdleWakeSeconds);
-            else window->WaitEvents();
-            if (window->ShouldClose()) continue;
-
-            //空闲唤醒帧不把等待时间传入 Simulation
-            auto frameStartTime = Clock::now();
-            float deltaTime = waitedForEvent
-                ? 0.0f
-                : std::chrono::duration<float>(frameStartTime - previousTime).count();
-            previousTime = frameStartTime;
-
-            app.Tick(deltaTime);
-            editorSystem.Update(app.GetWorld(), deltaTime);
-            app.Render(deltaTime);
-            editorSystem.RenderEditorGUI();
-            app.Present();
-
-            //请求重绘的面板每帧都会再请求一次，这里必须按目标帧率等待，
-            //否则会变成不受限的满速重绘
-            if (continuousRepaint || repaintRequested) app.WaitForNextFrame(frameStartTime);
-
-            //节拍等完再收帧：帧耗时是这一帧自己的跨度，不借用模拟的 delta
-            Profiler::EndFrame();
-        }
-    }
-    app.Quit();
-
-    Memory::GetHeapAllocator()->Analysis();
-
-    return 0;
+    //通知控制台处理线程完成退出
+    consoleShutdownFinished.store(true, std::memory_order_release);
+    consoleShutdownFinished.notify_all();
+    SetConsoleCtrlHandler(&HandleConsoleControl, FALSE);
+    return result;
 }

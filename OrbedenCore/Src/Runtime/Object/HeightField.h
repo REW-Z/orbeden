@@ -17,6 +17,46 @@ class HeightField final : public Component
     OBJECT_TYPE_DECLARE(HeightField)
 
 public:
+    //地形参数快照与独立几何数据
+    struct GeometryData
+    {
+        int32 seed = 1337;
+        int32 sampleTileX = 0;
+        int32 sampleTileZ = 0;
+        float32 sizeX = 400.0f;
+        float32 sizeZ = 400.0f;
+        int32 rowCount = 129;
+        int32 columnCount = 129;
+        float32 amplitude = 3.5f;
+        float32 frequency = 0.02f;
+        int32 octaves = 4;
+        float32 flattenMinX = -24.0f;
+        float32 flattenMaxX = 24.0f;
+        float32 flattenMinZ = -34.0f;
+        float32 flattenMaxZ = 10.0f;
+        float32 flattenHeight = 0.0f;
+        float32 flattenBlendDistance = 24.0f;
+        float32 tileSize = 96.0f;
+
+        std::vector<float32> heights;
+        std::vector<vector3> vertices;
+        std::vector<vector3> normals;
+        std::vector<vector2> texcoords;
+        std::vector<uint32> indices;
+    };
+
+    //复制当前几何参数
+    ORBEDEN_BIND_IGNORE
+    GeometryData CaptureGeometry() const;
+
+    //按快照生成独立几何数据
+    ORBEDEN_BIND_IGNORE
+    static void GenerateGeometry(GeometryData& data);
+
+    //在主线程接收几何数据并更新地形
+    ORBEDEN_BIND_IGNORE
+    void ApplyGeometry(GeometryData&& data);
+
     bool enabled = true;
     ORBEDEN_BIND_CHANGED(Regenerate)
     int32 seed = 1337;
@@ -51,7 +91,6 @@ public:
     float32 flattenHeight = 0.0f;
     ORBEDEN_BIND_CHANGED(Regenerate)
     float32 flattenBlendDistance = 24.0f;
-    ORBEDEN_BIND_CHANGED(Regenerate)
     ORBEDEN_BIND_CHANGED(Regenerate)
     Ref<Material> material;
     ORBEDEN_BIND_CHANGED(Regenerate)
@@ -95,21 +134,18 @@ protected:
 
 private:
     //确定性二维 value noise，输出 [0,1]。
-    float32 SampleNoise(double x, double z, int32 noiseSeed) const;
+    static float32 SampleNoise(double x, double z, int32 noiseSeed);
 
     /// <summary>采样全局坐标的连续地形高度。</summary>
-    float32 SampleHeight(double x, double z) const;
+    static float32 SampleHeight(const GeometryData& data, double x, double z);
 
-    //按当前参数重建高度采样。
-    void RebuildHeights();
-
-    //重建渲染网格并写入同 Ens 的 StaticMeshRenderer。
+    //将已计算几何写入渲染网格
     void RebuildRenderMesh();
 
     //重建噪声贴图并绑定到运行时材质。
     void RebuildNoiseTexture();
 
-    std::vector<float32> heights;
+    GeometryData geometry;
     uint32 generation = 0;
     bool meshPending = false;
     Mesh* generatedMesh = nullptr;

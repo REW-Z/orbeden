@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Runtime/Object/Component.h"
+#include "Runtime/Coroutines/CoRoutine.h"
 
 #include <string>
 
@@ -91,6 +92,18 @@ private:
     static bool SetEnabledValue(Object* object, const Reflection::Value& value);
 
 public:
+    //启动协程并立即执行到第一个等待点
+    ORBEDEN_BIND_IGNORE
+    CoRoutine RunCo(CoRoutine routine);
+
+    //停止当前脚本的一个协程
+    ORBEDEN_BIND_IGNORE
+    void StopCo(const CoRoutine& routine);
+
+    //停止当前脚本的全部协程
+    ORBEDEN_BIND_IGNORE
+    void StopAllCo();
+
     //注册 Script 自身持久化字段。
     ORBEDEN_BIND_IGNORE
     static void RegisterReflection();

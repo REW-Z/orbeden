@@ -21,6 +21,10 @@ internal static class OrbedenAotExports
     [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Update", CallConvs = [typeof(CallConvCdecl)])]
     public static void Update(float deltaTime) => GameScriptRuntime.Update(deltaTime);
 
+    /// <summary>推进托管协程</summary>
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_AdvanceCo", CallConvs = [typeof(CallConvCdecl)])]
+    public static void AdvanceCo(float deltaTime) => GameScriptRuntime.AdvanceCo(deltaTime);
+
     [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_FixedUpdate", CallConvs = [typeof(CallConvCdecl)])]
     public static void FixedUpdate(float fixedDeltaTime) => GameScriptRuntime.FixedUpdate(fixedDeltaTime);
 

@@ -6,6 +6,7 @@
 #include "Physics/PhysicsTypes.h"
 #include "Rendering/InstanceDrawData.h"
 #include "Rendering/RenderTypes.h"
+#include "ResourceManager/ResourceLoadOperation.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/CharacterController.h"
 #include "Runtime/Object/Collider.h"
@@ -30,8 +31,50 @@
 #include "Runtime/Object/WheelCollider.h"
 #include "Runtime/Particles/ParticleSettings.h"
 #include "Runtime/Reflection.h"
+#include <memory>
+#include <mutex>
+#include <unordered_map>
 namespace
 {
+std::mutex handleMutex_ResourceLoadOperation;
+std::unordered_map<uint64, std::shared_ptr<ResourceLoadOperation>> handles_ResourceLoadOperation;
+uint64 nextHandle_ResourceLoadOperation = 1;
+//保存共享句柄
+uint64 StoreHandle_ResourceLoadOperation(const std::shared_ptr<ResourceLoadOperation>& value)
+{
+    if (!value)
+    {
+        return 0;
+    }
+    std::lock_guard lock(handleMutex_ResourceLoadOperation);
+    uint64 id = nextHandle_ResourceLoadOperation++;
+    handles_ResourceLoadOperation.emplace(id, value);
+    return id;
+}
+//取得共享句柄
+std::shared_ptr<ResourceLoadOperation> FindHandle_ResourceLoadOperation(uint64 id)
+{
+    std::lock_guard lock(handleMutex_ResourceLoadOperation);
+    auto found = handles_ResourceLoadOperation.find(id);
+    if (found == handles_ResourceLoadOperation.end())
+    {
+        throw NativeBindingError(NativeBindingStatus::InvalidObject, "Native handle was released");
+    }
+    return found->second;
+}
+//释放指定句柄或全部会话句柄
+void ORBEDEN_NATIVE_CALL ReleaseHandle_ResourceLoadOperation(uint64 id)
+{
+    std::lock_guard lock(handleMutex_ResourceLoadOperation);
+    if (id == 0)
+    {
+        handles_ResourceLoadOperation.clear();
+    }
+    else
+    {
+        handles_ResourceLoadOperation.erase(id);
+    }
+}
 void Write_BlendMode(NativeBindingWriter& writer, BlendMode const& value);
 BlendMode Read_BlendMode(NativeBindingReader& reader);
 void Write_CharacterControllerShape(NativeBindingWriter& writer, CharacterControllerShape const& value);
@@ -203,12 +246,16 @@ color Read_color(NativeBindingReader& reader);
 void Write_const_ShaderPass_(NativeBindingWriter& writer, const ShaderPass* const& value);
 void Write_float32(NativeBindingWriter& writer, float32 const& value);
 float32 Read_float32(NativeBindingReader& reader);
+void Write_float64(NativeBindingWriter& writer, float64 const& value);
+float64 Read_float64(NativeBindingReader& reader);
 void Write_int32(NativeBindingWriter& writer, int32 const& value);
 int32 Read_int32(NativeBindingReader& reader);
 void Write_quaternion(NativeBindingWriter& writer, quaternion const& value);
 quaternion Read_quaternion(NativeBindingReader& reader);
 void Write_std__array_EnsId_16_(NativeBindingWriter& writer, std::array<EnsId,16> const& value);
 std::array<EnsId,16> Read_std__array_EnsId_16_(NativeBindingReader& reader);
+void Write_std__shared_ptr_ResourceLoadOperation_(NativeBindingWriter& writer, std::shared_ptr<ResourceLoadOperation> const& value);
+std::shared_ptr<ResourceLoadOperation> Read_std__shared_ptr_ResourceLoadOperation_(NativeBindingReader& reader);
 void Write_std__string(NativeBindingWriter& writer, std::string const& value);
 std::string Read_std__string(NativeBindingReader& reader);
 void Write_std__vector_float32_(NativeBindingWriter& writer, std::vector<float32> const& value);
@@ -1238,6 +1285,14 @@ float32 Read_float32(NativeBindingReader& reader)
 {
     return static_cast<float32>(reader.Scalar<float32>());
 }
+void Write_float64(NativeBindingWriter& writer, float64 const& value)
+{
+    writer.Scalar(static_cast<float64>(value));
+}
+float64 Read_float64(NativeBindingReader& reader)
+{
+    return static_cast<float64>(reader.Scalar<float64>());
+}
 void Write_int32(NativeBindingWriter& writer, int32 const& value)
 {
     writer.Scalar(static_cast<int32>(value));
@@ -1266,6 +1321,15 @@ std::array<EnsId,16> Read_std__array_EnsId_16_(NativeBindingReader& reader)
     if (count != static_cast<int32>(value.size())) throw NativeBindingError(NativeBindingStatus::InvalidArgument, "Fixed array size mismatch");
     for (int32 index = 0; index < count; ++index) value[index] = Read_EnsId(reader);
     return value;
+}
+void Write_std__shared_ptr_ResourceLoadOperation_(NativeBindingWriter& writer, std::shared_ptr<ResourceLoadOperation> const& value)
+{
+    writer.Scalar(StoreHandle_ResourceLoadOperation(value));
+}
+std::shared_ptr<ResourceLoadOperation> Read_std__shared_ptr_ResourceLoadOperation_(NativeBindingReader& reader)
+{
+    uint64 id = reader.Scalar<uint64>();
+    return id == 0 ? nullptr : FindHandle_ResourceLoadOperation(id);
 }
 void Write_std__string(NativeBindingWriter& writer, std::string const& value)
 {
@@ -6771,6 +6835,80 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_2(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ResourceLoadOperation_0(uint64 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto instance = FindHandle_ResourceLoadOperation(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_std__string(writer, instance->GetError()); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ResourceLoadOperation_1(uint64 objectId, int32* result)
+{
+    try
+    {
+        auto instance = FindHandle_ResourceLoadOperation(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = NativeBindings::Id(instance->GetResult());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ResourceLoadOperation_2(uint64 objectId, uint8* result)
+{
+    try
+    {
+        auto instance = FindHandle_ResourceLoadOperation(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->IsFinished());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ResourceLoadOperation_3(uint64 objectId, uint32 typeId, NativeBindingSlice key, uint64* result)
+{
+    try
+    {
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingReader reader_key(key);
+        auto decoded_key = Read_std__string(reader_key);
+        reader_key.Complete();
+        *result = StoreHandle_ResourceLoadOperation(ResourceLoadOperation::Load(typeId, decoded_key));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ResourceLoadOperation_4(uint64 objectId, float64 elapsedSeconds, uint8* result)
+{
+    try
+    {
+        auto instance = FindHandle_ResourceLoadOperation(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->ShouldWait(elapsedSeconds));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ResourceLoadOperation_5(uint64 objectId, uint8* result)
+{
+    try
+    {
+        auto instance = FindHandle_ResourceLoadOperation(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->Succeeded());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
 }
 
 void RegisterBindings_Orbeden()
@@ -6829,4 +6967,6 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(SphereCollider::StaticType(), 13173887832813750021ULL, { functions_SphereCollider, 3 });
     static void* functions_TriangleMeshCollider[] = { reinterpret_cast<void*>(&Call_TriangleMeshCollider_0), reinterpret_cast<void*>(&Call_TriangleMeshCollider_1), reinterpret_cast<void*>(&Call_TriangleMeshCollider_2) };
     NativeBindings::Register(TriangleMeshCollider::StaticType(), 16886362217598776389ULL, { functions_TriangleMeshCollider, 3 });
+    static void* functions_ResourceLoadOperation[] = { reinterpret_cast<void*>(&Call_ResourceLoadOperation_0), reinterpret_cast<void*>(&Call_ResourceLoadOperation_1), reinterpret_cast<void*>(&Call_ResourceLoadOperation_2), reinterpret_cast<void*>(&Call_ResourceLoadOperation_3), reinterpret_cast<void*>(&Call_ResourceLoadOperation_4), reinterpret_cast<void*>(&Call_ResourceLoadOperation_5), reinterpret_cast<void*>(&ReleaseHandle_ResourceLoadOperation) };
+    NativeBindings::Register("ResourceLoadOperation", 14895700534675878464ULL, { functions_ResourceLoadOperation, 7 });
 }

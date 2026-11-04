@@ -870,6 +870,9 @@ bool EditorSystem::ApplyPendingGraphicsBackend(std::unique_ptr<GlfwWindow>& main
     editorScene.ReleaseSceneViewTarget();
     editorGUI.Shutdown();
 
+    //暂停后台日志的窗口唤醒
+    Log::SetWakeHandler(nullptr, nullptr);
+
     //切换渲染设备并重建编辑器上下文
     bool switched = app.SetWindow(nextWindow.get());
     bool guiReady = editorGUI.Initialize(app.GetWindow());
@@ -891,6 +894,8 @@ bool EditorSystem::ApplyPendingGraphicsBackend(std::unique_ptr<GlfwWindow>& main
     graphicsBackendStatus = switched
         ? std::string("Rendering backend switched to ") + GetGraphicsBackendName() + "."
         : "Backend switch failed: initialization failed. Current backend retained.";
+    //恢复后台日志的窗口唤醒
+    Log::SetWakeHandler(&WakeEditorLoop, this);
     if (!switched) Log::Error(graphicsBackendStatus.c_str());
     if (maximized) glfwMaximizeWindow(mainWindow->GetGlfwWindow());
     glfwShowWindow(mainWindow->GetGlfwWindow());

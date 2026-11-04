@@ -83,6 +83,7 @@ namespace
     constexpr const char* EditorShutdownScriptRuntimeMethod = "ShutdownScriptRuntime";
     constexpr const char* EditorLoadScriptAssemblyMethod = "LoadScriptAssembly";
     constexpr const char* EditorUpdateScriptRuntimeMethod = "UpdateScriptRuntime";
+    constexpr const char* EditorAdvanceCoScriptRuntimeMethod = "AdvanceCoScriptRuntime";
     constexpr const char* EditorFixedUpdateScriptRuntimeMethod = "FixedUpdateScriptRuntime";
     constexpr const char* EditorLateUpdateScriptRuntimeMethod = "LateUpdateScriptRuntime";
     constexpr const char* EditorEnsWorldActiveChangedScriptRuntimeMethod = "EnsWorldActiveChangedScriptRuntime";
@@ -2262,6 +2263,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorShutdownScriptRuntimeMethod, &ShutdownScriptRuntimeFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorLoadScriptAssemblyMethod, &LoadScriptAssemblyFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUpdateScriptRuntimeMethod, &UpdateScriptRuntimeFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorAdvanceCoScriptRuntimeMethod, &AdvanceCoScriptRuntimeFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorFixedUpdateScriptRuntimeMethod, &FixedUpdateScriptRuntimeFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorLateUpdateScriptRuntimeMethod, &LateUpdateScriptRuntimeFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorEnsWorldActiveChangedScriptRuntimeMethod, &EnsWorldActiveChangedScriptRuntimeFunction)
@@ -2426,6 +2428,7 @@ void ManagedEditorBridge::Shutdown()
     ShutdownScriptRuntimeFunction = nullptr;
     LoadScriptAssemblyFunction = nullptr;
     UpdateScriptRuntimeFunction = nullptr;
+    AdvanceCoScriptRuntimeFunction = nullptr;
     FixedUpdateScriptRuntimeFunction = nullptr;
     LateUpdateScriptRuntimeFunction = nullptr;
     EnsWorldActiveChangedScriptRuntimeFunction = nullptr;
@@ -2492,7 +2495,7 @@ void ManagedEditorBridge::SetPanelVisible(int32 handle, bool visible)
 bool ManagedEditorBridge::FillScriptRuntimeEntryPoints(ScriptEntryPoints& entryPoints) const
 {
     if (!InitializeScriptRuntimeFunction || !ShutdownScriptRuntimeFunction || !LoadScriptAssemblyFunction
-        || !UpdateScriptRuntimeFunction || !FixedUpdateScriptRuntimeFunction || !LateUpdateScriptRuntimeFunction
+        || !UpdateScriptRuntimeFunction || !AdvanceCoScriptRuntimeFunction || !FixedUpdateScriptRuntimeFunction || !LateUpdateScriptRuntimeFunction
         || !EnsWorldActiveChangedScriptRuntimeFunction || !EnsDestroyedScriptRuntimeFunction
         || !DrawGuiScriptRuntimeFunction || !ProcessInputScriptRuntimeFunction || !PrepareRenderScriptRuntimeFunction)
         return false;
@@ -2501,6 +2504,7 @@ bool ManagedEditorBridge::FillScriptRuntimeEntryPoints(ScriptEntryPoints& entryP
     entryPoints.initialize = reinterpret_cast<ScriptEntryPoints::InitializeFunction>(InitializeScriptRuntimeFunction);
     entryPoints.shutdown = reinterpret_cast<ScriptEntryPoints::ShutdownFunction>(ShutdownScriptRuntimeFunction);
     entryPoints.update = reinterpret_cast<ScriptEntryPoints::UpdateFunction>(UpdateScriptRuntimeFunction);
+    entryPoints.advanceCo = reinterpret_cast<ScriptEntryPoints::UpdateFunction>(AdvanceCoScriptRuntimeFunction);
     entryPoints.fixedUpdate = reinterpret_cast<ScriptEntryPoints::UpdateFunction>(FixedUpdateScriptRuntimeFunction);
     entryPoints.lateUpdate = reinterpret_cast<ScriptEntryPoints::UpdateFunction>(LateUpdateScriptRuntimeFunction);
     entryPoints.ensWorldActiveChanged = reinterpret_cast<ScriptEntryPoints::EnsWorldActiveChangedFunction>(EnsWorldActiveChangedScriptRuntimeFunction);
