@@ -296,6 +296,12 @@ public static class EditorGUI
     /// <summary>绘制整数输入框。</summary>
     public static bool InputInt(string label, ref int value) => NativeEditorGUI.InputInt(label, ref value);
 
+    /// <summary>绘制无符号整数输入框</summary>
+    public static bool InputUInt(string label, ref uint value) => NativeEditorGUI.InputUInt(label, ref value);
+
+    /// <summary>绘制无符号长整数输入框</summary>
+    public static bool InputULong(string label, ref ulong value) => NativeEditorGUI.InputULong(label, ref value);
+
     /// <summary>绘制浮点滑条，默认步长为范围的 1%，step 为零时连续取值。</summary>
     public static bool SliderFloat(string id, ref float value, float minimum, float maximum, float width = 0.0f, float? step = null)
     {

@@ -106,6 +106,8 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<int*, int*, byte> StepTreeRows;
     public delegate* unmanaged[Cdecl]<void> EndTreeRows;
     public delegate* unmanaged[Cdecl]<byte*, int, byte, byte*, int, int, int> TreeRow;
+    public delegate* unmanaged[Cdecl]<byte*, int, uint*, byte> InputUInt;
+    public delegate* unmanaged[Cdecl]<byte*, int, ulong*, byte> InputULong;
 }
 #pragma warning restore CS0649
 
@@ -808,6 +810,36 @@ internal static unsafe class NativeEditorGUI
         fixed (int* valuePointer = &value)
         {
             return api.InputInt(pointer, bytes.Length, valuePointer) != 0;
+        }
+    }
+
+    //绘制无符号整数输入框
+    internal static bool InputUInt(string? label, ref uint value)
+    {
+        if (!initialized || api.InputUInt == null)
+        {
+            return false;
+        }
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        fixed (uint* valuePointer = &value)
+        {
+            return api.InputUInt(pointer, bytes.Length, valuePointer) != 0;
+        }
+    }
+
+    //绘制无符号长整数输入框
+    internal static bool InputULong(string? label, ref ulong value)
+    {
+        if (!initialized || api.InputULong == null)
+        {
+            return false;
+        }
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        fixed (ulong* valuePointer = &value)
+        {
+            return api.InputULong(pointer, bytes.Length, valuePointer) != 0;
         }
     }
 

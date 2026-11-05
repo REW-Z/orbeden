@@ -324,12 +324,21 @@ namespace
         const char* end = ImGui::FindRenderedTextEnd(begin);
         if (begin == end) return std::string();
 
-        //标签超长时裁在列内，不挤进右边的控件区
+        //提交标签命中区域并裁剪文本
         const ImVec2 start = ImGui::GetCursorScreenPos();
-        ImGui::PushClipRect(start, ImVec2(start.x + propertyLabelWidth - ImGui::GetStyle().ItemInnerSpacing.x,
-            start.y + ImGui::GetFrameHeight()), true);
-        ImGui::TextEx(begin, end);
-        ImGui::PopClipRect();
+        const ImGuiWindow* window = ImGui::GetCurrentContext()->CurrentWindow;
+        const float32 right = window->Pos.x - window->Scroll.x + propertyLabelWidth
+            + window->DC.GroupOffset.x + window->DC.ColumnsOffset.x - ImGui::GetStyle().ItemInnerSpacing.x;
+        const ImVec2 size(std::max(1.0f, right - start.x), ImGui::GetFrameHeight());
+        ImGui::PushID(text.c_str());
+        ImGui::InvisibleButton("##property_label", size);
+        ImGui::PopID();
+        ImGui::RenderTextClipped(start, ImVec2(start.x + size.x, start.y + size.y),
+            begin, end, nullptr, ImVec2(0.0f, 0.5f));
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        {
+            ImGui::SetTooltip("%.*s", static_cast<int32>(end - begin), begin);
+        }
         //右列用 SameLine(offset) 定位：它与托管侧对象框走的是同一个 EditorGuiSameLine，
         //两者的基准一致（都从窗口左缘起算），列位才对得上。
         //代价是这一路会带上外层 Group 的偏移——列表与向量控件内部才开 Group，
@@ -337,6 +346,25 @@ namespace
         ImGui::SameLine(propertyLabelWidth);
         //控件 ID 取 "##" 之后的部分；原标签没有 "##" 时补一个，同一次调用里仍然唯一
         return *end == '\0' ? "##" + text : std::string(end);
+    }
+
+    //拖动当前属性标签修改数值
+    bool DragPropertyLabel(ImGuiDataType type, void* value)
+    {
+        if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+        {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        }
+
+        const ImGuiID id = ImGui::GetItemID();
+        const bool integer = type != ImGuiDataType_Float;
+        const bool changed = ImGui::DragBehavior(id, type, value, integer ? 1.0f : 0.01f,
+            nullptr, nullptr, ImGui::DataTypeGetInfo(type)->PrintFmt, ImGuiSliderFlags_NoRoundToFormat);
+        if (changed)
+        {
+            ImGui::MarkItemEdited(id);
+        }
+        return changed;
     }
 
     //开始可独立滚动的内容区域
@@ -959,65 +987,111 @@ namespace
         return changed ? 1 : 0;
     }
 
+    //绘制数值属性输入框并处理标签拖动
+    bool InputNumber(const std::string& text, ImGuiDataType type, void* value,
+        const void* step = nullptr, const void* fastStep = nullptr)
+    {
+        const std::string control = BeginPropertyRow(text);
+        bool changed = false;
+        if (!control.empty())
+        {
+            changed = DragPropertyLabel(type, value);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+        }
+
+        const std::string display = type == ImGuiDataType_Float ? FormatFloatText(*static_cast<float32*>(value))
+            : ImGui::DataTypeGetInfo(type)->PrintFmt;
+        changed |= ImGui::InputScalar(control.empty() ? text.c_str() : control.c_str(),
+            type, value, step, fastStep, display.c_str(), ImGuiInputTextFlags_ParseEmptyRefVal);
+        return changed;
+    }
+
     //绘制整数输入框
     uint8 ORBEDEN_NATIVE_CALL EditorGuiInputInt(const uint8* label, int32 length, int32* value)
     {
-        if (!value) return 0;
-        std::string text = ReadUtf8Text(label, length);
-        const std::string control = BeginPropertyRow(text);
-        if (control.length() != 0) ImGui::SetNextItemWidth(-FLT_MIN);
-        return ImGui::InputInt(control.length() != 0 ? control.c_str() : text.c_str(), value) ? 1 : 0;
+        if (!value)
+        {
+            return 0;
+        }
+
+        const int32 step = 1, fastStep = 100;
+        return InputNumber(ReadUtf8Text(label, length), ImGuiDataType_S32, value, &step, &fastStep) ? 1 : 0;
+    }
+
+    //绘制无符号整数输入框
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiInputUInt(const uint8* label, int32 length, uint32* value)
+    {
+        if (!value)
+        {
+            return 0;
+        }
+
+        const uint32 step = 1, fastStep = 100;
+        return InputNumber(ReadUtf8Text(label, length), ImGuiDataType_U32, value, &step, &fastStep) ? 1 : 0;
+    }
+
+    //绘制无符号长整数输入框
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiInputULong(const uint8* label, int32 length, uint64* value)
+    {
+        if (!value)
+        {
+            return 0;
+        }
+
+        const uint64 step = 1, fastStep = 100;
+        return InputNumber(ReadUtf8Text(label, length), ImGuiDataType_U64, value, &step, &fastStep) ? 1 : 0;
     }
 
     //绘制浮点输入框；ImGui 的 format 对浮点只管显示（解析固定按 %f 走），所以直接把算好的文本交过去
     uint8 ORBEDEN_NATIVE_CALL EditorGuiInputFloat(const uint8* label, int32 length, float32* value)
     {
-        if (!value) return 0;
-        std::string text = ReadUtf8Text(label, length);
-        const std::string control = BeginPropertyRow(text);
-        if (control.length() != 0) ImGui::SetNextItemWidth(-FLT_MIN);
-        std::string display = FormatFloatText(*value);
-        return ImGui::InputFloat(control.length() != 0 ? control.c_str() : text.c_str(),
-            value, 0.0f, 0.0f, display.c_str()) ? 1 : 0;
+        if (!value)
+        {
+            return 0;
+        }
+
+        return InputNumber(ReadUtf8Text(label, length), ImGuiDataType_Float, value) ? 1 : 0;
     }
 
-    //绘制三维向量输入框；三个分量各自取最短写法，所以不能借 ImGui::InputFloat3 那种三格共用的格式
-    uint8 ORBEDEN_NATIVE_CALL EditorGuiInputVector3(const uint8* label, int32 length, vector3* value)
+    //绘制向量分量输入框
+    bool InputFloatComponents(const std::string& text, float32* values, int32 count)
     {
-        if (!value) return 0;
-
-        std::string text = ReadUtf8Text(label, length);
-        //标签有可见文字时画进左列，三格吃满右列；否则仍把标签画在三格右侧
         const std::string control = BeginPropertyRow(text);
-        const bool columned = control.length() != 0;
-        float32 values[3] = { value->x, value->y, value->z };
-        std::string displays[3] = { FormatFloatText(values[0]), FormatFloatText(values[1]), FormatFloatText(values[2]) };
-
+        const bool columned = !control.empty();
         bool changed = false;
+
+        //按各分量的最短文本绘制输入框
         ImGui::BeginGroup();
         ImGui::PushID(text.c_str());
-        ImGui::PushMultiItemsWidths(3, columned ? ImGui::GetContentRegionAvail().x : ImGui::CalcItemWidth());
-        for (int32 index = 0; index < 3; ++index)
+        ImGui::PushMultiItemsWidths(count, columned ? ImGui::GetContentRegionAvail().x : ImGui::CalcItemWidth());
+        for (int32 index = 0; index < count; ++index)
         {
             ImGui::PushID(index);
-            if (index > 0) ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-            changed |= ImGui::InputFloat("", &values[index], 0.0f, 0.0f, displays[index].c_str()) != 0;
+            if (index > 0)
+            {
+                ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            }
+            const std::string display = FormatFloatText(values[index]);
+            changed |= ImGui::InputFloat("", &values[index], 0.0f, 0.0f,
+                display.c_str(), ImGuiInputTextFlags_ParseEmptyRefVal);
             ImGui::PopID();
             ImGui::PopItemWidth();
         }
         ImGui::PopID();
-
-        if (!columned)
-        {
-            //标签画在三格右侧，与 ImGui::InputFloat3 的排布保持一致
-            const char* labelEnd = ImGui::FindRenderedTextEnd(text.c_str());
-            if (text.c_str() != labelEnd)
-            {
-                ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                ImGui::TextEx(text.c_str(), labelEnd);
-            }
-        }
         ImGui::EndGroup();
+        return changed;
+    }
+
+    //绘制三维向量输入框
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiInputVector3(const uint8* label, int32 length, vector3* value)
+    {
+        if (!value)
+        {
+            return 0;
+        }
+
+        float32 values[] = { value->x, value->y, value->z };
+        const bool changed = InputFloatComponents(ReadUtf8Text(label, length), values, 3);
         if (changed)
         {
             value->x = values[0];
@@ -1027,43 +1101,16 @@ namespace
         return changed ? 1 : 0;
     }
 
-    //绘制二维向量输入框；与三维版本一样逐分量取最短写法
+    //绘制二维向量输入框
     uint8 ORBEDEN_NATIVE_CALL EditorGuiInputVector2(const uint8* label, int32 length, vector2* value)
     {
-        if (!value) return 0;
-
-        std::string text = ReadUtf8Text(label, length);
-        //标签有可见文字时画进左列，两格吃满右列；否则仍把标签画在两格右侧
-        const std::string control = BeginPropertyRow(text);
-        const bool columned = control.length() != 0;
-        float32 values[2] = { value->x, value->y };
-        std::string displays[2] = { FormatFloatText(values[0]), FormatFloatText(values[1]) };
-
-        bool changed = false;
-        ImGui::BeginGroup();
-        ImGui::PushID(text.c_str());
-        ImGui::PushMultiItemsWidths(2, columned ? ImGui::GetContentRegionAvail().x : ImGui::CalcItemWidth());
-        for (int32 index = 0; index < 2; ++index)
+        if (!value)
         {
-            ImGui::PushID(index);
-            if (index > 0) ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-            changed |= ImGui::InputFloat("", &values[index], 0.0f, 0.0f, displays[index].c_str()) != 0;
-            ImGui::PopID();
-            ImGui::PopItemWidth();
+            return 0;
         }
-        ImGui::PopID();
 
-        if (!columned)
-        {
-            //标签画在两格右侧，与 ImGui::InputFloat2 的排布保持一致
-            const char* labelEnd = ImGui::FindRenderedTextEnd(text.c_str());
-            if (text.c_str() != labelEnd)
-            {
-                ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                ImGui::TextEx(text.c_str(), labelEnd);
-            }
-        }
-        ImGui::EndGroup();
+        float32 values[] = { value->x, value->y };
+        const bool changed = InputFloatComponents(ReadUtf8Text(label, length), values, 2);
         if (changed)
         {
             value->x = values[0];
@@ -2287,6 +2334,8 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.selectable = reinterpret_cast<void*>(&EditorGuiSelectable);
     api.checkbox = reinterpret_cast<void*>(&EditorGuiCheckbox);
     api.inputInt = reinterpret_cast<void*>(&EditorGuiInputInt);
+    api.inputUInt = reinterpret_cast<void*>(&EditorGuiInputUInt);
+    api.inputULong = reinterpret_cast<void*>(&EditorGuiInputULong);
     api.inputFloat = reinterpret_cast<void*>(&EditorGuiInputFloat);
     api.inputVector3 = reinterpret_cast<void*>(&EditorGuiInputVector3);
     api.inputVector2 = reinterpret_cast<void*>(&EditorGuiInputVector2);

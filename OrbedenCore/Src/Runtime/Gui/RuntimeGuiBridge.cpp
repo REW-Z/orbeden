@@ -217,10 +217,15 @@ namespace
         {
             //标签超长时裁在列内，不挤到拾色器上
             const ImVec2 start = ImGui::GetCursorScreenPos();
-            ImGui::PushClipRect(start, ImVec2(start.x + colorLabelColumn - ImGui::GetStyle().ItemInnerSpacing.x,
-                start.y + ImGui::GetFrameHeight()), true);
+            const ImVec2 labelMax(start.x + colorLabelColumn - ImGui::GetStyle().ItemInnerSpacing.x,
+                start.y + ImGui::GetFrameHeight());
+            ImGui::PushClipRect(start, labelMax, true);
             ImGui::TextUnformatted(visible.c_str());
             ImGui::PopClipRect();
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && ImGui::IsMouseHoveringRect(start, labelMax))
+            {
+                ImGui::SetTooltip("%s", visible.c_str());
+            }
             //与编辑器的属性行同基准（都从窗口左缘起算），颜色字段才落进其它属性行同一列
             ImGui::SameLine(colorLabelColumn);
         }

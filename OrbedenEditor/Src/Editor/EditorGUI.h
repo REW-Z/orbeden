@@ -117,11 +117,13 @@ public:
     void* stepTreeRows = nullptr;
     void* endTreeRows = nullptr;
     void* treeRow = nullptr;
+    void* inputUInt = nullptr;
+    void* inputULong = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 95);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 97);
 
 //Editor ImGui 绑定层
 class EditorGUI

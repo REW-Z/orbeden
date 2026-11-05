@@ -311,28 +311,28 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 194);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 196);
     static_assert(sizeof(EditorProfileScopeAbi) == 16);
     static_assert(sizeof(ProfileFrameSummary) == 104);
     static_assert(sizeof(ProfileGpuEvent) == 24);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 96);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 112);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 121);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 123);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 144);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 169);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 174);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 182);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 184);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 186);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 187);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 188);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 189);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 190);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 191);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getWorldEnsState, 192);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, readEnsHeader, 193);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 98);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 114);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 123);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 125);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 146);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 171);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 176);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 184);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 186);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 188);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 189);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 190);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 191);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 192);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 193);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getWorldEnsState, 194);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, readEnsHeader, 195);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)

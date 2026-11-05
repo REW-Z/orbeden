@@ -1255,6 +1255,26 @@ internal sealed class InspectorPanel : EditorPanel
                 value = InteropValue.From(current);
                 return true;
             }
+            case InteropValueKind.UInt32:
+            {
+                property.Value.TryGet(out uint current);
+                if (!EditorGUI.InputUInt(label, ref current))
+                {
+                    return false;
+                }
+                value = InteropValue.From(current);
+                return true;
+            }
+            case InteropValueKind.UInt64:
+            {
+                property.Value.TryGet(out ulong current);
+                if (!EditorGUI.InputULong(label, ref current))
+                {
+                    return false;
+                }
+                value = InteropValue.From(current);
+                return true;
+            }
             case InteropValueKind.Float32:
             {
                 property.Value.TryGet(out float current);
