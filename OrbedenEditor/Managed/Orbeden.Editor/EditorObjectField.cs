@@ -96,19 +96,19 @@ internal static class EditorObjectField
     }
 
     //绘制属性事务中的引用字段
-    internal static bool Draw(string label, PropertyValue property, out InteropValue value)
+    internal static bool Draw(string label, PropertyValue property, out object? value)
     {
         value = property.Value;
         bool ensHandle = property.ReferenceType is "EnsId" or "Orbeden.EnsId";
         string key = string.Empty;
         int objectId = 0;
-        if (property.Kind == InteropValueKind.EnsId)
+        if (property.Kind == NativeValueKind.EnsId)
         {
             property.Value.TryGet(out EnsId id);
             Ens ens = Ens.FromId(id);
             key = ens.IsValid ? ens.ResourceKey : id.IsNull ? string.Empty : "Missing Ens " + id;
         }
-        else if (property.Kind == InteropValueKind.Object)
+        else if (property.Kind == NativeValueKind.Object)
         {
             property.Value.TryGet(out objectId);
             key = NativeBindingRuntime.GetObjectResourceKey(objectId);
@@ -118,9 +118,9 @@ internal static class EditorObjectField
         if (!Draw(label, ensHandle ? "Ens" : property.ReferenceType, ref key, ref objectId, ensHandle, property.AllowsSceneReferences)) return false;
         value = property.Kind switch
         {
-            InteropValueKind.Object => InteropValue.FromObjectId(objectId),
-            InteropValueKind.EnsId => InteropValue.From(key.Length == 0 ? EnsId.Null : Ens.Find(key).Id),
-            _ => InteropValue.FromStringId(key)
+            NativeValueKind.Object => NativeBindingRuntime.Wrap<Orbeden.Object>(objectId),
+            NativeValueKind.EnsId => key.Length == 0 ? EnsId.Null : Ens.Find(key).Id,
+            _ => new StringId(key)
         };
         return true;
     }

@@ -117,17 +117,17 @@ internal static class EditorLayerSettings
     }
 
     /// <summary>绘制单层或位掩码选择，保持历史非单个位值直到用户明确选择。</summary>
-    internal static bool Draw(string label, PropertyValue property, bool mask, out InteropValue value)
+    internal static bool Draw(string label, PropertyValue property, bool mask, out object? value)
     {
         uint selected;
-        if (property.Kind == InteropValueKind.Int32)
+        if (property.Kind == NativeValueKind.Int32)
         {
             property.Value.TryGet(out int current);
             selected = unchecked((uint)current);
         }
         else property.Value.TryGet(out selected);
         bool changed = Draw(label, ref selected, mask, property.HasMultipleDifferentValues);
-        value = property.Kind == InteropValueKind.Int32 ? InteropValue.From(unchecked((int)selected)) : InteropValue.From(selected);
+        value = property.Kind == NativeValueKind.Int32 ? unchecked((int)selected) : selected;
         return changed;
     }
 

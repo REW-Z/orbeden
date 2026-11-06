@@ -27,6 +27,7 @@ public static class ScriptRuntimeRegistry
     internal static void Register(Script script)
     {
         if (script.EnsId.IsNull) return;
+        ManagedScriptInterop.ClearTypedBindings();
 
         if (!scriptsByEns.TryGetValue(script.EnsId, out List<Script>? scripts))
         {
@@ -52,6 +53,7 @@ public static class ScriptRuntimeRegistry
     internal static void Unregister(Script script)
     {
         if (script.EnsId.IsNull) return;
+        ManagedScriptInterop.ClearTypedBindings();
         if (!scriptsByEns.TryGetValue(script.EnsId, out List<Script>? scripts)) return;
 
         scripts.Remove(script);
@@ -67,6 +69,7 @@ public static class ScriptRuntimeRegistry
     /// <summary>清空所有运行态脚本实例记录。</summary>
     public static void Clear()
     {
+        ManagedScriptInterop.ClearTypedBindings();
         scriptsByEns.Clear();
         slotsByScript.Clear();
         scriptsBySlot.Clear();

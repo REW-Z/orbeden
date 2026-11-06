@@ -66,8 +66,8 @@ internal sealed class ParticleSystemEditor : ComponentEditor
     private static bool TryReadTargetSettings(IPropertyTarget target, out ParticleSettings settings)
     {
         settings = default;
-        if (target.TryGet("settings", out InteropValue value) != InteropStatus.Ok) return false;
-        ParticleSettingsParseResult parsed = Orbeden.ParticleSystem.ParseSettings(value.Value as string ?? string.Empty);
+        if (target.TryGet("settings", out object? value) != InteropStatus.Ok) return false;
+        ParticleSettingsParseResult parsed = Orbeden.ParticleSystem.ParseSettings(value as string ?? string.Empty);
         if (!parsed.success) return false;
         settings = parsed.settings;
         return true;
@@ -101,7 +101,7 @@ internal sealed class ParticleSystemEditor : ComponentEditor
                 return;
             }
 
-            writes.Add(new PropertyTargetWrite(target, "settings", InteropValue.From(candidate)));
+            writes.Add(new PropertyTargetWrite(target, "settings", candidate));
         }
 
         if (!Properties.ApplyTargetChanges($"Edit {Target.TypeName} particles", writes)) lastError = "Writing the particle settings was rejected.";
@@ -156,9 +156,9 @@ internal sealed class ParticleSystemEditor : ComponentEditor
         PropertyValue? property = FindProperty("enabled");
         if (property != null)
         {
-            enabled = property.Value.Value is bool value && value;
+            enabled = property.Value is bool value && value;
             bool edited = enabled;
-            if (EditorGUI.Checkbox("Enabled", ref edited)) SetValue("enabled", InteropValue.From(edited));
+            if (EditorGUI.Checkbox("Enabled", ref edited)) SetValue("enabled", edited);
         }
 
         ParticlePreviewInfoAbi info = default;

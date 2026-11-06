@@ -28,7 +28,7 @@ finished.Unsubscribe(subscription);
 
 每条 OrbEventCall 保存目标 Ens 的稳定键、Native/Managed 语言域、完整组件类型名、同类型实例序号、方法名、启用状态与参数传递方式。实例序号从零开始。方法按事件参数种类精确匹配，也可以配置无参方法；不做隐式类型转换。跨语言调用复用 ComponentProxy，失效目标和方法失败只影响当前调用。Inspector 的函数选择器仅列出无返回值且参数匹配的方法。
 
-支持的参数包括 bool、int32、uint32、uint64、float32、string、StringId、vector2、vector3、color、quaternion、EnsId 和 Object。托管单参便利类型使用 `OrbEvent<T>`；多个参数使用带 InteropValueKind 签名的 OrbEvent 与 InteropValue 参数数组。集合不作为事件参数。
+支持的参数包括 bool、int32、uint32、uint64、float32、string、StringId、vector2、vector3、color、quaternion、EnsId 和 Object。托管单参便利类型使用 `OrbEvent<T>`；多个参数使用带 NativeValueKind 签名的 OrbEvent 与普通 object? 参数数组。集合不作为事件参数。
 
 调用开始时同时快照持久化调用与运行时订阅，随后先执行持久化调用，再执行运行时订阅。回调增删订阅或编辑调用配置从下一次派发生效，单个回调异常不阻断后续回调。直接递归派发的最大深度为 32。
 

@@ -30093,6 +30093,36 @@
           "Parameters": []
         },
         {
+          "Name": "Block",
+          "Type": "std::span\u003Cconst uint8\u003E",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "count",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "stride",
+              "Type": "std::size_t",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "Count",
           "Type": "int32",
           "Access": "public",
@@ -49026,6 +49056,25 @@
           "Parameters": []
         },
         {
+          "Name": "directValueSetter",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "GetListSize",
           "Type": "int32",
           "Access": "public",
@@ -49443,6 +49492,25 @@
           "Parameters": []
         },
         {
+          "Name": "valueInvoker",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Invoke",
           "Type": "Value",
           "Access": "public",
@@ -49695,7 +49763,7 @@
         },
         {
           "Name": "data",
-          "Type": "std::variant\u003Cstd::monostate,bool,int32,uint32,uint64,float32,std::string,StringId,vector2,vector3,color,quaternion,EnsId,Object*\u003E",
+          "Type": "std::variant\u003Cstd::monostate,bool,int32,uint32,uint64,float32,std::string,StringId,vector2,vector3,color,quaternion,EnsId,Object*,const void*\u003E",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -50095,6 +50163,31 @@
           ]
         },
         {
+          "Name": "TryGet",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const void*\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "FromString",
           "Type": "bool",
           "Access": "public",
@@ -50204,6 +50297,10 @@
         },
         {
           "Key": "Vector2",
+          "Value": ""
+        },
+        {
+          "Key": "Pointer",
           "Value": ""
         }
       ]
@@ -62849,69 +62946,43 @@
               "DefaultValue": ""
             }
           ]
+        },
+        {
+          "Name": "TryBindMethod",
+          "Type": "InteropStatus",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": true,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "std::string_view",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "method",
+              "Type": "ManagedMethod\u003CSignature\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
         }
       ],
       "EnumValues": []
     },
     {
-      "Name": "InteropStatus",
-      "QualifiedName": "ScriptInterop::InteropStatus",
-      "BaseName": "",
-      "Kind": "enum",
-      "EnumBase": "uint32",
-      "IsExported": false,
-      "Include": "Scripting/ScriptInterop.h",
-      "IsObject": false,
-      "IsAbstract": false,
-      "IsUnique": false,
-      "IsFinal": false,
-      "Members": [],
-      "EnumValues": [
-        {
-          "Key": "Ok",
-          "Value": ""
-        },
-        {
-          "Key": "NotFound",
-          "Value": ""
-        },
-        {
-          "Key": "StaleHandle",
-          "Value": ""
-        },
-        {
-          "Key": "InvalidArgument",
-          "Value": ""
-        },
-        {
-          "Key": "TypeMismatch",
-          "Value": ""
-        },
-        {
-          "Key": "AmbiguousMethod",
-          "Value": ""
-        },
-        {
-          "Key": "UnsupportedType",
-          "Value": ""
-        },
-        {
-          "Key": "WrongThread",
-          "Value": ""
-        },
-        {
-          "Key": "ReentrancyLimit",
-          "Value": ""
-        },
-        {
-          "Key": "InvocationFailed",
-          "Value": ""
-        }
-      ]
-    },
-    {
-      "Name": "InteropValueAbi",
-      "QualifiedName": "ScriptInterop::InteropValueAbi",
+      "Name": "DynamicValueAbi",
+      "QualifiedName": "ScriptInterop::DynamicValueAbi",
       "BaseName": "",
       "Kind": "struct",
       "EnumBase": "int32",
@@ -62977,6 +63048,319 @@
           "Buffer": "",
           "Count": "",
           "FixedArray": true,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "InteropStatus",
+      "QualifiedName": "ScriptInterop::InteropStatus",
+      "BaseName": "",
+      "Kind": "enum",
+      "EnumBase": "uint32",
+      "IsExported": false,
+      "Include": "Scripting/ScriptInterop.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": [
+        {
+          "Key": "Ok",
+          "Value": ""
+        },
+        {
+          "Key": "NotFound",
+          "Value": ""
+        },
+        {
+          "Key": "StaleHandle",
+          "Value": ""
+        },
+        {
+          "Key": "InvalidArgument",
+          "Value": ""
+        },
+        {
+          "Key": "TypeMismatch",
+          "Value": ""
+        },
+        {
+          "Key": "AmbiguousMethod",
+          "Value": ""
+        },
+        {
+          "Key": "UnsupportedType",
+          "Value": ""
+        },
+        {
+          "Key": "WrongThread",
+          "Value": ""
+        },
+        {
+          "Key": "ReentrancyLimit",
+          "Value": ""
+        },
+        {
+          "Key": "InvocationFailed",
+          "Value": ""
+        }
+      ]
+    },
+    {
+      "Name": "ManagedArgument",
+      "QualifiedName": "ScriptInterop::ManagedArgument",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Scripting/ScriptInteropInvoke.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "borrowed",
+          "Type": "const T*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "objectId",
+          "Type": "int32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "view",
+          "Type": "NativeUtf8",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "bytes",
+          "Type": "List\u003Cuint8\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "strings",
+          "Type": "List\u003Cstd::string\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Data",
+          "Type": "const void*",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "ManagedCallException",
+      "QualifiedName": "ScriptInterop::ManagedCallException",
+      "BaseName": "std::runtime_error",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Scripting/ScriptInteropInvoke.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "status",
+          "Type": "InteropStatus",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "ManagedCallFrame",
+      "QualifiedName": "ScriptInterop::ManagedCallFrame",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Scripting/ScriptInteropInvoke.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "complete",
+          "Type": "void*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "entry",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "context",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "invoked",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
           "Parameters": []
         }
       ],
@@ -63203,6 +63587,63 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "BindTypedMethod",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "InvokeTypedMethod",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "CompleteTypedMethod",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []
@@ -63350,6 +63791,18 @@
         },
         {
           "Key": "DirectField",
+          "Value": ""
+        },
+        {
+          "Key": "ValueMethod",
+          "Value": ""
+        },
+        {
+          "Key": "ValueField",
+          "Value": ""
+        },
+        {
+          "Key": "ManagedMethod",
           "Value": ""
         }
       ]

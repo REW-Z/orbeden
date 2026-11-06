@@ -209,6 +209,7 @@
     <ClInclude Include="Src\Rendering\RenderSystem.h" />
     <ClInclude Include="Src\Scripting\ScriptSystem.h" />
     <ClInclude Include="Src\Scripting\ScriptInterop.h" />
+    <ClInclude Include="Src\Scripting\ScriptInteropInvoke.h" />
     <ClInclude Include="Src\Runtime\Object\Script.h" />
     <ClInclude Include="Src\Scripting\NativeGameModule.h" />
     <ClInclude Include="Src\Rendering\RenderTypes.h" />

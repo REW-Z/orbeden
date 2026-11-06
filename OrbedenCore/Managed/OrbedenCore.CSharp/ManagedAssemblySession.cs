@@ -99,18 +99,20 @@ public static class ManagedAssemblySession
         }
 
         SessionLoadContext created = new(path);
+        Assembly? loaded = null;
+        Assembly? editor = null;
         try
         {
             created.Share(typeof(Script).Assembly);
             if (editorContract != null) created.Share(editorContract);
 
-            Assembly loaded = created.LoadFile(path);
+            loaded = created.LoadFile(path);
             //模块初始化必须早于任何组件创建，否则静态字段还没就绪。
             RuntimeHelpers.RunModuleConstructor(loaded.ManifestModule.ModuleHandle);
 
             string editorPath = Path.Combine(Path.GetDirectoryName(path)!,
                 Path.GetFileNameWithoutExtension(path) + ".Editor.dll");
-            Assembly? editor = File.Exists(editorPath) ? created.LoadFile(editorPath) : null;
+            editor = File.Exists(editorPath) ? created.LoadFile(editorPath) : null;
             if (editor != null) RuntimeHelpers.RunModuleConstructor(editor.ManifestModule.ModuleHandle);
 
             context = created;
@@ -125,6 +127,8 @@ public static class ManagedAssemblySession
         {
             //加载失败保留场景字段并显示错误；不尝试运行部分注册成功的程序集。
             Console.Error.WriteLine($"ManagedAssemblySession: load '{path}' failed. {exception}");
+            if (editor != null) NativeBindingRuntime.UnregisterAssembly(editor);
+            if (loaded != null) NativeBindingRuntime.UnregisterAssembly(loaded);
             try { created.Unload(); } catch { }
             return false;
         }
@@ -136,6 +140,10 @@ public static class ManagedAssemblySession
     /// </summary>
     public static void Unload()
     {
+        if (ManagedScriptInterop.HasTypedCalls)
+        {
+            throw new InvalidOperationException("Cannot unload a script assembly during a typed managed call.");
+        }
         foreach (Action handler in unloadHandlers.ToArray())
         {
             try { handler(); }

@@ -19,9 +19,9 @@ namespace
     using ValidateFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle);
     using ResolveFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, const uint8*, int32, MemberHandle*);
     using ResolveMethodFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, const uint8*, int32, const uint32*, int32, MemberHandle*);
-    using GetFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, InteropValueAbi*);
-    using SetFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, const InteropValueAbi*);
-    using InvokeFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, const InteropValueAbi*, int32, InteropValueAbi*);
+    using GetFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, DynamicValueAbi*);
+    using SetFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, const DynamicValueAbi*);
+    using InvokeFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, const DynamicValueAbi*, int32, DynamicValueAbi*);
     using HostFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(void*);
     using HostFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(void*, const uint8*, int32);
 
@@ -43,6 +43,21 @@ namespace
     uint32 memberRegistryGeneration = 0;
     Component* cachedComponent = nullptr;
     uint64 cachedComponentId = 0;
+
+    struct BoundManagedMethod
+    {
+        ComponentHandle component;
+        void* context;
+    };
+    List<BoundManagedMethod> managedMethods;
+    uint32 managedMethodGeneration = 1;
+
+    //使托管调用上下文在释放前失效
+    void ClearManagedMethods()
+    {
+        managedMethods.clear();
+        if (++managedMethodGeneration == 0) managedMethodGeneration = 1;
+    }
 
     class ComponentCache final : public IObjectDestroyListener
     {
@@ -88,14 +103,14 @@ namespace
     }
 
     template<typename T>
-    void WritePayload(InteropValueAbi& destination, const T& value)
+    void WritePayload(DynamicValueAbi& destination, const T& value)
     {
         static_assert(sizeof(T) <= sizeof(destination.payload));
         std::memcpy(destination.payload, &value, sizeof(T));
     }
 
     template<typename T>
-    T ReadPayload(const InteropValueAbi& source)
+    T ReadPayload(const DynamicValueAbi& source)
     {
         static_assert(sizeof(T) <= sizeof(source.payload));
         T value{};
@@ -112,13 +127,20 @@ namespace
 
     static_assert(sizeof(Utf8Payload) == 16);
 
-    bool EncodeValue(const Reflection::Value& value, InteropValueAbi& destination, std::string* stringStorage)
+    bool EncodeValue(const Reflection::Value& value, DynamicValueAbi& destination, std::string* stringStorage)
     {
         destination = {};
         destination.kind = static_cast<uint32>(value.GetKind());
         switch (value.GetKind())
         {
         case Reflection::ValueKind::Empty: return true;
+        case Reflection::ValueKind::Pointer:
+        {
+            const void* pointer = nullptr;
+            if (!value.TryGet(pointer)) return false;
+            WritePayload(destination, pointer);
+            return true;
+        }
         case Reflection::ValueKind::Bool:
         {
             bool current = false;
@@ -219,12 +241,13 @@ namespace
         }
     }
 
-    bool DecodeValue(const InteropValueAbi& source, Reflection::Value& value)
+    bool DecodeValue(const DynamicValueAbi& source, Reflection::Value& value)
     {
         const Reflection::ValueKind kind = static_cast<Reflection::ValueKind>(source.kind);
         switch (kind)
         {
         case Reflection::ValueKind::Empty: value = Reflection::Value(); return true;
+        case Reflection::ValueKind::Pointer: value = Reflection::Value(ReadPayload<const void*>(source)); return true;
         case Reflection::ValueKind::Bool: value = Reflection::Value(ReadPayload<uint8>(source) != 0); return true;
         case Reflection::ValueKind::Int32: value = Reflection::Value(ReadPayload<int32>(source)); return true;
         case Reflection::ValueKind::UInt32: value = Reflection::Value(ReadPayload<uint32>(source)); return true;
@@ -337,7 +360,11 @@ namespace
         kinds.reserve(rawKinds.size());
         for (uint32 rawKind : rawKinds)
         {
-            if (rawKind > static_cast<uint32>(Reflection::ValueKind::Object) && rawKind != static_cast<uint32>(Reflection::ValueKind::Vector2)) return InteropStatus::UnsupportedType;
+            const uint32 element = rawKind >> 16;
+            const bool array = (rawKind & 0xffff) == static_cast<uint32>(Reflection::ValueKind::Array)
+                && element > 0 && (element <= static_cast<uint32>(Reflection::ValueKind::Object)
+                    || element == static_cast<uint32>(Reflection::ValueKind::Vector2) || element == static_cast<uint32>(Reflection::ValueKind::Pointer));
+            if (!array && rawKind > static_cast<uint32>(Reflection::ValueKind::Object) && rawKind != static_cast<uint32>(Reflection::ValueKind::Vector2) && rawKind != static_cast<uint32>(Reflection::ValueKind::Pointer)) return InteropStatus::UnsupportedType;
             kinds.push_back(static_cast<Reflection::ValueKind>(rawKind));
         }
 
@@ -362,7 +389,7 @@ namespace
         return InteropStatus::Ok;
     }
 
-    InteropStatus GetNativeField(ComponentHandle component, MemberHandle member, InteropValueAbi* output)
+    InteropStatus GetNativeField(ComponentHandle component, MemberHandle member, DynamicValueAbi* output)
     {
         Component* instance = ResolveNativeComponent(component);
         if (!instance) return InteropStatus::StaleHandle;
@@ -378,7 +405,7 @@ namespace
         return EncodeValue(value, *output, &utf8Result) ? InteropStatus::Ok : InteropStatus::UnsupportedType;
     }
 
-    InteropStatus SetNativeField(ComponentHandle component, MemberHandle member, const InteropValueAbi* input)
+    InteropStatus SetNativeField(ComponentHandle component, MemberHandle member, const DynamicValueAbi* input)
     {
         Component* instance = ResolveNativeComponent(component);
         if (!instance) return InteropStatus::StaleHandle;
@@ -397,7 +424,7 @@ namespace
         return field->SetValue(instance, value) ? InteropStatus::Ok : InteropStatus::TypeMismatch;
     }
 
-    InteropStatus InvokeNative(ComponentHandle component, MemberHandle member, const InteropValueAbi* input, int32 count, InteropValueAbi* output)
+    InteropStatus InvokeNative(ComponentHandle component, MemberHandle member, const DynamicValueAbi* input, int32 count, DynamicValueAbi* output)
     {
         Component* instance = ResolveNativeComponent(component);
         if (!instance) return InteropStatus::StaleHandle;
@@ -411,7 +438,7 @@ namespace
         for (int32 index = 0; index < count; ++index)
         {
             if (input[index].kind > static_cast<uint32>(Reflection::ValueKind::Object)
-                && input[index].kind != static_cast<uint32>(Reflection::ValueKind::Vector2)) return InteropStatus::UnsupportedType;
+                && input[index].kind != static_cast<uint32>(Reflection::ValueKind::Vector2) && input[index].kind != static_cast<uint32>(Reflection::ValueKind::Pointer)) return InteropStatus::UnsupportedType;
             if (input[index].kind != static_cast<uint32>(method->parameters[index].kind)) return InteropStatus::TypeMismatch;
         }
         if (!method->abiInvoker) return InteropStatus::UnsupportedType;
@@ -481,7 +508,7 @@ namespace
         catch (...) { return InteropStatus::InvocationFailed; }
     }
 
-    InteropStatus ORBEDEN_NATIVE_CALL NativeGetField(ComponentHandle component, MemberHandle member, InteropValueAbi* output)
+    InteropStatus ORBEDEN_NATIVE_CALL NativeGetField(ComponentHandle component, MemberHandle member, DynamicValueAbi* output)
     {
         CallGuard guard;
         InteropStatus status = guard.Enter();
@@ -490,7 +517,7 @@ namespace
         catch (...) { return InteropStatus::InvocationFailed; }
     }
 
-    InteropStatus ORBEDEN_NATIVE_CALL NativeSetField(ComponentHandle component, MemberHandle member, const InteropValueAbi* input)
+    InteropStatus ORBEDEN_NATIVE_CALL NativeSetField(ComponentHandle component, MemberHandle member, const DynamicValueAbi* input)
     {
         CallGuard guard;
         InteropStatus status = guard.Enter();
@@ -499,7 +526,7 @@ namespace
         catch (...) { return InteropStatus::InvocationFailed; }
     }
 
-    InteropStatus ORBEDEN_NATIVE_CALL NativeInvoke(ComponentHandle component, MemberHandle member, const InteropValueAbi* input, int32 count, InteropValueAbi* output)
+    InteropStatus ORBEDEN_NATIVE_CALL NativeInvoke(ComponentHandle component, MemberHandle member, const DynamicValueAbi* input, int32 count, DynamicValueAbi* output)
     {
         CallGuard guard;
         InteropStatus status = guard.Enter();
@@ -525,9 +552,10 @@ namespace
             status = ValidateNativeMember(instance->GetType(), methodHandle, MemberKind::Method, address);
             if (status != InteropStatus::Ok) return status;
             const auto* method = static_cast<const Reflection::MethodInfo*>(address);
-            if (static_cast<uint32>(method->returnKind) != returnKind) return InteropStatus::TypeMismatch;
-            if (!method->directInvoker) return InteropStatus::UnsupportedType;
-            *output = AddNativeMember(instance->GetType(), MemberKind::DirectMethod, method);
+            const bool valueArguments = (returnKind & 0x80000000u) != 0;
+            if (static_cast<uint32>(method->returnKind) != (returnKind & 0x7fffffffu)) return InteropStatus::TypeMismatch;
+            if (!(valueArguments ? method->valueInvoker : method->directInvoker)) return InteropStatus::UnsupportedType;
+            *output = AddNativeMember(instance->GetType(), valueArguments ? MemberKind::ValueMethod : MemberKind::DirectMethod, method);
             return InteropStatus::Ok;
         }
         catch (...) { return InteropStatus::InvocationFailed; }
@@ -545,12 +573,14 @@ namespace
         Component* instance = ResolveNativeComponent(component);
         if (!instance) return InteropStatus::StaleHandle;
         const void* address = nullptr;
-        status = ValidateNativeMember(instance->GetType(), member, MemberKind::DirectMethod, address);
+        if (member.kind != MemberKind::DirectMethod && member.kind != MemberKind::ValueMethod) return InteropStatus::InvalidArgument;
+        status = ValidateNativeMember(instance->GetType(), member, member.kind, address);
         if (status != InteropStatus::Ok) return status;
         const auto* method = static_cast<const Reflection::MethodInfo*>(address);
-        if (!method->directInvoker) return InteropStatus::UnsupportedType;
+        void* entry = member.kind == MemberKind::ValueMethod ? method->valueInvoker : method->directInvoker;
+        if (!entry) return InteropStatus::UnsupportedType;
         *instanceOutput = static_cast<Object*>(instance);
-        *entryOutput = method->directInvoker;
+        *entryOutput = entry;
         guard.Transfer();
         return InteropStatus::Ok;
     }
@@ -577,9 +607,12 @@ namespace
             const Reflection::FieldInfo* field = Reflection::FindField(instance->GetType(), std::string(ReadUtf8(name, length)));
             if (!field) return InteropStatus::NotFound;
             if (field->directKind == Reflection::ValueKind::Empty || (!field->directGetter && !field->directSetter)) return InteropStatus::UnsupportedType;
-            if (static_cast<uint32>(field->directKind) != valueKind) return InteropStatus::TypeMismatch;
-            *output = AddNativeMember(instance->GetType(), MemberKind::DirectField, field);
-            *access = (field->directGetter ? 1u : 0u) | (field->directSetter ? 2u : 0u);
+            const bool valueArgument = (valueKind & 0x80000000u) != 0;
+            if (static_cast<uint32>(field->directKind) != (valueKind & 0x7fffffffu)) return InteropStatus::TypeMismatch;
+            void* setter = valueArgument ? field->directValueSetter : field->directSetter;
+            if (valueArgument && field->directSetter && !setter) return InteropStatus::UnsupportedType;
+            *output = AddNativeMember(instance->GetType(), valueArgument ? MemberKind::ValueField : MemberKind::DirectField, field);
+            *access = (field->directGetter ? 1u : 0u) | (setter ? 2u : 0u);
             return InteropStatus::Ok;
         }
         catch (...) { return InteropStatus::InvocationFailed; }
@@ -597,10 +630,12 @@ namespace
         Component* instance = ResolveNativeComponent(component);
         if (!instance) return InteropStatus::StaleHandle;
         const void* address = nullptr;
-        status = ValidateNativeMember(instance->GetType(), member, MemberKind::DirectField, address);
+        if (member.kind != MemberKind::DirectField && member.kind != MemberKind::ValueField) return InteropStatus::InvalidArgument;
+        status = ValidateNativeMember(instance->GetType(), member, member.kind, address);
         if (status != InteropStatus::Ok) return status;
         const auto* field = static_cast<const Reflection::FieldInfo*>(address);
-        void* entry = access == 1 ? field->directGetter : access == 2 ? field->directSetter : nullptr;
+        void* setter = member.kind == MemberKind::ValueField ? field->directValueSetter : field->directSetter;
+        void* entry = access == 1 ? field->directGetter : access == 2 ? setter : nullptr;
         if (access && !entry) return InteropStatus::UnsupportedType;
         *instanceOutput = static_cast<Object*>(instance);
         *entryOutput = entry;
@@ -641,21 +676,21 @@ namespace
         return InteropStatus::StaleHandle;
     }
 
-    InteropStatus DispatchGet(ComponentHandle handle, MemberHandle member, InteropValueAbi* output)
+    InteropStatus DispatchGet(ComponentHandle handle, MemberHandle member, DynamicValueAbi* output)
     {
         if (handle.domain == ComponentDomain::Native) return NativeGetField(handle, member, output);
         if (handle.domain == ComponentDomain::Managed) return CallManaged<GetFieldFunction>(managedApi.GetField, handle, member, output);
         return InteropStatus::StaleHandle;
     }
 
-    InteropStatus DispatchSet(ComponentHandle handle, MemberHandle member, const InteropValueAbi* input)
+    InteropStatus DispatchSet(ComponentHandle handle, MemberHandle member, const DynamicValueAbi* input)
     {
         if (handle.domain == ComponentDomain::Native) return NativeSetField(handle, member, input);
         if (handle.domain == ComponentDomain::Managed) return CallManaged<SetFieldFunction>(managedApi.SetField, handle, member, input);
         return InteropStatus::StaleHandle;
     }
 
-    InteropStatus DispatchInvoke(ComponentHandle handle, MemberHandle member, const InteropValueAbi* input, int32 count, InteropValueAbi* output)
+    InteropStatus DispatchInvoke(ComponentHandle handle, MemberHandle member, const DynamicValueAbi* input, int32 count, DynamicValueAbi* output)
     {
         if (handle.domain == ComponentDomain::Native) return NativeInvoke(handle, member, input, count, output);
         if (handle.domain == ComponentDomain::Managed) return CallManaged<InvokeFunction>(managedApi.Invoke, handle, member, input, count, output);
@@ -747,7 +782,7 @@ namespace ScriptInterop
         InteropStatus status = ResolveCachedField(name, member);
         if (status != InteropStatus::Ok) return status;
 
-        InteropValueAbi abi;
+        DynamicValueAbi abi;
         status = DispatchGet(handle, member, &abi);
         if (status != InteropStatus::Ok) return status;
         return DecodeValue(abi, value) ? InteropStatus::Ok : InteropStatus::UnsupportedType;
@@ -760,7 +795,7 @@ namespace ScriptInterop
         if (status != InteropStatus::Ok) return status;
 
         std::string stringStorage;
-        InteropValueAbi abi;
+        DynamicValueAbi abi;
         if (!EncodeValue(value, abi, &stringStorage)) return InteropStatus::UnsupportedType;
         return DispatchSet(handle, member, &abi);
     }
@@ -780,13 +815,13 @@ namespace ScriptInterop
     InteropStatus ComponentProxy::Invoke(const MemberHandle& method, std::span<const Reflection::Value> args, Reflection::Value& result) const
     {
         std::vector<std::string> strings(args.size());
-        List<InteropValueAbi> values(args.size());
+        List<DynamicValueAbi> values(args.size());
         for (std::size_t index = 0; index < args.size(); ++index)
         {
             if (!EncodeValue(args[index], values[index], &strings[index])) return InteropStatus::UnsupportedType;
         }
 
-        InteropValueAbi output;
+        DynamicValueAbi output;
         InteropStatus status = DispatchInvoke(handle, method, values.empty() ? nullptr : values.data(), static_cast<int32>(values.size()), &output);
         if (status != InteropStatus::Ok) return status;
         return DecodeValue(output, result) ? InteropStatus::Ok : InteropStatus::UnsupportedType;
@@ -835,6 +870,61 @@ namespace ScriptInterop
         return &api;
     }
 
+    InteropStatus BindManagedMethod(ComponentHandle component, std::string_view name, uint32 result, std::span<const uint32> arguments, MemberHandle& member)
+    {
+        member = {};
+        CallGuard guard;
+        InteropStatus status = guard.Enter();
+        if (status != InteropStatus::Ok) return status;
+        if (component.domain != ComponentDomain::Managed) return InteropStatus::UnsupportedType;
+        if (!managedApi.BindTypedMethod || !managedApi.InvokeTypedMethod || !managedApi.CompleteTypedMethod) return InteropStatus::StaleHandle;
+        if (name.empty() || arguments.size() > 16) return InteropStatus::InvalidArgument;
+        try
+        {
+            using Bind = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, const uint8*, int32, uint32, const uint32*, int32, void**);
+            void* context = nullptr;
+            status = reinterpret_cast<Bind>(managedApi.BindTypedMethod)(component, reinterpret_cast<const uint8*>(name.data()), static_cast<int32>(name.size()), result, arguments.data(), static_cast<int32>(arguments.size()), &context);
+            if (status != InteropStatus::Ok) return status;
+            for (std::size_t index = 0; index < managedMethods.size(); ++index)
+            {
+                if (managedMethods[index].context == context)
+                {
+                    member = { ComponentDomain::Managed, MemberKind::ManagedMethod, index + 1, managedMethodGeneration, 0 };
+                    return InteropStatus::Ok;
+                }
+            }
+            managedMethods.push_back({ component, context });
+            member = { ComponentDomain::Managed, MemberKind::ManagedMethod, managedMethods.size(), managedMethodGeneration, 0 };
+            return InteropStatus::Ok;
+        }
+        catch (...) { return InteropStatus::InvocationFailed; }
+    }
+
+    InteropStatus PrepareManagedCall(ComponentHandle component, MemberHandle member, void*& entry, void*& context, void*& complete)
+    {
+        CallGuard guard;
+        InteropStatus status = guard.Enter();
+        if (status != InteropStatus::Ok) return status;
+        if (member.generation != managedMethodGeneration || !currentWorld) return InteropStatus::StaleHandle;
+        if (member.domain != ComponentDomain::Managed || member.kind != MemberKind::ManagedMethod || !member.slot || member.slot > managedMethods.size()) return InteropStatus::InvalidArgument;
+        const BoundManagedMethod& bound = managedMethods[static_cast<std::size_t>(member.slot - 1)];
+        if (component.domain != bound.component.domain || component.generation != bound.component.generation || component.slot != bound.component.slot) return InteropStatus::InvalidArgument;
+        Object* object = Object::FindObjectById(static_cast<int32>(component.slot));
+        Script* host = object ? object->Cast<Script>() : nullptr;
+        if (!host || host->GetWorld() != currentWorld || !host->IsManagedHost() || !host->GetManagedWrapper()) return InteropStatus::StaleHandle;
+        entry = managedApi.InvokeTypedMethod;
+        context = bound.context;
+        complete = managedApi.CompleteTypedMethod;
+        guard.Transfer();
+        return InteropStatus::Ok;
+    }
+
+    void CompleteManagedCall(void* complete, bool invoked)
+    {
+        if (invoked) reinterpret_cast<void(ORBEDEN_NATIVE_CALL*)()>(complete)();
+        --reentrancyDepth;
+    }
+
     bool HasActiveCalls() { return reentrancyDepth != 0; }
 
     NativeUtf8 StoreDirectString(std::string_view text)
@@ -849,6 +939,7 @@ namespace ScriptInterop
         cachedComponent = nullptr;
         cachedComponentId = 0;
         ClearNativeMembers();
+        ClearManagedMethods();
         Object::AddDestroyListener(&componentCache);
         currentWorld = world;
         mainThread = std::this_thread::get_id();
@@ -863,6 +954,7 @@ namespace ScriptInterop
         cachedComponent = nullptr;
         cachedComponentId = 0;
         ClearNativeMembers();
+        ClearManagedMethods();
         managedApi = {};
         currentWorld = nullptr;
         ++nativeGeneration;
@@ -871,9 +963,8 @@ namespace ScriptInterop
 
     InteropStatus RegisterManagedApi(const ManagedScriptInteropApi* api)
     {
-        CallGuard guard;
-        InteropStatus status = guard.Enter();
-        if (status != InteropStatus::Ok) return status;
+        if (std::this_thread::get_id() != mainThread) return InteropStatus::WrongThread;
+        ClearManagedMethods();
         managedApi = api ? *api : ManagedScriptInteropApi();
         return InteropStatus::Ok;
     }

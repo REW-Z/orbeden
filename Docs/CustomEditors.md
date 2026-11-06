@@ -82,7 +82,7 @@ public sealed class DetectionZoneEditor : ComponentEditor
     {
         DrawDefaultInspector();
         if (EditorGUI.Button("Reset Radius"))
-            SetValue("radius", InteropValue.From(3.0f));
+            SetValue("radius", 3.0f);
     }
 
     /// <summary>在选中对象的场景视图提供快捷操作。</summary>
@@ -90,7 +90,7 @@ public sealed class DetectionZoneEditor : ComponentEditor
     {
         EditorGUI.Label("Detection Zone");
         if (EditorGUI.Button("Set Radius to 5"))
-            SetValue("radius", InteropValue.From(5.0f));
+            SetValue("radius", 5.0f);
     }
 
     /// <summary>绘制世界空间范围，不改变组件数据。</summary>

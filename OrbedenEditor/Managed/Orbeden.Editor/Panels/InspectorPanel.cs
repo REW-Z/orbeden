@@ -391,8 +391,8 @@ internal sealed class InspectorPanel : EditorPanel
     {
         List<DelegatedProperty> properties =
         [
-            new DelegatedProperty("shader", InteropValueKind.StringId,
-                () => InteropValue.FromStringId(material.shader?.GetInstanceId() ?? string.Empty),
+            new DelegatedProperty("shader", NativeValueKind.StringId,
+                () => new StringId(material.shader?.GetInstanceId() ?? string.Empty),
                 updated =>
                 {
                     if (!updated.TryGet(out string value)) return InteropStatus.TypeMismatch;
@@ -400,16 +400,16 @@ internal sealed class InspectorPanel : EditorPanel
                     return InteropStatus.Ok;
                 },
                 "Orbeden.Shader"),
-            new DelegatedProperty("overrideDrawQueue", InteropValueKind.Bool,
-                () => InteropValue.From(material.overrideDrawQueue),
+            new DelegatedProperty("overrideDrawQueue", NativeValueKind.Bool,
+                () => material.overrideDrawQueue,
                 updated =>
                 {
                     if (!updated.TryGet(out bool value)) return InteropStatus.TypeMismatch;
                     material.overrideDrawQueue = value;
                     return InteropStatus.Ok;
                 }),
-            new DelegatedProperty("drawQueue", InteropValueKind.UInt32,
-                () => InteropValue.From((uint)material.drawQueue),
+            new DelegatedProperty("drawQueue", NativeValueKind.UInt32,
+                () => (uint)material.drawQueue,
                 updated =>
                 {
                     if (!updated.TryGet(out uint value)) return InteropStatus.TypeMismatch;
@@ -425,8 +425,8 @@ internal sealed class InspectorPanel : EditorPanel
             //标识用 uniform 名（唯一），显示名另走 Label——displayName 会剥掉 Color/Texture 后缀，颜色槽与贴图槽本来就同名
             foreach (ShaderColorSlot slot in shader.colorSlots)
             {
-                properties.Add(new DelegatedProperty(slot.name, InteropValueKind.Color,
-                    () => InteropValue.From(material.GetColor(slot.name, slot.defaultValue)),
+                properties.Add(new DelegatedProperty(slot.name, NativeValueKind.Color,
+                    () => material.GetColor(slot.name, slot.defaultValue),
                     updated =>
                     {
                         if (!updated.TryGet(out color value)) return InteropStatus.TypeMismatch;
@@ -437,8 +437,8 @@ internal sealed class InspectorPanel : EditorPanel
             }
             foreach (ShaderFloatSlot slot in shader.floatSlots)
             {
-                properties.Add(new DelegatedProperty(slot.name, InteropValueKind.Float32,
-                    () => InteropValue.From(material.GetFloat(slot.name, slot.defaultValue)),
+                properties.Add(new DelegatedProperty(slot.name, NativeValueKind.Float32,
+                    () => material.GetFloat(slot.name, slot.defaultValue),
                     updated =>
                     {
                         if (!updated.TryGet(out float value)) return InteropStatus.TypeMismatch;
@@ -449,8 +449,8 @@ internal sealed class InspectorPanel : EditorPanel
             }
             foreach (ShaderTextureSlot slot in shader.textureSlots)
             {
-                properties.Add(new DelegatedProperty(slot.name, InteropValueKind.StringId,
-                    () => InteropValue.FromStringId(material.GetTexture(slot.name)?.GetInstanceId() ?? string.Empty),
+                properties.Add(new DelegatedProperty(slot.name, NativeValueKind.StringId,
+                    () => new StringId(material.GetTexture(slot.name)?.GetInstanceId() ?? string.Empty),
                     updated =>
                     {
                         if (!updated.TryGet(out string value)) return InteropStatus.TypeMismatch;
@@ -476,8 +476,8 @@ internal sealed class InspectorPanel : EditorPanel
                 .Select(value => (IPropertyTarget)new DelegatedPropertyTarget(
                     $"ens:{value.Id.id}:{value.Id.version}",
                     [
-                        new DelegatedProperty("Name", InteropValueKind.String,
-                            () => InteropValue.From(value.Name),
+                        new DelegatedProperty("Name", NativeValueKind.String,
+                            () => value.Name,
                             updated =>
                             {
                                 if (!EditorPrefabSession.CanModify(value, EditorPrefabEditOperation.Header)) return InteropStatus.InvocationFailed;
@@ -486,8 +486,8 @@ internal sealed class InspectorPanel : EditorPanel
                                 return InteropStatus.Ok;
                             }),
                         //勾选框读写自身标记，EnsView 的灰显看的是层级生效后的 worldActive
-                        new DelegatedProperty(LocalActiveProperty, InteropValueKind.Bool,
-                            () => InteropValue.From(value.LocalActive),
+                        new DelegatedProperty(LocalActiveProperty, NativeValueKind.Bool,
+                            () => value.LocalActive,
                             updated =>
                             {
                                 if (!EditorPrefabSession.CanModify(value, EditorPrefabEditOperation.Header)) return InteropStatus.InvocationFailed;
@@ -496,8 +496,8 @@ internal sealed class InspectorPanel : EditorPanel
                                 return InteropStatus.Ok;
                             }),
                         //static 由原生侧校验层级，失败时保持原值并让属性文档回滚
-                        new DelegatedProperty(StaticProperty, InteropValueKind.Bool,
-                            () => InteropValue.From(value.Static),
+                        new DelegatedProperty(StaticProperty, NativeValueKind.Bool,
+                            () => value.Static,
                             updated =>
                             {
                                 if (!EditorPrefabSession.CanModify(value, EditorPrefabEditOperation.Header)) return InteropStatus.InvocationFailed;
@@ -515,7 +515,7 @@ internal sealed class InspectorPanel : EditorPanel
         headerDocument.Update();
         PropertyValue? localActiveProperty = headerDocument.FindProperty(LocalActiveProperty);
         //LocalActive 读不出来时不画勾选框，免得给不存在的状态留个能点的空壳
-        bool hasLocalActive = localActiveProperty is { IsReadable: true, Kind: InteropValueKind.Bool };
+        bool hasLocalActive = localActiveProperty is { IsReadable: true, Kind: NativeValueKind.Bool };
         bool localActive = true;
         if (hasLocalActive) localActiveProperty!.Value.TryGet(out localActive);
 
@@ -544,7 +544,7 @@ internal sealed class InspectorPanel : EditorPanel
 
                     //Play 与暂停期间 static 只读，原生 setter 仍是最终保护
                     bool staticValue = false;
-                    bool hasStatic = headerDocument.FindProperty(StaticProperty) is { IsReadable: true, Kind: InteropValueKind.Bool } property
+                    bool hasStatic = headerDocument.FindProperty(StaticProperty) is { IsReadable: true, Kind: NativeValueKind.Bool } property
                         && property.Value.TryGet(out staticValue);
                     if (hasStatic)
                     {
@@ -760,7 +760,7 @@ internal sealed class InspectorPanel : EditorPanel
         document.Document.Update();
         PropertyValue? enabledProperty = document.Document.FindProperty(EnabledProperty);
         //没有 enabled 字段的组件（Transform）连勾选框都不画，免得给不存在的状态留个能点的空壳
-        bool hasEnabled = enabledProperty is { IsReadable: true, Kind: InteropValueKind.Bool };
+        bool hasEnabled = enabledProperty is { IsReadable: true, Kind: NativeValueKind.Bool };
         bool enabled = true;
         if (hasEnabled) enabledProperty!.Value.TryGet(out enabled);
 
@@ -831,7 +831,7 @@ internal sealed class InspectorPanel : EditorPanel
         PropertyValue? property = document.FindProperty(propertyName);
         if (property == null) return;
 
-        property.SetValue(InteropValue.From(value));
+        property.SetValue(value);
         if (!document.ApplyChanges($"Edit {title}")) propertyError = $"Failed to apply {title}; changes were rolled back.";
         EditorApplication.RequestRepaint();
     }
@@ -913,7 +913,7 @@ internal sealed class InspectorPanel : EditorPanel
             .ToList());
         document.Update();
         int matched = 0;
-        foreach ((string name, InteropValueKind kind, InteropValue value) in entry.Values)
+        foreach ((string name, NativeValueKind kind, object? value) in entry.Values)
         {
             PropertyValue? property = document.FindProperty(name);
             if (property == null || property.Kind != kind || !property.IsReadable) continue;
@@ -952,7 +952,7 @@ internal sealed class InspectorPanel : EditorPanel
             //元素由所属列表统一绘制，折叠时不在外部重复出现。
             int bracket = property.Name.LastIndexOf('[');
             if (bracket > 0 && property.Name.EndsWith(']')
-                && document.FindProperty(property.Name[..bracket])?.Kind == InteropValueKind.Array) continue;
+                && document.FindProperty(property.Name[..bracket])?.Kind == NativeValueKind.Array) continue;
             //跳过已单独绘制的字段
             if (skipProperty.Length != 0 && string.Equals(property.Name, skipProperty, StringComparison.Ordinal)) continue;
             if (additionalSkipProperty.Length != 0 && string.Equals(property.Name, additionalSkipProperty, StringComparison.Ordinal)) continue;
@@ -990,9 +990,9 @@ internal sealed class InspectorPanel : EditorPanel
                 };
             }
             string label = property.HasMultipleDifferentValues ? $"{title} (Mixed)" : title;
-            InteropValue value;
+            object? value;
             //容器字段统一绘制折叠头、元素和结构编辑按钮。
-            if (property.Kind == InteropValueKind.Array)
+            if (property.Kind == NativeValueKind.Array)
             {
                 DrawListSlots(document, property, label);
                 continue;
@@ -1004,7 +1004,7 @@ internal sealed class InspectorPanel : EditorPanel
                     continue;
                 }
             }
-            else if (property.Kind == InteropValueKind.Quaternion
+            else if (property.Kind == NativeValueKind.Quaternion
                 && (nativeType == "Transform" && property.Name == "localRotation"
                     || nativeType == "RigidBody" && property.Name == "inertiaTensorRotation"))
             {
@@ -1024,8 +1024,8 @@ internal sealed class InspectorPanel : EditorPanel
         PropertyValue? property = document.FindProperty(name);
         if (property == null || !property.IsReadable) return;
         string label = property.HasMultipleDifferentValues ? name + " (Mixed)" : name;
-        if (property.Kind == InteropValueKind.Array) { DrawListSlots(document, property, label); return; }
-        bool changed = property.ReferenceType.Length != 0 ? EditorObjectField.Draw(label, property, out InteropValue value)
+        if (property.Kind == NativeValueKind.Array) { DrawListSlots(document, property, label); return; }
+        bool changed = property.ReferenceType.Length != 0 ? EditorObjectField.Draw(label, property, out object? value)
             : TryDrawProperty(label, property, out value, componentType);
         if (changed) property.SetValue(value);
     }
@@ -1070,7 +1070,7 @@ internal sealed class InspectorPanel : EditorPanel
                     EditorGUI.TableSetColumnIndex(1);
                     string elementLabel = element.HasMultipleDifferentValues ? $"Mixed##value_{index}" : $"##value_{index}";
                     bool changed = element.ReferenceType.Length != 0
-                        ? EditorObjectField.Draw(elementLabel, element, out InteropValue updated)
+                        ? EditorObjectField.Draw(elementLabel, element, out object? updated)
                         : TryDrawProperty(elementLabel, element, out updated);
                     if (changed) { element.SetValue(updated); state.Selected = index; }
                 }
@@ -1080,7 +1080,7 @@ internal sealed class InspectorPanel : EditorPanel
         {
             action = NativeEditorGUI.EndList();
         }
-        if (action == 1 && EditListSlots(document, property.Name, values => values.Add(InteropValue.Empty))) state.Selected = count;
+        if (action == 1 && EditListSlots(document, property.Name, values => values.Add(DBNull.Value))) state.Selected = count;
         else if (action == 2)
         {
             int remove = state.Selected < 0 ? count - 1 : state.Selected;
@@ -1088,19 +1088,19 @@ internal sealed class InspectorPanel : EditorPanel
         }
         else if (moveFrom >= 0 && EditListSlots(document, property.Name, values =>
         {
-            InteropValue moved = values[moveFrom];
+            object? moved = values[moveFrom];
             values.RemoveAt(moveFrom);
             values.Insert(moveTo, moved);
         })) state.Selected = moveTo;
     }
 
     /// <summary>读取元素原始类型和值，撤销时保留空引用和普通数值。</summary>
-    private static InteropValue[] ReadListSlots(IPropertyTarget target, string name)
+    private static object?[] ReadListSlots(IPropertyTarget target, string name)
     {
         target.Refresh();
         if (target.TryGet(name, out var value) != InteropStatus.Ok || !value.TryGet(out int count))
             throw new InvalidOperationException("Cannot read list size.");
-        InteropValue[] result = new InteropValue[count];
+        object?[] result = new object?[count];
         for (int index = 0; index < count; ++index)
             if (target.TryGet($"{name}[{index}]", out result[index]) != InteropStatus.Ok)
                 throw new InvalidOperationException($"Cannot read element {index}.");
@@ -1108,22 +1108,22 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     /// <summary>先恢复长度并刷新字段结构，再恢复元素；空标记保留新槽默认值。</summary>
-    private static void WriteListSlots(IPropertyTarget target, string name, InteropValue[] values)
+    private static void WriteListSlots(IPropertyTarget target, string name, object?[] values)
     {
         target.Refresh();
-        if (target.Set(name, InteropValue.FromArray(values.Length)) != InteropStatus.Ok)
+        if (target.Set(name, values.Length) != InteropStatus.Ok)
             throw new InvalidOperationException("Cannot write list size.");
         target.Refresh();
         for (int index = 0; index < values.Length; ++index)
-            if (values[index].Kind != InteropValueKind.Empty && target.Set($"{name}[{index}]", values[index]) != InteropStatus.Ok)
+            if (!ReferenceEquals(values[index], DBNull.Value) && target.Set($"{name}[{index}]", values[index]) != InteropStatus.Ok)
                 throw new InvalidOperationException($"Cannot write element {index}.");
         target.Refresh();
     }
 
     /// <summary>批量应用快照，失败时恢复所有已经写入的目标。</summary>
-    private static void ApplyListSlots(IReadOnlyList<IPropertyTarget> targets, string name, IReadOnlyList<InteropValue[]> values)
+    private static void ApplyListSlots(IReadOnlyList<IPropertyTarget> targets, string name, IReadOnlyList<object?[]> values)
     {
-        InteropValue[][] before = targets.Select(target => ReadListSlots(target, name)).ToArray();
+        object?[][] before = targets.Select(target => ReadListSlots(target, name)).ToArray();
         for (int index = 0; index < targets.Count; ++index)
         {
             try { WriteListSlots(targets[index], name, values[index]); }
@@ -1142,17 +1142,17 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     /// <summary>提交一次可回滚、可撤销的增删或排序操作。</summary>
-    private static bool EditListSlots(PropertyDocument document, string fieldName, Action<List<InteropValue>> edit)
+    private static bool EditListSlots(PropertyDocument document, string fieldName, Action<List<object?>> edit)
     {
         if (document.HasPendingChanges && !document.ApplyChanges($"Edit {fieldName}"))
         { propertyError = $"Failed to apply {fieldName}."; return false; }
         try
         {
             var targets = document.Targets;
-            InteropValue[][] before = targets.Select(target => ReadListSlots(target, fieldName)).ToArray();
-            InteropValue[][] after = before.Select(values =>
+            object?[][] before = targets.Select(target => ReadListSlots(target, fieldName)).ToArray();
+            object?[][] after = before.Select(values =>
             {
-                List<InteropValue> updated = values.ToList();
+                List<object?> updated = values.ToList();
                 edit(updated);
                 return updated.ToArray();
             }).ToArray();
@@ -1177,7 +1177,7 @@ internal sealed class InspectorPanel : EditorPanel
     /// <summary>以角度显示旋转，保留用户输入的欧拉角分支。
     /// 次序是内禀 YXZ（等价于外禀 ZXY，即 R = Ry·Rx·Rz）；
     /// 完整说明见 Docs/ProjectConventions.md 的「旋转次序」。</summary>
-    private static bool TryDrawEulerRotation(string label, PropertyValue property, out InteropValue value)
+    private static bool TryDrawEulerRotation(string label, PropertyValue property, out object? value)
     {
         value = property.Value;
         if (!value.TryGet(out quaternion current)) return false;
@@ -1223,80 +1223,80 @@ internal sealed class InspectorPanel : EditorPanel
             (degrees.y % 360.0f) / degreesPerRadian, (degrees.x % 360.0f) / degreesPerRadian, (degrees.z % 360.0f) / degreesPerRadian));
         state.Degrees = degrees;
         state.Rotation = rotation;
-        value = InteropValue.From(new quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W));
+        value = new quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W);
         return true;
     }
 
     //绘制单个属性并返回用户提交的新值。
-    private static bool TryDrawProperty(string label, PropertyValue property, out InteropValue value, string componentType = "")
+    private static bool TryDrawProperty(string label, PropertyValue property, out object? value, string componentType = "")
     {
         if (property.TypeName == "OrbEvent") return OrbEventEditor.Draw(label, property, out value);
-        if (property.Kind is InteropValueKind.Int32 or InteropValueKind.UInt32
+        if (property.Kind is NativeValueKind.Int32 or NativeValueKind.UInt32
             && EditorLayerSettings.TryGetField(componentType, property.Name, out bool mask))
             return EditorLayerSettings.Draw(label, property, mask, out value);
         value = property.Value;
         //枚举字段只画下拉框：选项在属性快照重建时解析好，画过就不再走数值控件。
-        if (property.Kind is InteropValueKind.Int32 or InteropValueKind.UInt32
+        if (property.Kind is NativeValueKind.Int32 or NativeValueKind.UInt32
             && property.EnumOptions is { Length: > 0 } options)
             return TryDrawEnumSelection(label, property, options, out value);
         switch (property.Kind)
         {
-            case InteropValueKind.Bool:
+            case NativeValueKind.Bool:
             {
                 property.Value.TryGet(out bool current);
                 if (!EditorGUI.Checkbox(label, ref current)) return false;
-                value = InteropValue.From(current);
+                value = current;
                 return true;
             }
-            case InteropValueKind.Int32:
+            case NativeValueKind.Int32:
             {
                 property.Value.TryGet(out int current);
                 if (!EditorGUI.InputInt(label, ref current)) return false;
-                value = InteropValue.From(current);
+                value = current;
                 return true;
             }
-            case InteropValueKind.UInt32:
+            case NativeValueKind.UInt32:
             {
                 property.Value.TryGet(out uint current);
                 if (!EditorGUI.InputUInt(label, ref current))
                 {
                     return false;
                 }
-                value = InteropValue.From(current);
+                value = current;
                 return true;
             }
-            case InteropValueKind.UInt64:
+            case NativeValueKind.UInt64:
             {
                 property.Value.TryGet(out ulong current);
                 if (!EditorGUI.InputULong(label, ref current))
                 {
                     return false;
                 }
-                value = InteropValue.From(current);
+                value = current;
                 return true;
             }
-            case InteropValueKind.Float32:
+            case NativeValueKind.Float32:
             {
                 property.Value.TryGet(out float current);
                 if (!EditorGUI.InputFloat(label, ref current)) return false;
-                value = InteropValue.From(current);
+                value = current;
                 return true;
             }
-            case InteropValueKind.Vector2:
+            case NativeValueKind.Vector2:
             {
                 property.Value.TryGet(out vector2 current);
                 if (!EditorGUI.InputVector2(label, ref current)) return false;
-                value = InteropValue.From(current);
+                value = current;
                 return true;
             }
-            case InteropValueKind.Vector3:
+            case NativeValueKind.Vector3:
             {
                 property.Value.TryGet(out vector3 current);
                 if (!EditorGUI.InputVector3(label, ref current)) return false;
-                value = InteropValue.From(current);
+                value = current;
                 return true;
             }
-            case InteropValueKind.Quaternion:
+            case NativeValueKind.Quaternion:
             {
                 property.Value.TryGet(out quaternion rotation);
                 vector3 xyz = new(rotation.x, rotation.y, rotation.z);
@@ -1306,33 +1306,33 @@ internal sealed class InspectorPanel : EditorPanel
                 if (!changed) return false;
                 float length = MathF.Sqrt(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z + w * w);
                 if (length < 0.000001f) return false;
-                value = InteropValue.From(new quaternion(xyz.x / length, xyz.y / length, xyz.z / length, w / length));
+                value = new quaternion(xyz.x / length, xyz.y / length, xyz.z / length, w / length);
                 return true;
             }
-            case InteropValueKind.Color:
+            case NativeValueKind.Color:
             {
                 //颜色走共享的颜色字段原语：RGB 与 Alpha 都在拾色器里，粒子那边用的也是这一个
                 property.Value.TryGet(out color color);
                 if (!GUI.ColorField(label, ref color)) return false;
-                value = InteropValue.From(color);
+                value = color;
                 return true;
             }
-            case InteropValueKind.String:
-            case InteropValueKind.StringId:
+            case NativeValueKind.String:
+            case NativeValueKind.StringId:
             {
                 property.Value.TryGet(out string current);
                 current ??= string.Empty;
                 if (!EditorGUI.InputText(label, ref current)) return false;
-                value = property.Kind == InteropValueKind.String
-                    ? InteropValue.From(current)
-                    : InteropValue.FromStringId(current);
+                value = property.Kind == NativeValueKind.String
+                    ? current
+                    : new StringId(current);
                 return true;
             }
             default:
             {
-                string current = EditorInteropValueText.Format(property.Value);
+                string current = EditorValueText.Format(property.Value);
                 if (!EditorGUI.InputText(label, ref current)) return false;
-                return EditorInteropValueText.TryParse(property.Kind, current, out value);
+                return EditorValueText.TryParse(property.Kind, current, out value);
             }
         }
     }
@@ -1340,12 +1340,12 @@ internal sealed class InspectorPanel : EditorPanel
 
     //按快照上解析好的枚举项画下拉框；返回是否有新值。
     private static bool TryDrawEnumSelection(string label, PropertyValue property,
-        (long Value, string Label)[] options, out InteropValue value)
+        (long Value, string Label)[] options, out object? value)
     {
         value = property.Value;
         property.Value.TryGet(out uint unsignedValue);
         property.Value.TryGet(out int signedValue);
-        bool isUnsigned = property.Kind == InteropValueKind.UInt32;
+        bool isUnsigned = property.Kind == NativeValueKind.UInt32;
         long current = isUnsigned ? unsignedValue : signedValue;
         long selected = current;
         if (!EditorGUI.BeginCombo(label, EditorEnumOptions.GetLabel(options, current))) return false;
@@ -1356,7 +1356,7 @@ internal sealed class InspectorPanel : EditorPanel
         }
         finally { EditorGUI.EndCombo(); }
         if (selected == current) return false;
-        value = isUnsigned ? InteropValue.From((uint)selected) : InteropValue.From((int)selected);
+        value = isUnsigned ? (uint)selected : (int)selected;
         return true;
     }
 
@@ -1461,7 +1461,7 @@ internal sealed class InspectorPanel : EditorPanel
     //原子地为全部选择对象添加同一种组件。
     //initialValues 非空时，把这份字段值回填进新建的组件（粘贴用）；只回填到目标类型上，不碰顺带补齐的依赖组件。
     private void AddComponentGroup(IReadOnlyList<EnsId> selection, ComponentAddChoice choice,
-        IReadOnlyList<(string Name, InteropValueKind Kind, InteropValue Value)>? initialValues = null)
+        IReadOnlyList<(string Name, NativeValueKind Kind, object? Value)>? initialValues = null)
     {
         List<ComponentSnapshot> created = [];
         try
@@ -1524,12 +1524,12 @@ internal sealed class InspectorPanel : EditorPanel
 
     //把复制来的字段值写进刚建好的组件；类型对不上的字段跳过
     private static void ApplyInitialValues(int objectId, ComponentAddChoice choice,
-        IReadOnlyList<(string Name, InteropValueKind Kind, InteropValue Value)> values)
+        IReadOnlyList<(string Name, NativeValueKind Kind, object? Value)> values)
     {
         NativeComponentPropertyTarget target = new(
             new NativeComponentInfo(objectId, choice.TypeName, choice.IsManaged), EditorApplication.MarkWorldDirty);
         target.Refresh();
-        foreach ((string name, _, InteropValue value) in values)
+        foreach ((string name, _, object? value) in values)
         {
             if (target.Validate(name, value) != InteropStatus.Ok) continue;
             target.Set(name, value);

@@ -14,7 +14,7 @@ internal sealed class ManagedFieldMetadata
 {
     internal string Name = string.Empty;
     internal Type FieldType = null!;
-    internal InteropValueKind Kind;
+    internal NativeValueKind Kind;
     internal bool InspectorVisible;
     internal Func<Script, object?> Getter = null!;
     internal Action<Script, object?> Setter = null!;
@@ -23,8 +23,8 @@ internal sealed class ManagedFieldMetadata
 internal sealed class ManagedMethodMetadata
 {
     internal MethodInfo Method = null!;
-    internal InteropValueKind ReturnKind;
-    internal InteropValueKind[] ParameterKinds = [];
+    internal NativeValueKind ReturnKind;
+    internal NativeValueKind[] ParameterKinds = [];
     internal Type[] ParameterTypes = [];
 }
 
@@ -54,74 +54,76 @@ internal static partial class ManagedTypeMetadataCache
         cache.Clear();
     }
 
-    internal static bool TryGetKind(Type type, out InteropValueKind kind)
+    internal static bool TryGetKind(Type type, out NativeValueKind kind)
     {
         Type valueType = Nullable.GetUnderlyingType(type) ?? type;
-        if (valueType == typeof(bool)) kind = InteropValueKind.Bool;
+        if (valueType == typeof(bool)) kind = NativeValueKind.Bool;
         else if (valueType == typeof(int)
-            || valueType.IsEnum && Enum.GetUnderlyingType(valueType) == typeof(int)) kind = InteropValueKind.Int32;
+            || valueType.IsEnum && Enum.GetUnderlyingType(valueType) == typeof(int)) kind = NativeValueKind.Int32;
         else if (valueType == typeof(uint)
-            || valueType.IsEnum && Enum.GetUnderlyingType(valueType) == typeof(uint)) kind = InteropValueKind.UInt32;
-        else if (valueType == typeof(ulong)) kind = InteropValueKind.UInt64;
-        else if (valueType == typeof(float)) kind = InteropValueKind.Float32;
-        else if (valueType == typeof(string) || typeof(OrbEvent).IsAssignableFrom(valueType)) kind = InteropValueKind.String;
-        else if (valueType == typeof(vector2)) kind = InteropValueKind.Vector2;
-        else if (valueType == typeof(vector3)) kind = InteropValueKind.Vector3;
-        else if (valueType == typeof(color)) kind = InteropValueKind.Color;
-        else if (valueType == typeof(quaternion)) kind = InteropValueKind.Quaternion;
-        else if (valueType == typeof(EnsId)) kind = InteropValueKind.EnsId;
-        else if (typeof(Object).IsAssignableFrom(valueType)) kind = InteropValueKind.Object;
+            || valueType.IsEnum && Enum.GetUnderlyingType(valueType) == typeof(uint)) kind = NativeValueKind.UInt32;
+        else if (valueType == typeof(ulong)) kind = NativeValueKind.UInt64;
+        else if (valueType == typeof(float)) kind = NativeValueKind.Float32;
+        else if (valueType == typeof(string) || typeof(OrbEvent).IsAssignableFrom(valueType)) kind = NativeValueKind.String;
+        else if (valueType == typeof(StringId)) kind = NativeValueKind.StringId;
+        else if (valueType == typeof(vector2)) kind = NativeValueKind.Vector2;
+        else if (valueType == typeof(vector3)) kind = NativeValueKind.Vector3;
+        else if (valueType == typeof(color)) kind = NativeValueKind.Color;
+        else if (valueType == typeof(quaternion)) kind = NativeValueKind.Quaternion;
+        else if (valueType == typeof(EnsId)) kind = NativeValueKind.EnsId;
+        else if (typeof(Object).IsAssignableFrom(valueType)) kind = NativeValueKind.Object;
         else if (GetCollectionElementType(valueType) is Type element && TryGetKind(element, out var elementKind)
-            && elementKind != InteropValueKind.Array && !typeof(OrbEvent).IsAssignableFrom(element)) kind = InteropValueKind.Array;
+            && elementKind != NativeValueKind.Array && !typeof(OrbEvent).IsAssignableFrom(element)) kind = NativeValueKind.Array;
         else
         {
-            kind = InteropValueKind.Empty;
+            kind = NativeValueKind.Empty;
             return false;
         }
         return true;
     }
 
-    internal static bool TryToInterop(object? input, Type declaredType, out InteropValue value)
+    internal static bool TryToInterop(object? input, Type declaredType, out object? value)
     {
-        if (!TryGetKind(declaredType, out InteropValueKind kind))
+        if (!TryGetKind(declaredType, out NativeValueKind kind))
         {
             value = default;
             return false;
         }
 
         //集合由宿主持久化入口处理，不能装成只携带单个标量的代理值。
-        if (input is OrbEvent eventValue) { value = InteropValue.From(eventValue.Serialize()); return true; }
-        if (kind == InteropValueKind.Array) { value = default; return false; }
+        if (input is OrbEvent eventValue) { value = eventValue.Serialize(); return true; }
+        if (kind == NativeValueKind.Array) { value = default; return false; }
 
         if (input == null)
         {
-            value = kind == InteropValueKind.String ? InteropValue.From(string.Empty) : InteropValue.FromObject(null);
-            return kind is InteropValueKind.String or InteropValueKind.Object;
+            value = kind == NativeValueKind.String ? string.Empty : null;
+            return kind is NativeValueKind.String or NativeValueKind.Object;
         }
 
         value = kind switch
         {
-            InteropValueKind.Bool => InteropValue.From((bool)input),
-            InteropValueKind.Int32 => InteropValue.From(declaredType.IsEnum ? Convert.ToInt32(input, CultureInfo.InvariantCulture) : (int)input),
-            InteropValueKind.UInt32 => InteropValue.From(declaredType.IsEnum ? Convert.ToUInt32(input, CultureInfo.InvariantCulture) : (uint)input),
-            InteropValueKind.UInt64 => InteropValue.From((ulong)input),
-            InteropValueKind.Float32 => InteropValue.From((float)input),
-            InteropValueKind.String => InteropValue.From((string)input),
-            InteropValueKind.Vector2 => InteropValue.From((vector2)input),
-            InteropValueKind.Vector3 => InteropValue.From((vector3)input),
-            InteropValueKind.Color => InteropValue.From((color)input),
-            InteropValueKind.Quaternion => InteropValue.From((quaternion)input),
-            InteropValueKind.EnsId => InteropValue.From((EnsId)input),
-            InteropValueKind.Object => InteropValue.FromObject((Object)input),
+            NativeValueKind.Bool => (bool)input,
+            NativeValueKind.Int32 => declaredType.IsEnum ? Convert.ToInt32(input, CultureInfo.InvariantCulture) : (int)input,
+            NativeValueKind.UInt32 => declaredType.IsEnum ? Convert.ToUInt32(input, CultureInfo.InvariantCulture) : (uint)input,
+            NativeValueKind.UInt64 => (ulong)input,
+            NativeValueKind.Float32 => (float)input,
+            NativeValueKind.String => (string)input,
+            NativeValueKind.StringId => (StringId)input,
+            NativeValueKind.Vector2 => (vector2)input,
+            NativeValueKind.Vector3 => (vector3)input,
+            NativeValueKind.Color => (color)input,
+            NativeValueKind.Quaternion => (quaternion)input,
+            NativeValueKind.EnsId => (EnsId)input,
+            NativeValueKind.Object => (Object)input,
             _ => default,
         };
         return true;
     }
 
-    internal static bool TryFromInterop(InteropValue value, Type targetType, out object? result)
+    internal static bool TryFromInterop(object? value, Type targetType, out object? result)
     {
         result = null;
-        if (!TryGetKind(targetType, out InteropValueKind expected) || expected != value.Kind) return false;
+        if (!TryGetKind(targetType, out NativeValueKind expected) || !NativeValues.Matches(value, expected)) return false;
         Type valueType = Nullable.GetUnderlyingType(targetType) ?? targetType;
         if (typeof(OrbEvent).IsAssignableFrom(valueType))
         {
@@ -137,28 +139,28 @@ internal static partial class ManagedTypeMetadataCache
         }
         if (valueType.IsEnum)
         {
-            if (expected == InteropValueKind.Int32 && value.TryGet(out int signed))
+            if (expected == NativeValueKind.Int32 && value.TryGet(out int signed))
             {
                 result = Enum.ToObject(valueType, signed);
                 return true;
             }
-            if (expected == InteropValueKind.UInt32 && value.TryGet(out uint unsigned))
+            if (expected == NativeValueKind.UInt32 && value.TryGet(out uint unsigned))
             {
                 result = Enum.ToObject(valueType, unsigned);
                 return true;
             }
             return false;
         }
-        if (expected == InteropValueKind.Object)
+        if (expected == NativeValueKind.Object)
         {
             if (!value.TryGet(out int objectId)) return false;
-            Object? objectValue = Object.FindCachedObject(objectId);
+            Object? objectValue = value as Object;
             if (objectId != 0 && (objectValue == null || !valueType.IsInstanceOfType(objectValue))) return false;
             result = objectValue;
             return true;
         }
 
-        result = value.Value;
+        result = value;
         return result == null ? !valueType.IsValueType : valueType.IsInstanceOfType(result);
     }
 
@@ -185,7 +187,7 @@ internal static partial class ManagedTypeMetadataCache
             {
                 if (field.IsStatic || field.IsInitOnly || field.Name is "domain" or "managedTypeName" or "enabled") continue;
                 bool serialized = field.IsPublic || field.GetCustomAttribute<SerializeFieldAttribute>() != null;
-                if (!serialized || !TryGetKind(field.FieldType, out InteropValueKind kind)) continue;
+                if (!serialized || !TryGetKind(field.FieldType, out NativeValueKind kind)) continue;
 
                 ManagedFieldMetadata entry = new()
                 {
@@ -212,7 +214,7 @@ internal static partial class ManagedTypeMetadataCache
         {
             Name = "enabled",
             FieldType = typeof(bool),
-            Kind = InteropValueKind.Bool,
+            Kind = NativeValueKind.Bool,
             InspectorVisible = true,
             Getter = script => script.GetEnabled(),
             Setter = (script, value) => script.SetEnabled(value is bool enabled && enabled),
@@ -229,15 +231,15 @@ internal static partial class ManagedTypeMetadataCache
                 continue;
             ParameterInfo[] parameters = method.GetParameters();
             if (parameters.Any(parameter => parameter.ParameterType.IsByRef || parameter.IsOut)) continue;
-            if (!TryGetMethodReturnKind(method.ReturnType, out InteropValueKind returnKind)) continue;
+            if (!TryGetMethodReturnKind(method.ReturnType, out NativeValueKind returnKind)) continue;
 
-            InteropValueKind[] kinds = new InteropValueKind[parameters.Length];
+            NativeValueKind[] kinds = new NativeValueKind[parameters.Length];
             Type[] parameterTypes = new Type[parameters.Length];
             bool supported = true;
             for (int index = 0; index < parameters.Length; ++index)
             {
                 parameterTypes[index] = parameters[index].ParameterType;
-                if (!TryGetKind(parameterTypes[index], out kinds[index]) || kinds[index] == InteropValueKind.Array
+                if (!TryGetKind(parameterTypes[index], out kinds[index]) || kinds[index] == NativeValueKind.Array
                     || typeof(OrbEvent).IsAssignableFrom(parameterTypes[index]))
                 {
                     supported = false;
@@ -256,36 +258,37 @@ internal static partial class ManagedTypeMetadataCache
         return metadata;
     }
 
-    private static bool TryGetMethodReturnKind(Type type, out InteropValueKind kind)
+    private static bool TryGetMethodReturnKind(Type type, out NativeValueKind kind)
     {
         if (type == typeof(void))
         {
-            kind = InteropValueKind.Empty;
+            kind = NativeValueKind.Empty;
             return true;
         }
-        return TryGetKind(type, out kind) && kind != InteropValueKind.Array && !typeof(OrbEvent).IsAssignableFrom(type);
+        return TryGetKind(type, out kind) && kind != NativeValueKind.Array && !typeof(OrbEvent).IsAssignableFrom(type);
     }
 
-    private static bool TryParseSerialized(InteropValueKind kind, string text, out InteropValue value)
+    private static bool TryParseSerialized(NativeValueKind kind, string text, out object? value)
     {
         switch (kind)
         {
-            case InteropValueKind.Bool when text is "true" or "false" or "1" or "0": value = InteropValue.From(text is "true" or "1"); return true;
-            case InteropValueKind.Int32 when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integer): value = InteropValue.From(integer); return true;
-            case InteropValueKind.UInt32 when uint.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint unsigned): value = InteropValue.From(unsigned); return true;
-            case InteropValueKind.UInt64 when ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong unsignedLong): value = InteropValue.From(unsignedLong); return true;
-            case InteropValueKind.Float32 when float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float number): value = InteropValue.From(number); return true;
-            case InteropValueKind.String: value = InteropValue.From(text); return true;
-            case InteropValueKind.Vector2 when TryParseFloats(text, 2, out float[] pair): value = InteropValue.From(new vector2(pair[0], pair[1])); return true;
-            case InteropValueKind.Vector3 when TryParseFloats(text, 3, out float[] vector): value = InteropValue.From(new vector3(vector[0], vector[1], vector[2])); return true;
-            case InteropValueKind.Color when TryParseFloats(text, 4, out float[] color): value = InteropValue.From(new color(color[0], color[1], color[2], color[3])); return true;
-            case InteropValueKind.Quaternion when TryParseFloats(text, 4, out float[] quaternion): value = InteropValue.From(new quaternion(quaternion[0], quaternion[1], quaternion[2], quaternion[3])); return true;
-            case InteropValueKind.EnsId:
+            case NativeValueKind.Bool when text is "true" or "false" or "1" or "0": value = text is "true" or "1"; return true;
+            case NativeValueKind.Int32 when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integer): value = integer; return true;
+            case NativeValueKind.UInt32 when uint.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint unsigned): value = unsigned; return true;
+            case NativeValueKind.UInt64 when ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong unsignedLong): value = unsignedLong; return true;
+            case NativeValueKind.Float32 when float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float number): value = number; return true;
+            case NativeValueKind.String: value = text; return true;
+            case NativeValueKind.StringId: value = new StringId(text); return true;
+            case NativeValueKind.Vector2 when TryParseFloats(text, 2, out float[] pair): value = new vector2(pair[0], pair[1]); return true;
+            case NativeValueKind.Vector3 when TryParseFloats(text, 3, out float[] vector): value = new vector3(vector[0], vector[1], vector[2]); return true;
+            case NativeValueKind.Color when TryParseFloats(text, 4, out float[] color): value = new color(color[0], color[1], color[2], color[3]); return true;
+            case NativeValueKind.Quaternion when TryParseFloats(text, 4, out float[] quaternion): value = new quaternion(quaternion[0], quaternion[1], quaternion[2], quaternion[3]); return true;
+            case NativeValueKind.EnsId:
             {
                 string[] parts = text.Split(':');
                 if (parts.Length == 2 && uint.TryParse(parts[0], out uint id) && uint.TryParse(parts[1], out uint version))
                 {
-                    value = InteropValue.From(new EnsId(id, version));
+                    value = new EnsId(id, version);
                     return true;
                 }
                 break;
@@ -328,6 +331,7 @@ internal static unsafe partial class ManagedScriptInterop
     internal static void Initialize()
     {
         mainThreadId = Environment.CurrentManagedThreadId;
+        AddDefaultTypedSignatures();
         ManagedScriptInteropApi api = new()
         {
             FindComponent = &FindComponentAbi,
@@ -341,12 +345,18 @@ internal static unsafe partial class ManagedScriptInterop
             HostDetached = &HostDetachedAbi,
             HostEnabledChanged = &HostEnabledChangedAbi,
             HostFieldChanged = &HostFieldChangedAbi,
+            BindTypedMethod = &BindTypedMethodAbi,
+            InvokeTypedMethod = &InvokeTypedMethodAbi,
+            CompleteTypedMethod = &CompleteTypedMethodAbi,
         };
+        registeredApi = api;
+        apiRegistered = true;
         ScriptInteropDispatch.RegisterManaged(&api);
     }
 
     internal static void Shutdown()
     {
+        apiRegistered = false;
         ScriptInteropDispatch.RegisterManaged(null);
         ClearMembers();
         ManagedTypeMetadataCache.Clear();
@@ -356,6 +366,7 @@ internal static unsafe partial class ManagedScriptInterop
     /// <summary>清空保存了游戏 Type 的成员表，但保留已注册的原生互操作入口。</summary>
     internal static void ClearMembers()
     {
+        ClearTypedBindings();
         members.Clear();
         memberCache.Clear();
         nextMemberSlot = 1;
@@ -396,7 +407,7 @@ internal static unsafe partial class ManagedScriptInterop
         return InteropStatus.Ok;
     }
 
-    internal static InteropStatus ResolveMethod(ComponentHandle component, string name, ReadOnlySpan<InteropValueKind> kinds, out MemberHandle handle)
+    internal static InteropStatus ResolveMethod(ComponentHandle component, string name, ReadOnlySpan<NativeValueKind> kinds, out MemberHandle handle)
     {
         handle = default;
         if (!ScriptRuntimeRegistry.TryResolve(component, out Script? script)) return InteropStatus.StaleHandle;
@@ -419,7 +430,7 @@ internal static unsafe partial class ManagedScriptInterop
         return InteropStatus.Ok;
     }
 
-    internal static InteropStatus GetField(ComponentHandle component, MemberHandle member, out InteropValue value)
+    internal static InteropStatus GetField(ComponentHandle component, MemberHandle member, out object? value)
     {
         value = default;
         if (!TryResolveMember(component, member, InteropMemberKind.Field, out Script? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
@@ -433,7 +444,7 @@ internal static unsafe partial class ManagedScriptInterop
         catch { return InteropStatus.InvocationFailed; }
     }
 
-    internal static InteropStatus SetField(ComponentHandle component, MemberHandle member, InteropValue value)
+    internal static InteropStatus SetField(ComponentHandle component, MemberHandle member, object? value)
     {
         if (!TryResolveMember(component, member, InteropMemberKind.Field, out Script? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
         ManagedFieldMetadata field = entry.Field!;
@@ -454,7 +465,7 @@ internal static unsafe partial class ManagedScriptInterop
         catch { return InteropStatus.InvocationFailed; }
     }
 
-    internal static InteropStatus Invoke(ComponentHandle component, MemberHandle member, ReadOnlySpan<InteropValue> arguments, out InteropValue result)
+    internal static InteropStatus Invoke(ComponentHandle component, MemberHandle member, ReadOnlySpan<object?> arguments, out object? result)
     {
         result = default;
         if (!TryResolveMember(component, member, InteropMemberKind.Method, out Script? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
@@ -469,9 +480,9 @@ internal static unsafe partial class ManagedScriptInterop
         try
         {
             object? returnValue = method.Method.Invoke(script, converted);
-            if (method.ReturnKind == InteropValueKind.Empty)
+            if (method.ReturnKind == NativeValueKind.Empty)
             {
-                result = InteropValue.Empty;
+                result = null;
                 return InteropStatus.Ok;
             }
             return ManagedTypeMetadataCache.TryToInterop(returnValue, method.Method.ReturnType, out result)
@@ -528,15 +539,20 @@ internal static unsafe partial class ManagedScriptInterop
         if (stringPin.IsAllocated) stringPin.Free();
     }
 
-    private static bool EncodeResult(InteropValue value, InteropValueAbi* output)
+    private static bool EncodeResult(object? value, DynamicValueAbi* output, NativeValueKind? declaredKind = null)
     {
         if (output == null) return false;
+        if (declaredKind == NativeValueKind.Empty)
+        {
+            *output = default;
+            return true;
+        }
         using InteropAbiConverter.EncodedValue encoded = InteropAbiConverter.Encode(value);
         if (!encoded.Success) return false;
         *output = encoded.Abi;
-        if (value.Kind is InteropValueKind.String or InteropValueKind.StringId)
+        if (value.GetValueKind() is NativeValueKind.String or NativeValueKind.StringId)
         {
-            byte[] bytes = InteropText.EncodeUtf8(value.ToString());
+            byte[] bytes = InteropText.EncodeUtf8(value?.ToString() ?? string.Empty);
             stringPin = GCHandle.Alloc(bytes, GCHandleType.Pinned);
             byte* payload = output->Payload;
                 *(IntPtr*)payload = stringPin.AddrOfPinnedObject();
@@ -596,8 +612,8 @@ internal static unsafe partial class ManagedScriptInterop
         try
         {
             if (name == null || length <= 0 || count < 0 || count > 0 && rawKinds == null || output == null) return InteropStatus.InvalidArgument;
-            InteropValueKind[] kinds = new InteropValueKind[count];
-            for (int index = 0; index < count; ++index) kinds[index] = (InteropValueKind)rawKinds[index];
+            NativeValueKind[] kinds = new NativeValueKind[count];
+            for (int index = 0; index < count; ++index) kinds[index] = (NativeValueKind)rawKinds[index];
             InteropStatus status = ResolveMethod(component, InteropText.DecodeUtf8(name, length), kinds, out MemberHandle member);
             if (status == InteropStatus.Ok) *output = member;
             return status;
@@ -607,13 +623,13 @@ internal static unsafe partial class ManagedScriptInterop
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static InteropStatus GetFieldAbi(ComponentHandle component, MemberHandle member, InteropValueAbi* output)
+    private static InteropStatus GetFieldAbi(ComponentHandle component, MemberHandle member, DynamicValueAbi* output)
     {
         InteropStatus enter = EnterCall();
         if (enter != InteropStatus.Ok) return enter;
         try
         {
-            InteropStatus status = GetField(component, member, out InteropValue value);
+            InteropStatus status = GetField(component, member, out object? value);
             return status != InteropStatus.Ok ? status : EncodeResult(value, output) ? InteropStatus.Ok : InteropStatus.UnsupportedType;
         }
         catch { return InteropStatus.InvocationFailed; }
@@ -621,34 +637,36 @@ internal static unsafe partial class ManagedScriptInterop
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static InteropStatus SetFieldAbi(ComponentHandle component, MemberHandle member, InteropValueAbi* input)
+    private static InteropStatus SetFieldAbi(ComponentHandle component, MemberHandle member, DynamicValueAbi* input)
     {
         InteropStatus enter = EnterCall();
         if (enter != InteropStatus.Ok) return enter;
         try
         {
             if (input == null) return InteropStatus.InvalidArgument;
-            return InteropAbiConverter.TryDecode(*input, out InteropValue value) ? SetField(component, member, value) : InteropStatus.UnsupportedType;
+            return InteropAbiConverter.TryDecode(*input, out object? value) ? SetField(component, member, value) : InteropStatus.UnsupportedType;
         }
         catch { return InteropStatus.InvocationFailed; }
         finally { ExitCall(); }
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static InteropStatus InvokeAbi(ComponentHandle component, MemberHandle member, InteropValueAbi* input, int count, InteropValueAbi* output)
+    private static InteropStatus InvokeAbi(ComponentHandle component, MemberHandle member, DynamicValueAbi* input, int count, DynamicValueAbi* output)
     {
         InteropStatus enter = EnterCall();
         if (enter != InteropStatus.Ok) return enter;
         try
         {
             if (count < 0 || count > 0 && input == null || output == null) return InteropStatus.InvalidArgument;
-            InteropValue[] arguments = new InteropValue[count];
+            object?[] arguments = new object?[count];
             for (int index = 0; index < count; ++index)
             {
                 if (!InteropAbiConverter.TryDecode(input[index], out arguments[index])) return InteropStatus.UnsupportedType;
             }
-            InteropStatus status = Invoke(component, member, arguments, out InteropValue result);
-            return status != InteropStatus.Ok ? status : EncodeResult(result, output) ? InteropStatus.Ok : InteropStatus.UnsupportedType;
+            InteropStatus status = Invoke(component, member, arguments, out object? result);
+            if (status != InteropStatus.Ok) return status;
+            if (!TryResolveMember(component, member, InteropMemberKind.Method, out _, out MemberEntry? entry)) return InteropStatus.StaleHandle;
+            return EncodeResult(result, output, entry.Method!.ReturnKind) ? InteropStatus.Ok : InteropStatus.UnsupportedType;
         }
         catch { return InteropStatus.InvocationFailed; }
         finally { ExitCall(); }

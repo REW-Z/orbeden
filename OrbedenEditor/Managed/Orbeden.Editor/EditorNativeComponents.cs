@@ -50,31 +50,32 @@ internal unsafe struct EditorTextAbi
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct EditorValueAbi
 {
-    public InteropValueKind Kind;
+    public NativeValueKind Kind;
     public InteropStatus Status;
     public fixed byte Payload[16];
 
     /// <summary>复制快照载荷到托管值。</summary>
-    internal InteropValue Decode()
+    internal object? Decode()
     {
         fixed (byte* pointer = Payload)
         {
             return Kind switch
             {
-                InteropValueKind.Bool => InteropValue.From(*pointer != 0),
-                InteropValueKind.Int32 => InteropValue.From(*(int*)pointer),
-                InteropValueKind.UInt32 => InteropValue.From(*(uint*)pointer),
-                InteropValueKind.UInt64 => InteropValue.From(*(ulong*)pointer),
-                InteropValueKind.Float32 => InteropValue.From(*(float*)pointer),
-                InteropValueKind.Vector2 => InteropValue.From(*(vector2*)pointer),
-                InteropValueKind.Vector3 => InteropValue.From(*(vector3*)pointer),
-                InteropValueKind.Color => InteropValue.From(*(color*)pointer),
-                InteropValueKind.Quaternion => InteropValue.From(*(quaternion*)pointer),
-                InteropValueKind.EnsId => InteropValue.From(*(EnsId*)pointer),
-                InteropValueKind.String => InteropValue.From(((EditorTextAbi*)pointer)->ToString()),
-                InteropValueKind.StringId => InteropValue.FromStringId(((EditorTextAbi*)pointer)->ToString()),
+                NativeValueKind.Bool => *pointer != 0,
+                NativeValueKind.Int32 => *(int*)pointer,
+                NativeValueKind.UInt32 => *(uint*)pointer,
+                NativeValueKind.UInt64 => *(ulong*)pointer,
+                NativeValueKind.Float32 => *(float*)pointer,
+                NativeValueKind.Vector2 => *(vector2*)pointer,
+                NativeValueKind.Vector3 => *(vector3*)pointer,
+                NativeValueKind.Color => *(color*)pointer,
+                NativeValueKind.Quaternion => *(quaternion*)pointer,
+                NativeValueKind.EnsId => *(EnsId*)pointer,
+                NativeValueKind.Object => NativeBindingRuntime.Wrap<Orbeden.Object>(*(int*)pointer),
+                NativeValueKind.String => ((EditorTextAbi*)pointer)->ToString(),
+                NativeValueKind.StringId => new StringId(((EditorTextAbi*)pointer)->ToString()),
                 //容器条目：载荷是槽位数
-                InteropValueKind.Array => InteropValue.FromArray(*(int*)pointer),
+                NativeValueKind.Array => *(int*)pointer,
                 _ => default,
             };
         }
@@ -88,7 +89,7 @@ internal struct EditorPropertyAbi
     public EditorTextAbi ReferenceType;
     public EditorTextAbi TypeName;
     public EditorValueAbi Value;
-    public InteropValueKind DeclaredKind;
+    public NativeValueKind DeclaredKind;
     public uint Reserved;
 }
 
@@ -121,8 +122,8 @@ internal static unsafe class EditorNativeComponents
         internal ulong PayloadHigh;
         internal InteropStatus Status;
         internal InteropStatus SourceStatus;
-        internal InteropValueKind SourceKind;
-        internal InteropValue Value;
+        internal NativeValueKind SourceKind;
+        internal object? Value;
     }
 
     /// <summary>可复用的组件快照，不保存借用指针。</summary>
@@ -266,7 +267,7 @@ internal static unsafe class EditorNativeComponents
             bool valueChanged = changed || field.SourceStatus != source.Status || field.SourceKind != source.Kind;
             if (source.Status == InteropStatus.Ok)
             {
-                if (source.Kind is InteropValueKind.String or InteropValueKind.StringId)
+                if (source.Kind is NativeValueKind.String or NativeValueKind.StringId)
                 {
                     EditorTextAbi text = *(EditorTextAbi*)source.Payload;
                     if (!text.Bytes.SequenceEqual(field.Text))
@@ -291,10 +292,10 @@ internal static unsafe class EditorNativeComponents
                 if (source.Status == InteropStatus.Ok)
                 {
                     //解析发生变化的宿主文本，并缓存解析失败状态
-                    if (source.Kind == InteropValueKind.String && field.Descriptor.Kind != InteropValueKind.String)
+                    if (source.Kind == NativeValueKind.String && field.Descriptor.Kind != NativeValueKind.String)
                     {
                         string text = InteropText.DecodeUtf8(field.Text);
-                        if (!EditorInteropValueText.TryParse(field.Descriptor.Kind, text, out field.Value))
+                        if (!EditorValueText.TryParse(field.Descriptor.Kind, text, out field.Value))
                             field.Status = InteropStatus.InvocationFailed;
                     }
                     else if (source.Kind != field.Descriptor.Kind) field.Status = InteropStatus.TypeMismatch;
@@ -311,31 +312,32 @@ internal static unsafe class EditorNativeComponents
     internal static uint RegistryGeneration => api.GetRegistryGeneration == null ? 0 : api.GetRegistryGeneration(api.Context);
 
     /// <summary>按字段名写入类型化值。</summary>
-    internal static InteropStatus SetComponentProperty(int objectId, string name, InteropValue value)
+    internal static InteropStatus SetComponentProperty(int objectId, string name, object? value, NativeValueKind kind)
     {
         if (api.SetComponentProperty == null) return InteropStatus.NotFound;
-        EditorValueAbi encoded = new() { Kind = value.Kind };
+        EditorValueAbi encoded = new() { Kind = kind };
         byte[] nameBytes = InteropText.EncodeUtf8(name);
-        byte[] text = value.Kind is InteropValueKind.String or InteropValueKind.StringId
+        byte[] text = value.GetValueKind() is NativeValueKind.String or NativeValueKind.StringId
             && value.TryGet(out string content) ? InteropText.EncodeUtf8(content) : [];
         fixed (byte* namePointer = nameBytes)
         fixed (byte* textPointer = text)
         {
             byte* pointer = encoded.Payload;
-            switch (value.Kind)
+            switch (kind)
             {
-                case InteropValueKind.Bool: value.TryGet(out bool boolean); *pointer = boolean ? (byte)1 : (byte)0; break;
-                case InteropValueKind.Int32: case InteropValueKind.Array:
+                case NativeValueKind.Bool: value.TryGet(out bool boolean); *pointer = boolean ? (byte)1 : (byte)0; break;
+                case NativeValueKind.Int32: case NativeValueKind.Array:
                     value.TryGet(out int integer); *(int*)pointer = integer; break;
-                case InteropValueKind.UInt32: value.TryGet(out uint unsigned); *(uint*)pointer = unsigned; break;
-                case InteropValueKind.UInt64: value.TryGet(out ulong wide); *(ulong*)pointer = wide; break;
-                case InteropValueKind.Float32: value.TryGet(out float number); *(float*)pointer = number; break;
-                case InteropValueKind.Vector2: value.TryGet(out vector2 pair); *(vector2*)pointer = pair; break;
-                case InteropValueKind.Vector3: value.TryGet(out vector3 vector); *(vector3*)pointer = vector; break;
-                case InteropValueKind.Color: value.TryGet(out color color); *(color*)pointer = color; break;
-                case InteropValueKind.Quaternion: value.TryGet(out quaternion rotation); *(quaternion*)pointer = rotation; break;
-                case InteropValueKind.EnsId: value.TryGet(out EnsId ens); *(EnsId*)pointer = ens; break;
-                case InteropValueKind.String: case InteropValueKind.StringId:
+                case NativeValueKind.UInt32: value.TryGet(out uint unsigned); *(uint*)pointer = unsigned; break;
+                case NativeValueKind.UInt64: value.TryGet(out ulong wide); *(ulong*)pointer = wide; break;
+                case NativeValueKind.Float32: value.TryGet(out float number); *(float*)pointer = number; break;
+                case NativeValueKind.Vector2: value.TryGet(out vector2 pair); *(vector2*)pointer = pair; break;
+                case NativeValueKind.Vector3: value.TryGet(out vector3 vector); *(vector3*)pointer = vector; break;
+                case NativeValueKind.Color: value.TryGet(out color color); *(color*)pointer = color; break;
+                case NativeValueKind.Quaternion: value.TryGet(out quaternion rotation); *(quaternion*)pointer = rotation; break;
+                case NativeValueKind.EnsId: value.TryGet(out EnsId ens); *(EnsId*)pointer = ens; break;
+                case NativeValueKind.Object: value.TryGet(out int reference); *(int*)pointer = reference; break;
+                case NativeValueKind.String: case NativeValueKind.StringId:
                     *(EditorTextAbi*)pointer = new EditorTextAbi { Data = textPointer, Length = text.Length }; break;
                 default: return InteropStatus.UnsupportedType;
             }

@@ -88,11 +88,17 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.InstanceDrawOptions Read_InstanceDrawOptions(ref NativeBindingReader reader)
     {
-        global::Orbeden.InstanceDrawOptions value = new();
-        value.@drawLayer = Read_uint32(ref reader);
-        value.@castShadows = Read_bool(ref reader);
-        value.@receiveShadows = Read_bool(ref reader);
-        value.@camera = Read_EnsId(ref reader);
+        var block = reader.Block(sizeof(uint) + sizeof(byte) + sizeof(byte) + sizeof(global::Orbeden.EnsId));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.InstanceDrawOptions value = default;
+        value.@drawLayer = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@castShadows = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@receiveShadows = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@camera = (global::Orbeden.EnsId)Unsafe.ReadUnaligned<global::Orbeden.EnsId>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.EnsId));
         return value;
     }
     internal static void Write_List_MaterialColorSlot_(NativeBindingWriter writer, global::Orbeden.MaterialColorSlot[] value)
@@ -135,8 +141,25 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleBurst[] Read_List_ParticleBurst_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new global::Orbeden.ParticleBurst[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_ParticleBurst(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(float) + sizeof(uint) + sizeof(uint) + sizeof(float) + sizeof(float))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new global::Orbeden.ParticleBurst[length];
+        for (int index = 0; index < length; ++index)
+        {
+            global::Orbeden.ParticleBurst element = default;
+            element.@time = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            element.@count = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+            element.@cycles = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+            element.@interval = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            element.@probability = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_List_ParticleCurveKey_(NativeBindingWriter writer, global::Orbeden.ParticleCurveKey[] value)
@@ -146,8 +169,25 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleCurveKey[] Read_List_ParticleCurveKey_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new global::Orbeden.ParticleCurveKey[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_ParticleCurveKey(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(uint))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new global::Orbeden.ParticleCurveKey[length];
+        for (int index = 0; index < length; ++index)
+        {
+            global::Orbeden.ParticleCurveKey element = default;
+            element.@time = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            element.@value = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            element.@inTangent = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            element.@outTangent = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            element.@interpolation = (global::Orbeden.ParticleCurveInterpolation)Unsafe.ReadUnaligned<uint>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_List_ParticleGradientKey_(NativeBindingWriter writer, global::Orbeden.ParticleGradientKey[] value)
@@ -157,8 +197,19 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleGradientKey[] Read_List_ParticleGradientKey_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new global::Orbeden.ParticleGradientKey[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_ParticleGradientKey(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(float) + sizeof(global::Orbeden.color))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new global::Orbeden.ParticleGradientKey[length];
+        for (int index = 0; index < length; ++index)
+        {
+            global::Orbeden.ParticleGradientKey element = default;
+            element.@time = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            element.@value = (global::Orbeden.color)Unsafe.ReadUnaligned<global::Orbeden.color>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.color));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_List_ParticleSubEmitterRule_(NativeBindingWriter writer, global::Orbeden.ParticleSubEmitterRule[] value)
@@ -168,8 +219,29 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleSubEmitterRule[] Read_List_ParticleSubEmitterRule_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new global::Orbeden.ParticleSubEmitterRule[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_ParticleSubEmitterRule(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(uint) + sizeof(uint) + sizeof(uint) + sizeof(float) + sizeof(byte) + sizeof(byte) + sizeof(byte))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new global::Orbeden.ParticleSubEmitterRule[length];
+        for (int index = 0; index < length; ++index)
+        {
+            global::Orbeden.ParticleSubEmitterRule element = default;
+            element.@targetSlot = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+            element.@event = (global::Orbeden.ParticleSubEmitterEvent)Unsafe.ReadUnaligned<uint>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+            element.@count = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+            element.@probability = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            element.@inheritVelocity = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+            cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+            element.@inheritColor = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+            cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+            element.@inheritSize = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+            cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_List_Ref_Material__(NativeBindingWriter writer, global::Orbeden.Material?[] value)
@@ -245,8 +317,17 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static uint[] Read_List_uint32_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new uint[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_uint32(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(uint))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new uint[length];
+        for (int index = 0; index < length; ++index)
+        {
+            uint element = default;
+            element = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_List_uint8_(NativeBindingWriter writer, byte[] value)
@@ -256,8 +337,17 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static byte[] Read_List_uint8_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new byte[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_uint8(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(byte))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new byte[length];
+        for (int index = 0; index < length; ++index)
+        {
+            byte element = default;
+            element = (byte)Unsafe.ReadUnaligned<byte>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_List_vector2_(NativeBindingWriter writer, global::Orbeden.vector2[] value)
@@ -267,8 +357,17 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.vector2[] Read_List_vector2_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new global::Orbeden.vector2[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_vector2(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(global::Orbeden.vector2))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new global::Orbeden.vector2[length];
+        for (int index = 0; index < length; ++index)
+        {
+            global::Orbeden.vector2 element = default;
+            element = (global::Orbeden.vector2)Unsafe.ReadUnaligned<global::Orbeden.vector2>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.vector2));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_List_vector3_(NativeBindingWriter writer, global::Orbeden.vector3[] value)
@@ -278,8 +377,17 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.vector3[] Read_List_vector3_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new global::Orbeden.vector3[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_vector3(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(global::Orbeden.vector3))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new global::Orbeden.vector3[length];
+        for (int index = 0; index < length; ++index)
+        {
+            global::Orbeden.vector3 element = default;
+            element = (global::Orbeden.vector3)Unsafe.ReadUnaligned<global::Orbeden.vector3>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.vector3));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_MaterialColorSlot(NativeBindingWriter writer, global::Orbeden.MaterialColorSlot value)
@@ -344,12 +452,19 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.MeshInstanceData Read_MeshInstanceData(ref NativeBindingReader reader)
     {
-        global::Orbeden.MeshInstanceData value = new();
-        value.@position = Read_vector3(ref reader);
-        value.@rotation = Read_quaternion(ref reader);
-        value.@scale = Read_vector3(ref reader);
-        value.@tint = Read_color(ref reader);
-        value.@uvRect = Read_color(ref reader);
+        var block = reader.Block(sizeof(global::Orbeden.vector3) + sizeof(global::Orbeden.quaternion) + sizeof(global::Orbeden.vector3) + sizeof(global::Orbeden.color) + sizeof(global::Orbeden.color));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.MeshInstanceData value = default;
+        value.@position = (global::Orbeden.vector3)Unsafe.ReadUnaligned<global::Orbeden.vector3>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.vector3));
+        value.@rotation = (global::Orbeden.quaternion)Unsafe.ReadUnaligned<global::Orbeden.quaternion>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.quaternion));
+        value.@scale = (global::Orbeden.vector3)Unsafe.ReadUnaligned<global::Orbeden.vector3>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.vector3));
+        value.@tint = (global::Orbeden.color)Unsafe.ReadUnaligned<global::Orbeden.color>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.color));
+        value.@uvRect = (global::Orbeden.color)Unsafe.ReadUnaligned<global::Orbeden.color>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.color));
         return value;
     }
     internal static void Write_Mesh_(NativeBindingWriter writer, global::Orbeden.Mesh? value)
@@ -378,12 +493,19 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleBurst Read_ParticleBurst(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleBurst value = new();
-        value.@time = Read_float32(ref reader);
-        value.@count = Read_uint32(ref reader);
-        value.@cycles = Read_uint32(ref reader);
-        value.@interval = Read_float32(ref reader);
-        value.@probability = Read_float32(ref reader);
+        var block = reader.Block(sizeof(float) + sizeof(uint) + sizeof(uint) + sizeof(float) + sizeof(float));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleBurst value = default;
+        value.@time = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@count = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@cycles = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@interval = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@probability = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
         return value;
     }
     internal static void Write_ParticleCollisionResponse(NativeBindingWriter writer, global::Orbeden.ParticleCollisionResponse value)
@@ -406,14 +528,23 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleCollisionSettings Read_ParticleCollisionSettings(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleCollisionSettings value = new();
-        value.@enabled = Read_bool(ref reader);
-        value.@layerMask = Read_uint32(ref reader);
-        value.@radiusScale = Read_float32(ref reader);
-        value.@restitution = Read_float32(ref reader);
-        value.@friction = Read_float32(ref reader);
-        value.@lifetimeLoss = Read_float32(ref reader);
-        value.@response = Read_ParticleCollisionResponse(ref reader);
+        var block = reader.Block(sizeof(byte) + sizeof(uint) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(uint));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleCollisionSettings value = default;
+        value.@enabled = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@layerMask = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@radiusScale = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@restitution = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@friction = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@lifetimeLoss = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@response = (global::Orbeden.ParticleCollisionResponse)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
         return value;
     }
     internal static void Write_ParticleCurve(NativeBindingWriter writer, global::Orbeden.ParticleCurve value)
@@ -444,12 +575,19 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleCurveKey Read_ParticleCurveKey(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleCurveKey value = new();
-        value.@time = Read_float32(ref reader);
-        value.@value = Read_float32(ref reader);
-        value.@inTangent = Read_float32(ref reader);
-        value.@outTangent = Read_float32(ref reader);
-        value.@interpolation = Read_ParticleCurveInterpolation(ref reader);
+        var block = reader.Block(sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(uint));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleCurveKey value = default;
+        value.@time = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@value = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@inTangent = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@outTangent = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@interpolation = (global::Orbeden.ParticleCurveInterpolation)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
         return value;
     }
     internal static void Write_ParticleEmissionSettings(NativeBindingWriter writer, global::Orbeden.ParticleEmissionSettings value)
@@ -473,9 +611,13 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleFloatRange Read_ParticleFloatRange(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleFloatRange value = new();
-        value.@min = Read_float32(ref reader);
-        value.@max = Read_float32(ref reader);
+        var block = reader.Block(sizeof(float) + sizeof(float));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleFloatRange value = default;
+        value.@min = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@max = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
         return value;
     }
     internal static void Write_ParticleGradient(NativeBindingWriter writer, global::Orbeden.ParticleGradient value)
@@ -495,9 +637,13 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleGradientKey Read_ParticleGradientKey(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleGradientKey value = new();
-        value.@time = Read_float32(ref reader);
-        value.@value = Read_color(ref reader);
+        var block = reader.Block(sizeof(float) + sizeof(global::Orbeden.color));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleGradientKey value = default;
+        value.@time = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@value = (global::Orbeden.color)Unsafe.ReadUnaligned<global::Orbeden.color>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.color));
         return value;
     }
     internal static void Write_ParticleMainSettings(NativeBindingWriter writer, global::Orbeden.ParticleMainSettings value)
@@ -517,19 +663,41 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleMainSettings Read_ParticleMainSettings(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleMainSettings value = new();
-        value.@maxParticles = Read_uint32(ref reader);
-        value.@duration = Read_float32(ref reader);
-        value.@looping = Read_bool(ref reader);
-        value.@playOnAwake = Read_bool(ref reader);
-        value.@startDelay = Read_float32(ref reader);
-        value.@simulationSpace = Read_ParticleSimulationSpace(ref reader);
-        value.@randomSeed = Read_uint32(ref reader);
-        value.@startLifetime = Read_ParticleFloatRange(ref reader);
-        value.@startSpeed = Read_ParticleFloatRange(ref reader);
-        value.@startSize = Read_ParticleFloatRange(ref reader);
-        value.@startRotation = Read_ParticleFloatRange(ref reader);
-        value.@startColor = Read_color(ref reader);
+        var block = reader.Block(sizeof(uint) + sizeof(float) + sizeof(byte) + sizeof(byte) + sizeof(float) + sizeof(uint) + sizeof(uint) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(global::Orbeden.color));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleMainSettings value = default;
+        value.@maxParticles = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@duration = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@looping = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@playOnAwake = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@startDelay = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@simulationSpace = (global::Orbeden.ParticleSimulationSpace)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@randomSeed = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@startLifetime.@min = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@startLifetime.@max = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@startSpeed.@min = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@startSpeed.@max = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@startSize.@min = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@startSize.@max = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@startRotation.@min = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@startRotation.@max = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@startColor = (global::Orbeden.color)Unsafe.ReadUnaligned<global::Orbeden.color>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.color));
         return value;
     }
     internal static void Write_ParticleMotionSettings(NativeBindingWriter writer, global::Orbeden.ParticleMotionSettings value)
@@ -563,13 +731,21 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticlePlaybackInfo Read_ParticlePlaybackInfo(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticlePlaybackInfo value = new();
-        value.@state = Read_ParticlePlaybackState(ref reader);
-        value.@time = Read_float32(ref reader);
-        value.@aliveCount = Read_uint32(ref reader);
-        value.@trailCount = Read_uint32(ref reader);
-        value.@emittedCount = Read_uint64(ref reader);
-        value.@rejectedCount = Read_uint64(ref reader);
+        var block = reader.Block(sizeof(uint) + sizeof(float) + sizeof(uint) + sizeof(uint) + sizeof(ulong) + sizeof(ulong));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticlePlaybackInfo value = default;
+        value.@state = (global::Orbeden.ParticlePlaybackState)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@time = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@aliveCount = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@trailCount = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@emittedCount = (ulong)Unsafe.ReadUnaligned<ulong>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(ulong));
+        value.@rejectedCount = (ulong)Unsafe.ReadUnaligned<ulong>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(ulong));
         return value;
     }
     internal static void Write_ParticlePlaybackState(NativeBindingWriter writer, global::Orbeden.ParticlePlaybackState value)
@@ -608,14 +784,23 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleRenderSettings Read_ParticleRenderSettings(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleRenderSettings value = new();
-        value.@path = Read_ParticleRenderPath(ref reader);
-        value.@mode = Read_ParticleRenderMode(ref reader);
-        value.@blendMode = Read_BlendMode(ref reader);
-        value.@tilesX = Read_uint32(ref reader);
-        value.@tilesY = Read_uint32(ref reader);
-        value.@animationCycles = Read_float32(ref reader);
-        value.@randomStartFrame = Read_bool(ref reader);
+        var block = reader.Block(sizeof(uint) + sizeof(uint) + sizeof(uint) + sizeof(uint) + sizeof(uint) + sizeof(float) + sizeof(byte));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleRenderSettings value = default;
+        value.@path = (global::Orbeden.ParticleRenderPath)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@mode = (global::Orbeden.ParticleRenderMode)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@blendMode = (global::Orbeden.BlendMode)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@tilesX = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@tilesY = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@animationCycles = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@randomStartFrame = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
         return value;
     }
     internal static void Write_ParticleSettings(NativeBindingWriter writer, global::Orbeden.ParticleSettings value)
@@ -674,12 +859,19 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleShapeSettings Read_ParticleShapeSettings(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleShapeSettings value = new();
-        value.@shape = Read_ParticleShape(ref reader);
-        value.@radius = Read_float32(ref reader);
-        value.@boxExtents = Read_vector3(ref reader);
-        value.@coneAngle = Read_float32(ref reader);
-        value.@surfaceOnly = Read_bool(ref reader);
+        var block = reader.Block(sizeof(uint) + sizeof(float) + sizeof(global::Orbeden.vector3) + sizeof(float) + sizeof(byte));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleShapeSettings value = default;
+        value.@shape = (global::Orbeden.ParticleShape)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@radius = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@boxExtents = (global::Orbeden.vector3)Unsafe.ReadUnaligned<global::Orbeden.vector3>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.vector3));
+        value.@coneAngle = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@surfaceOnly = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
         return value;
     }
     internal static void Write_ParticleSimulationSpace(NativeBindingWriter writer, global::Orbeden.ParticleSimulationSpace value)
@@ -710,14 +902,23 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ParticleSubEmitterRule Read_ParticleSubEmitterRule(ref NativeBindingReader reader)
     {
-        global::Orbeden.ParticleSubEmitterRule value = new();
-        value.@targetSlot = Read_uint32(ref reader);
-        value.@event = Read_ParticleSubEmitterEvent(ref reader);
-        value.@count = Read_uint32(ref reader);
-        value.@probability = Read_float32(ref reader);
-        value.@inheritVelocity = Read_bool(ref reader);
-        value.@inheritColor = Read_bool(ref reader);
-        value.@inheritSize = Read_bool(ref reader);
+        var block = reader.Block(sizeof(uint) + sizeof(uint) + sizeof(uint) + sizeof(float) + sizeof(byte) + sizeof(byte) + sizeof(byte));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ParticleSubEmitterRule value = default;
+        value.@targetSlot = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@event = (global::Orbeden.ParticleSubEmitterEvent)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@count = (uint)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@probability = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@inheritVelocity = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@inheritColor = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@inheritSize = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
         return value;
     }
     internal static void Write_ParticleTrailSettings(NativeBindingWriter writer, global::Orbeden.ParticleTrailSettings value)
@@ -871,11 +1072,17 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.ShaderPassState Read_ShaderPassState(ref NativeBindingReader reader)
     {
-        global::Orbeden.ShaderPassState value = new();
-        value.@depthTest = Read_ShaderPassToggle(ref reader);
-        value.@depthWrite = Read_ShaderPassToggle(ref reader);
-        value.@blend = Read_ShaderPassToggle(ref reader);
-        value.@cull = Read_CullMode(ref reader);
+        var block = reader.Block(sizeof(int) + sizeof(int) + sizeof(int) + sizeof(uint));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.ShaderPassState value = default;
+        value.@depthTest = (global::Orbeden.ShaderPassToggle)Unsafe.ReadUnaligned<int>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(int));
+        value.@depthWrite = (global::Orbeden.ShaderPassToggle)Unsafe.ReadUnaligned<int>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(int));
+        value.@blend = (global::Orbeden.ShaderPassToggle)Unsafe.ReadUnaligned<int>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(int));
+        value.@cull = (global::Orbeden.CullMode)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
         return value;
     }
     internal static void Write_ShaderPassToggle(NativeBindingWriter writer, global::Orbeden.ShaderPassToggle value)
@@ -978,10 +1185,15 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.bounds3 Read_bounds3(ref NativeBindingReader reader)
     {
-        global::Orbeden.bounds3 value = new();
-        value.@center = Read_vector3(ref reader);
-        value.@extents = Read_vector3(ref reader);
-        value.@valid = Read_bool(ref reader);
+        var block = reader.Block(sizeof(global::Orbeden.vector3) + sizeof(global::Orbeden.vector3) + sizeof(byte));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.bounds3 value = default;
+        value.@center = (global::Orbeden.vector3)Unsafe.ReadUnaligned<global::Orbeden.vector3>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.vector3));
+        value.@extents = (global::Orbeden.vector3)Unsafe.ReadUnaligned<global::Orbeden.vector3>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.vector3));
+        value.@valid = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
         return value;
     }
     internal static void Write_color(NativeBindingWriter writer, global::Orbeden.color value)
@@ -1040,8 +1252,17 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static global::Orbeden.EnsId[] Read_std__array_EnsId_16_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new global::Orbeden.EnsId[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_EnsId(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(global::Orbeden.EnsId))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new global::Orbeden.EnsId[length];
+        for (int index = 0; index < length; ++index)
+        {
+            global::Orbeden.EnsId element = default;
+            element = (global::Orbeden.EnsId)Unsafe.ReadUnaligned<global::Orbeden.EnsId>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.EnsId));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_std__shared_ptr_ResourceLoadOperation_(NativeBindingWriter writer, global::Orbeden.ResourceLoadOperation? value)
@@ -1068,8 +1289,17 @@ internal static unsafe class GeneratedBindingCodecs
     }
     internal static float[] Read_std__vector_float32_(ref NativeBindingReader reader)
     {
-        int length = reader.Count(); var value = new float[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_float32(ref reader);
+        int length = reader.Count();
+        var block = reader.Block(checked(length * (sizeof(float))));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        var value = new float[length];
+        for (int index = 0; index < length; ++index)
+        {
+            float element = default;
+            element = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+            cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+            value[index] = element;
+        }
         return value;
     }
     internal static void Write_uint32(NativeBindingWriter writer, uint value)

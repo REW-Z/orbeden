@@ -25,15 +25,15 @@ public static class UIEventIds
     public const int Submitted = 6;
 
     //按事件标识给出稳定名字与载荷种类；编辑器的事件表用它们挑可绑定的方法。
-    private static readonly (int Id, string Name, InteropValueKind Payload)[] Entries =
+    private static readonly (int Id, string Name, NativeValueKind Payload)[] Entries =
     [
-        (Clicked, nameof(Clicked), InteropValueKind.Empty),
-        (CheckedChanged, nameof(CheckedChanged), InteropValueKind.Bool),
-        (ValueChanged, nameof(ValueChanged), InteropValueKind.Float32),
-        (ScrollChanged, nameof(ScrollChanged), InteropValueKind.Vector2),
-        (SelectionChanged, nameof(SelectionChanged), InteropValueKind.Int32),
-        (TextChanged, nameof(TextChanged), InteropValueKind.String),
-        (Submitted, nameof(Submitted), InteropValueKind.String),
+        (Clicked, nameof(Clicked), NativeValueKind.Empty),
+        (CheckedChanged, nameof(CheckedChanged), NativeValueKind.Bool),
+        (ValueChanged, nameof(ValueChanged), NativeValueKind.Float32),
+        (ScrollChanged, nameof(ScrollChanged), NativeValueKind.Vector2),
+        (SelectionChanged, nameof(SelectionChanged), NativeValueKind.Int32),
+        (TextChanged, nameof(TextChanged), NativeValueKind.String),
+        (Submitted, nameof(Submitted), NativeValueKind.String),
     ];
 
     /// <summary>事件标识的数量。</summary>
@@ -53,13 +53,13 @@ public static class UIEventIds
     }
 
     /// <summary>取事件载荷的种类；没有载荷（如 Clicked）与未知标识都返回 Empty。</summary>
-    public static InteropValueKind GetPayloadKind(int eventId)
+    public static NativeValueKind GetPayloadKind(int eventId)
     {
-        foreach ((int id, _, InteropValueKind payload) in Entries)
+        foreach ((int id, _, NativeValueKind payload) in Entries)
         {
             if (id == eventId) return payload;
         }
-        return InteropValueKind.Empty;
+        return NativeValueKind.Empty;
     }
 }
 

@@ -1,10 +1,11 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Orbeden;
 
 /// <summary>已绑定的原生字段；按具体类型读写，不重复查找字段名称。</summary>
-public readonly unsafe struct NativeField<T> where T : unmanaged
+public readonly unsafe struct NativeField<T>
 {
     private readonly NativeFieldBinding binding;
 
@@ -43,9 +44,16 @@ public readonly unsafe struct NativeField<T> where T : unmanaged
         NativeCallFrame.ThrowIfFailed(binding.TryEnter(1, out NativeCallFrame call));
         try
         {
-            T value = default;
-            NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T*, InteropStatus>)call.Entry)(call.Instance, &value));
-            return value;
+            if (!RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+            {
+                T value = default!;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, void*, InteropStatus>)call.Entry)(call.Instance, Unsafe.AsPointer(ref value)));
+                return value;
+            }
+
+            NativeUtf8 output = default;
+            NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, void*, InteropStatus>)call.Entry)(call.Instance, &output));
+            return NativeMarshaller<T>.Read(&output);
         }
         finally { call.Dispose(); }
     }
@@ -54,17 +62,36 @@ public readonly unsafe struct NativeField<T> where T : unmanaged
     public void Set(T value)
     {
         NativeCallFrame.ThrowIfFailed(binding.TryEnter(2, out NativeCallFrame call));
-        try { NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T, InteropStatus>)call.Entry)(call.Instance, value)); }
-        finally { call.Dispose(); }
+        if (!RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+        {
+            try
+            {
+                //按已验证的具体值类型直接传参
+                #pragma warning disable CA1420
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T, InteropStatus>)call.Entry)(call.Instance, value));
+                #pragma warning restore CA1420
+            }
+            finally { call.Dispose(); }
+            return;
+        }
+
+        NativeMarshallingScope scope = new();
+        try
+        {
+            byte* input = stackalloc byte[NativeMarshaller<T>.Size];
+            NativeMarshaller<T>.Write(input, value, ref scope);
+            NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, void*, InteropStatus>)call.Entry)(call.Instance, input));
+        }
+        finally { scope.Dispose(); call.Dispose(); }
     }
 }
 
 public sealed partial class ComponentProxy
 {
     /// <summary>按名称和精确值类型绑定原生字段；后续通过 NativeField 直接读写。</summary>
-    public InteropStatus TryBindField<T>(string name, out NativeField<T> field) where T : unmanaged
+    public InteropStatus TryBindField<T>(string name, out NativeField<T> field)
     {
-        InteropStatus status = NativeFieldRuntime.Bind(handle, name, NativeValueType<T>.Kind, out NativeFieldBinding binding);
+        InteropStatus status = NativeFieldRuntime.Bind(handle, name, NativeMarshaller<T>.Kind, !RuntimeHelpers.IsReferenceOrContainsReferences<T>(), out NativeFieldBinding binding);
         field = status == InteropStatus.Ok ? new(binding) : default;
         return status;
     }
@@ -111,7 +138,7 @@ internal static unsafe class NativeFieldRuntime
     internal static void Initialize(NativeTypedFieldsApi api) => Api = api;
 
     //只在绑定阶段编码名称和校验类型
-    internal static InteropStatus Bind(ComponentHandle component, string name, InteropValueKind kind, out NativeFieldBinding binding)
+    internal static InteropStatus Bind(ComponentHandle component, string name, NativeValueKind kind, bool valueArgument, out NativeFieldBinding binding)
     {
         binding = default;
         if (component.Domain != ComponentDomain.Native) return InteropStatus.UnsupportedType;
@@ -123,7 +150,7 @@ internal static unsafe class NativeFieldRuntime
         uint access;
         fixed (byte* pointer = bytes)
         {
-            InteropStatus status = Api.Resolve(component, pointer, bytes.Length, (uint)kind, &member, &access);
+            InteropStatus status = Api.Resolve(component, pointer, bytes.Length, ((uint)kind | (valueArgument ? 0x80000000u : 0u)), &member, &access);
             if (status == InteropStatus.Ok) binding = new(component, member, access);
             return status;
         }

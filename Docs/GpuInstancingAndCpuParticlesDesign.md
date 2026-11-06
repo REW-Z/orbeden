@@ -601,7 +601,7 @@ OnDrawInspector顺序固定：
 
 新增 `PropertyTargetWrite`（PropertyDocument.cs内部record，字段Target、Name、Value）与 `PropertyDocument.ApplyTargetChanges(string undoLabel, IReadOnlyList<PropertyTargetWrite> writes, bool merge=false)`：检查目标属于当前document→全部Refresh/Validate/保存旧值→依次Set→失败逆序回滚→MarkDirty→PushAction→Update。撤销/重做复用现有ApplyHistory算法，源码依据 `PropertyDocument.cs:330`。普通ApplyChanges改为构造writes后调用这条公共内部执行路径，保持其原merge=true行为。
 
-ParticleSystemEditor每次提交读取各目标自己的settings文本，经ParticleSystem.ParseSettings得到配置，修改用户正在编辑的叶字段，再FormatSettings；构造每目标自己的String InteropValue写入settings。sub-emitter编辑在同一writes中写settings与`subEmitterTargets[index]`，原生setter允许暂时无效目标，下一Step才刷新图。资源字段使用现有PropertyDocument原子提交。新增/删除Burst或规则一次写回整个settings，生成一条撤销历史。
+ParticleSystemEditor每次提交读取各目标自己的settings文本，经ParticleSystem.ParseSettings得到配置，修改用户正在编辑的叶字段，再FormatSettings；把每个目标自己的普通字符串写入settings。sub-emitter编辑在同一writes中写settings与`subEmitterTargets[index]`，原生setter允许暂时无效目标，下一Step才刷新图。资源字段使用现有PropertyDocument原子提交。新增/删除Burst或规则一次写回整个settings，生成一条撤销历史。
 
 ### 15.2 曲线控件
 

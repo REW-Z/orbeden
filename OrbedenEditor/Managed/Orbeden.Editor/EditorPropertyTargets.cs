@@ -5,32 +5,32 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-internal static class EditorInteropValueText
+internal static class EditorValueText
 {
-    internal static bool TryParse(InteropValueKind kind, string text, out InteropValue value)
+    internal static bool TryParse(NativeValueKind kind, string text, out object? value)
     {
         switch (kind)
         {
-            case InteropValueKind.Bool:
-                value = InteropValue.From(text is "true" or "1");
+            case NativeValueKind.Bool:
+                value = text is "true" or "1";
                 return text is "true" or "false" or "1" or "0";
-            case InteropValueKind.Int32 when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integer): value = InteropValue.From(integer); return true;
-            case InteropValueKind.UInt32 when uint.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint unsigned): value = InteropValue.From(unsigned); return true;
-            case InteropValueKind.UInt64 when ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong unsignedLong): value = InteropValue.From(unsignedLong); return true;
-            case InteropValueKind.Float32 when float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float number): value = InteropValue.From(number); return true;
-            case InteropValueKind.String: value = InteropValue.From(text); return true;
-            case InteropValueKind.StringId: value = InteropValue.FromStringId(text); return true;
-            case InteropValueKind.Object when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int objectId): value = InteropValue.FromObjectId(objectId); return true;
-            case InteropValueKind.Vector2 when TryFloats(text, 2, out float[] pair): value = InteropValue.From(new vector2(pair[0], pair[1])); return true;
-            case InteropValueKind.Vector3 when TryFloats(text, 3, out float[] vector): value = InteropValue.From(new vector3(vector[0], vector[1], vector[2])); return true;
-            case InteropValueKind.Color when TryFloats(text, 4, out float[] color): value = InteropValue.From(new color(color[0], color[1], color[2], color[3])); return true;
-            case InteropValueKind.Quaternion when TryFloats(text, 4, out float[] rotation): value = InteropValue.From(new quaternion(rotation[0], rotation[1], rotation[2], rotation[3])); return true;
-            case InteropValueKind.EnsId:
+            case NativeValueKind.Int32 when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integer): value = integer; return true;
+            case NativeValueKind.UInt32 when uint.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint unsigned): value = unsigned; return true;
+            case NativeValueKind.UInt64 when ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong unsignedLong): value = unsignedLong; return true;
+            case NativeValueKind.Float32 when float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float number): value = number; return true;
+            case NativeValueKind.String: value = text; return true;
+            case NativeValueKind.StringId: value = new StringId(text); return true;
+            case NativeValueKind.Object when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int objectId): value = NativeBindingRuntime.Wrap<Orbeden.Object>(objectId); return true;
+            case NativeValueKind.Vector2 when TryFloats(text, 2, out float[] pair): value = new vector2(pair[0], pair[1]); return true;
+            case NativeValueKind.Vector3 when TryFloats(text, 3, out float[] vector): value = new vector3(vector[0], vector[1], vector[2]); return true;
+            case NativeValueKind.Color when TryFloats(text, 4, out float[] color): value = new color(color[0], color[1], color[2], color[3]); return true;
+            case NativeValueKind.Quaternion when TryFloats(text, 4, out float[] rotation): value = new quaternion(rotation[0], rotation[1], rotation[2], rotation[3]); return true;
+            case NativeValueKind.EnsId:
             {
                 string[] parts = text.Split(':');
                 if (parts.Length == 2 && uint.TryParse(parts[0], out uint id) && uint.TryParse(parts[1], out uint version))
                 {
-                    value = InteropValue.From(new EnsId(id, version));
+                    value = new EnsId(id, version);
                     return true;
                 }
                 break;
@@ -40,23 +40,23 @@ internal static class EditorInteropValueText
         return false;
     }
 
-    internal static string Format(InteropValue value)
+    internal static string Format(object? value)
     {
-        return value.Kind switch
+        return value.GetValueKind() switch
         {
-            InteropValueKind.Empty => string.Empty,
-            InteropValueKind.Bool => value.TryGet(out bool boolean) && boolean ? "true" : "false",
-            InteropValueKind.Int32 => value.TryGet(out int integer) ? integer.ToString(CultureInfo.InvariantCulture) : string.Empty,
-            InteropValueKind.UInt32 => value.TryGet(out uint unsigned) ? unsigned.ToString(CultureInfo.InvariantCulture) : string.Empty,
-            InteropValueKind.UInt64 => value.TryGet(out ulong unsignedLong) ? unsignedLong.ToString(CultureInfo.InvariantCulture) : string.Empty,
-            InteropValueKind.Float32 => value.TryGet(out float number) ? number.ToString("R", CultureInfo.InvariantCulture) : string.Empty,
-            InteropValueKind.String or InteropValueKind.StringId => value.TryGet(out string text) ? text : string.Empty,
-            InteropValueKind.Vector2 => value.TryGet(out vector2 pair) ? Join(pair.x, pair.y) : string.Empty,
-            InteropValueKind.Vector3 => value.TryGet(out vector3 vector) ? Join(vector.x, vector.y, vector.z) : string.Empty,
-            InteropValueKind.Color => value.TryGet(out color color) ? Join(color.r, color.g, color.b, color.a) : string.Empty,
-            InteropValueKind.Quaternion => value.TryGet(out quaternion rotation) ? Join(rotation.x, rotation.y, rotation.z, rotation.w) : string.Empty,
-            InteropValueKind.EnsId => value.TryGet(out EnsId ens) ? $"{ens.id}:{ens.version}" : string.Empty,
-            InteropValueKind.Object => value.TryGet(out int objectId) ? objectId.ToString(CultureInfo.InvariantCulture) : string.Empty,
+            NativeValueKind.Empty => string.Empty,
+            NativeValueKind.Bool => value.TryGet(out bool boolean) && boolean ? "true" : "false",
+            NativeValueKind.Int32 => value.TryGet(out int integer) ? integer.ToString(CultureInfo.InvariantCulture) : string.Empty,
+            NativeValueKind.UInt32 => value.TryGet(out uint unsigned) ? unsigned.ToString(CultureInfo.InvariantCulture) : string.Empty,
+            NativeValueKind.UInt64 => value.TryGet(out ulong unsignedLong) ? unsignedLong.ToString(CultureInfo.InvariantCulture) : string.Empty,
+            NativeValueKind.Float32 => value.TryGet(out float number) ? number.ToString("R", CultureInfo.InvariantCulture) : string.Empty,
+            NativeValueKind.String or NativeValueKind.StringId => value.TryGet(out string text) ? text : string.Empty,
+            NativeValueKind.Vector2 => value.TryGet(out vector2 pair) ? Join(pair.x, pair.y) : string.Empty,
+            NativeValueKind.Vector3 => value.TryGet(out vector3 vector) ? Join(vector.x, vector.y, vector.z) : string.Empty,
+            NativeValueKind.Color => value.TryGet(out color color) ? Join(color.r, color.g, color.b, color.a) : string.Empty,
+            NativeValueKind.Quaternion => value.TryGet(out quaternion rotation) ? Join(rotation.x, rotation.y, rotation.z, rotation.w) : string.Empty,
+            NativeValueKind.EnsId => value.TryGet(out EnsId ens) ? $"{ens.id}:{ens.version}" : string.Empty,
+            NativeValueKind.Object => value.TryGet(out int objectId) ? objectId.ToString(CultureInfo.InvariantCulture) : string.Empty,
             _ => string.Empty,
         };
     }
@@ -131,7 +131,7 @@ internal sealed class NativeComponentPropertyTarget : IPropertyTarget
     }
 
     /// <summary>读取本次文档刷新持有的属性快照。</summary>
-    public InteropStatus TryGet(string name, out InteropValue value)
+    public InteropStatus TryGet(string name, out object? value)
     {
         value = default;
         if (status != InteropStatus.Ok) return status;
@@ -141,67 +141,69 @@ internal sealed class NativeComponentPropertyTarget : IPropertyTarget
     }
 
     /// <summary>验证字段仍存在且值类型一致。</summary>
-    public InteropStatus Validate(string name, InteropValue value)
+    public InteropStatus Validate(string name, object? value)
     {
         if (status != InteropStatus.Ok) return status;
-        return snapshot.FieldsByName.TryGetValue(name, out var field) && field.Descriptor.Kind == value.Kind
+        return snapshot.FieldsByName.TryGetValue(name, out var field) && NativeValues.Matches(value, field.Descriptor.Kind)
             ? InteropStatus.Ok : InteropStatus.TypeMismatch;
     }
 
     /// <summary>通过稳定身份和字段名执行写入。</summary>
-    public InteropStatus Set(string name, InteropValue value)
+    public InteropStatus Set(string name, object? value)
     {
         InteropStatus validation = Validate(name, value);
         if (validation != InteropStatus.Ok) return validation;
         int current = EditorNativeComponents.FindComponent(snapshot.StableId);
-        return EditorNativeComponents.SetComponentProperty(current, name, value);
+        return EditorNativeComponents.SetComponentProperty(current, name, value, snapshot.FieldsByName[name].Descriptor.Kind);
     }
 
     /// <summary>标记属性所属场景已修改。</summary>
     public void MarkDirty() => dirty();
 }
 
-internal static class EditorManagedInteropValue
+internal static class EditorManagedValue
 {
-    internal static InteropValueKind GetKind(Type type)
+    internal static NativeValueKind GetKind(Type type)
     {
         Type valueType = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
-        if (valueType == typeof(bool)) return InteropValueKind.Bool;
-        if (valueType == typeof(int)) return InteropValueKind.Int32;
-        if (valueType == typeof(uint)) return InteropValueKind.UInt32;
-        if (valueType == typeof(ulong)) return InteropValueKind.UInt64;
-        if (valueType == typeof(float)) return InteropValueKind.Float32;
-        if (valueType == typeof(string)) return InteropValueKind.String;
-        if (valueType == typeof(vector2)) return InteropValueKind.Vector2;
-        if (valueType == typeof(vector3)) return InteropValueKind.Vector3;
-        if (valueType == typeof(color)) return InteropValueKind.Color;
-        if (valueType == typeof(quaternion)) return InteropValueKind.Quaternion;
-        if (valueType == typeof(EnsId)) return InteropValueKind.EnsId;
-        if (typeof(Orbeden.Object).IsAssignableFrom(valueType)) return InteropValueKind.Object;
-        return InteropValueKind.Empty;
+        if (valueType == typeof(bool)) return NativeValueKind.Bool;
+        if (valueType == typeof(int)) return NativeValueKind.Int32;
+        if (valueType == typeof(uint)) return NativeValueKind.UInt32;
+        if (valueType == typeof(ulong)) return NativeValueKind.UInt64;
+        if (valueType == typeof(float)) return NativeValueKind.Float32;
+        if (valueType == typeof(string)) return NativeValueKind.String;
+        if (valueType == typeof(StringId)) return NativeValueKind.StringId;
+        if (valueType == typeof(vector2)) return NativeValueKind.Vector2;
+        if (valueType == typeof(vector3)) return NativeValueKind.Vector3;
+        if (valueType == typeof(color)) return NativeValueKind.Color;
+        if (valueType == typeof(quaternion)) return NativeValueKind.Quaternion;
+        if (valueType == typeof(EnsId)) return NativeValueKind.EnsId;
+        if (typeof(Orbeden.Object).IsAssignableFrom(valueType)) return NativeValueKind.Object;
+        return NativeValueKind.Empty;
     }
 
-    internal static bool TryEncode(Type type, object? value, out InteropValue result)
+    internal static bool TryEncode(Type type, object? value, out object? result)
     {
         Type valueType = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
         object? converted = type.IsEnum && value != null ? Convert.ChangeType(value, valueType, CultureInfo.InvariantCulture) : value;
-        if (valueType == typeof(bool) && converted is bool boolean) result = InteropValue.From(boolean);
-        else if (valueType == typeof(int) && converted is int integer) result = InteropValue.From(integer);
-        else if (valueType == typeof(uint) && converted is uint unsigned) result = InteropValue.From(unsigned);
-        else if (valueType == typeof(ulong) && converted is ulong unsignedLong) result = InteropValue.From(unsignedLong);
-        else if (valueType == typeof(float) && converted is float number) result = InteropValue.From(number);
-        else if (valueType == typeof(string)) result = InteropValue.From(converted as string);
-        else if (valueType == typeof(vector2) && converted is vector2 pair) result = InteropValue.From(pair);
-        else if (valueType == typeof(vector3) && converted is vector3 vector) result = InteropValue.From(vector);
-        else if (valueType == typeof(color) && converted is color color) result = InteropValue.From(color);
-        else if (valueType == typeof(quaternion) && converted is quaternion rotation) result = InteropValue.From(rotation);
-        else if (valueType == typeof(EnsId) && converted is EnsId ens) result = InteropValue.From(ens);
-        else if (typeof(Orbeden.Object).IsAssignableFrom(valueType)) result = InteropValue.FromObject(converted as Orbeden.Object);
+        if (valueType == typeof(bool) && converted is bool boolean) result = boolean;
+        else if (valueType == typeof(int) && converted is int integer) result = integer;
+        else if (valueType == typeof(uint) && converted is uint unsigned) result = unsigned;
+        else if (valueType == typeof(ulong) && converted is ulong unsignedLong) result = unsignedLong;
+        else if (valueType == typeof(float) && converted is float number) result = number;
+        else if (valueType == typeof(string)) result = converted as string;
+        else if (valueType == typeof(StringId) && converted is StringId key) result = key;
+        else if (valueType == typeof(vector2) && converted is vector2 pair) result = pair;
+        else if (valueType == typeof(vector3) && converted is vector3 vector) result = vector;
+        else if (valueType == typeof(color) && converted is color color) result = color;
+        else if (valueType == typeof(quaternion) && converted is quaternion rotation) result = rotation;
+        else if (valueType == typeof(EnsId) && converted is EnsId ens) result = ens;
+        else if (typeof(Orbeden.Object).IsAssignableFrom(valueType)) result = converted as Orbeden.Object;
         else { result = default; return false; }
         return true;
     }
 
-    internal static bool TryDecode(Type type, InteropValue value, out object? result)
+    internal static bool TryDecode(Type type, object? value, out object? result)
     {
         Type valueType = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
         object? raw;
@@ -211,6 +213,7 @@ internal static class EditorManagedInteropValue
         else if (valueType == typeof(ulong) && value.TryGet(out ulong unsignedLong)) raw = unsignedLong;
         else if (valueType == typeof(float) && value.TryGet(out float number)) raw = number;
         else if (valueType == typeof(string) && value.TryGet(out string text)) raw = text;
+        else if (valueType == typeof(StringId) && value is StringId key) raw = key;
         else if (valueType == typeof(vector2) && value.TryGet(out vector2 pair)) raw = pair;
         else if (valueType == typeof(vector3) && value.TryGet(out vector3 vector)) raw = vector;
         else if (valueType == typeof(color) && value.TryGet(out color color)) raw = color;
@@ -249,7 +252,7 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
         dirty = markDirty;
         List<PropertyDescriptor> descriptors = [];
         hasEnabled = value is Script;
-        if (hasEnabled) descriptors.Add(new PropertyDescriptor("enabled", InteropValueKind.Bool));
+        if (hasEnabled) descriptors.Add(new PropertyDescriptor("enabled", NativeValueKind.Bool));
 
         List<Type> chain = [];
         for (Type? current = value.GetType(); current != null && current != typeof(Script) && current != typeof(Component); current = current.BaseType)
@@ -263,8 +266,8 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
             {
                 if (field.IsStatic || field.GetCustomAttribute<HideInEditorAttribute>() != null) continue;
                 if (!field.IsPublic && field.GetCustomAttribute<SerializeFieldAttribute>() == null) continue;
-                InteropValueKind kind = EditorManagedInteropValue.GetKind(field.FieldType);
-                if (kind == InteropValueKind.Empty) continue;
+                NativeValueKind kind = EditorManagedValue.GetKind(field.FieldType);
+                if (kind == NativeValueKind.Empty) continue;
                 if (fields.ContainsKey(field.Name))
                 {
                     fields[field.Name] = field;
@@ -273,15 +276,15 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
                 fields[field.Name] = field;
                 //枚举字段带上枚举的全名，Inspector 据此画下拉框
                 descriptors.Add(new PropertyDescriptor(field.Name, kind,
-                    kind is InteropValueKind.Object or InteropValueKind.EnsId ? field.FieldType.FullName ?? field.FieldType.Name : string.Empty,
+                    kind is NativeValueKind.Object or NativeValueKind.EnsId ? field.FieldType.FullName ?? field.FieldType.Name : string.Empty,
                     TypeName: field.FieldType.IsEnum ? field.FieldType.FullName ?? field.FieldType.Name : string.Empty));
             }
             foreach (PropertyInfo property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
             {
                 if (property.GetIndexParameters().Length != 0 || property.GetMethod == null || property.SetMethod == null) continue;
                 if (property.GetCustomAttribute<HideInEditorAttribute>() != null || fields.ContainsKey(property.Name)) continue;
-                InteropValueKind kind = EditorManagedInteropValue.GetKind(property.PropertyType);
-                if (kind == InteropValueKind.Empty) continue;
+                NativeValueKind kind = EditorManagedValue.GetKind(property.PropertyType);
+                if (kind == NativeValueKind.Empty) continue;
                 if (managedProperties.ContainsKey(property.Name))
                 {
                     managedProperties[property.Name] = property;
@@ -289,7 +292,7 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
                 }
                 managedProperties[property.Name] = property;
                 descriptors.Add(new PropertyDescriptor(property.Name, kind,
-                    kind is InteropValueKind.Object or InteropValueKind.EnsId ? property.PropertyType.FullName ?? property.PropertyType.Name : string.Empty,
+                    kind is NativeValueKind.Object or NativeValueKind.EnsId ? property.PropertyType.FullName ?? property.PropertyType.Name : string.Empty,
                     TypeName: property.PropertyType.IsEnum ? property.PropertyType.FullName ?? property.PropertyType.Name : string.Empty));
             }
         }
@@ -300,18 +303,18 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
     public string Identity => $"managed:{RuntimeHelpers.GetHashCode(instance)}";
     public IReadOnlyList<PropertyDescriptor> Properties => properties;
 
-    public InteropStatus TryGet(string name, out InteropValue value)
+    public InteropStatus TryGet(string name, out object? value)
     {
         try
         {
             if (hasEnabled && name == "enabled")
             {
-                value = InteropValue.From(((Script)instance).GetEnabled());
+                value = ((Script)instance).GetEnabled();
                 return InteropStatus.Ok;
             }
             if (managedProperties.TryGetValue(name, out PropertyInfo? property))
             {
-                return EditorManagedInteropValue.TryEncode(property.PropertyType, property.GetValue(instance), out value)
+                return EditorManagedValue.TryEncode(property.PropertyType, property.GetValue(instance), out value)
                     ? InteropStatus.Ok : InteropStatus.UnsupportedType;
             }
             if (!fields.TryGetValue(name, out FieldInfo? field))
@@ -319,7 +322,7 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
                 value = default;
                 return InteropStatus.NotFound;
             }
-            return EditorManagedInteropValue.TryEncode(field.FieldType, field.GetValue(instance), out value)
+            return EditorManagedValue.TryEncode(field.FieldType, field.GetValue(instance), out value)
                 ? InteropStatus.Ok
                 : InteropStatus.UnsupportedType;
         }
@@ -330,23 +333,23 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
         }
     }
 
-    public InteropStatus Validate(string name, InteropValue value)
+    public InteropStatus Validate(string name, object? value)
     {
-        if (hasEnabled && name == "enabled") return value.Kind == InteropValueKind.Bool ? InteropStatus.Ok : InteropStatus.TypeMismatch;
+        if (hasEnabled && name == "enabled") return value.GetValueKind() == NativeValueKind.Bool ? InteropStatus.Ok : InteropStatus.TypeMismatch;
         if (managedProperties.TryGetValue(name, out PropertyInfo? property))
         {
-            return EditorManagedInteropValue.GetKind(property.PropertyType) == value.Kind
-                && EditorManagedInteropValue.TryDecode(property.PropertyType, value, out _)
+            return EditorManagedValue.GetKind(property.PropertyType) == value.GetValueKind()
+                && EditorManagedValue.TryDecode(property.PropertyType, value, out _)
                 ? InteropStatus.Ok : InteropStatus.TypeMismatch;
         }
         if (!fields.TryGetValue(name, out FieldInfo? field)) return InteropStatus.NotFound;
-        return EditorManagedInteropValue.GetKind(field.FieldType) == value.Kind
-            && EditorManagedInteropValue.TryDecode(field.FieldType, value, out _)
+        return EditorManagedValue.GetKind(field.FieldType) == value.GetValueKind()
+            && EditorManagedValue.TryDecode(field.FieldType, value, out _)
             ? InteropStatus.Ok
             : InteropStatus.TypeMismatch;
     }
 
-    public InteropStatus Set(string name, InteropValue value)
+    public InteropStatus Set(string name, object? value)
     {
         try
         {
@@ -359,13 +362,13 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
             }
             if (managedProperties.TryGetValue(name, out PropertyInfo? property))
             {
-                if (!EditorManagedInteropValue.TryDecode(property.PropertyType, value, out object? propertyValue))
+                if (!EditorManagedValue.TryDecode(property.PropertyType, value, out object? propertyValue))
                     return InteropStatus.TypeMismatch;
                 property.SetValue(instance, propertyValue);
                 return InteropStatus.Ok;
             }
             FieldInfo field = fields[name];
-            if (!EditorManagedInteropValue.TryDecode(field.FieldType, value, out object? decoded)) return InteropStatus.TypeMismatch;
+            if (!EditorManagedValue.TryDecode(field.FieldType, value, out object? decoded)) return InteropStatus.TypeMismatch;
             field.SetValue(instance, decoded);
             return InteropStatus.Ok;
         }
@@ -381,7 +384,7 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
 /// <summary>DelegatedPropertyTarget 上的一个属性：名字、取值类型，加一对读写委托。
 /// ReferenceType 非空时该行走对象引用选择器，值按资源 Key 存取。</summary>
 internal readonly record struct DelegatedProperty(
-    string Name, InteropValueKind Kind, Func<InteropValue> GetValue, Func<InteropValue, InteropStatus> SetValue,
+    string Name, NativeValueKind Kind, Func<object?> GetValue, Func<object?, InteropStatus> SetValue,
     string ReferenceType = "", string Label = "");
 
 /// <summary>把一个带业务 setter 的字段接入 PropertyDocument；同一目标可以挂多个属性。</summary>
@@ -391,8 +394,8 @@ internal sealed class DelegatedPropertyTarget : IPropertyTarget
     private readonly List<PropertyDescriptor> descriptors;
     private readonly Action dirty;
 
-    internal DelegatedPropertyTarget(string identity, string propertyName, InteropValueKind propertyKind,
-        Func<InteropValue> getValue, Func<InteropValue, InteropStatus> setValue, Action markDirty)
+    internal DelegatedPropertyTarget(string identity, string propertyName, NativeValueKind propertyKind,
+        Func<object?> getValue, Func<object?, InteropStatus> setValue, Action markDirty)
         : this(identity, [new DelegatedProperty(propertyName, propertyKind, getValue, setValue)], markDirty)
     {
     }
@@ -408,7 +411,7 @@ internal sealed class DelegatedPropertyTarget : IPropertyTarget
     public string Identity { get; }
     public IReadOnlyList<PropertyDescriptor> Properties => descriptors;
 
-    public InteropStatus TryGet(string propertyName, out InteropValue value)
+    public InteropStatus TryGet(string propertyName, out object? value)
     {
         if (!properties.TryGetValue(propertyName, out DelegatedProperty property))
         {
@@ -416,14 +419,14 @@ internal sealed class DelegatedPropertyTarget : IPropertyTarget
             return InteropStatus.NotFound;
         }
         value = property.GetValue();
-        return value.Kind == property.Kind ? InteropStatus.Ok : InteropStatus.TypeMismatch;
+        return NativeValues.Matches(value, property.Kind) ? InteropStatus.Ok : InteropStatus.TypeMismatch;
     }
 
-    public InteropStatus Validate(string propertyName, InteropValue value) =>
-        properties.TryGetValue(propertyName, out DelegatedProperty property) && value.Kind == property.Kind
+    public InteropStatus Validate(string propertyName, object? value) =>
+        properties.TryGetValue(propertyName, out DelegatedProperty property) && NativeValues.Matches(value, property.Kind)
             ? InteropStatus.Ok : InteropStatus.TypeMismatch;
 
-    public InteropStatus Set(string propertyName, InteropValue value) =>
+    public InteropStatus Set(string propertyName, object? value) =>
         Validate(propertyName, value) == InteropStatus.Ok
             ? properties[propertyName].SetValue(value) : InteropStatus.TypeMismatch;
 

@@ -9,7 +9,7 @@ internal static class OrbEventEditor
         int Occurrence, string Method, bool UseArguments);
 
     //绘制事件持久化调用列表
-    internal static bool Draw(string label, PropertyValue property, out InteropValue value)
+    internal static bool Draw(string label, PropertyValue property, out object? value)
     {
         value = property.Value;
         if (!value.TryGet(out string text)) return false;
@@ -52,7 +52,7 @@ internal static class OrbEventEditor
             { eventValue.AddPersistentCall(EnsId.Null, string.Empty, string.Empty); changed = true; }
         }
         finally { EditorGUI.EndDisabled(); EditorGUI.PopId(); }
-        if (changed) value = InteropValue.From(eventValue.Serialize());
+        if (changed) value = eventValue.Serialize();
         return changed;
     }
 
@@ -108,7 +108,7 @@ internal static class OrbEventEditor
             occurrences[key] = occurrence + 1;
             foreach (BindableMethod method in ComponentProxy.DescribeMethods(component))
             {
-                if (method.ReturnKind != InteropValueKind.Empty) continue;
+                if (method.ReturnKind != NativeValueKind.Empty) continue;
                 bool passArguments = method.ParameterKinds.SequenceEqual(eventValue.ParameterKinds);
                 if (!passArguments && method.ParameterKinds.Count != 0) continue;
                 string signature = string.Join(", ", method.ParameterKinds);

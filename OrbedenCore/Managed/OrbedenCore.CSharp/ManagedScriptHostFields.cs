@@ -141,7 +141,7 @@ internal static partial class ManagedTypeMetadataCache
         if (field.Name == "enabled") return true;
         if (field.Getter(script) is OrbEvent eventValue)
             return Script.WriteHostField(host, field.Name, "OrbEvent", eventValue.Serialize(), field.InspectorVisible);
-        if (field.Kind == InteropValueKind.Array)
+        if (field.Kind == NativeValueKind.Array)
         {
             Type element = GetCollectionElementType(field.FieldType)!;
             TryGetKind(element, out var elementKind);
@@ -151,13 +151,13 @@ internal static partial class ManagedTypeMetadataCache
                 int index = 0;
                 foreach (object? item in collection)
                 {
-                    if (elementKind == InteropValueKind.Object)
+                    if (elementKind == NativeValueKind.Object)
                     {
                         string key = (item as Object)?.ResourceKey ?? string.Empty;
                         if (key.Length == 0 && !explicitEdit) key = script.GetUnresolvedElement(field.Name, index) ?? string.Empty;
                         values.Add(key);
                     }
-                    else if (elementKind == InteropValueKind.EnsId && item is EnsId id)
+                    else if (elementKind == NativeValueKind.EnsId && item is EnsId id)
                     {
                         string key = id.IsNull ? string.Empty : Ens.FromId(id).ResourceKey ?? string.Empty;
                         if (key.Length == 0 && !explicitEdit) key = script.GetUnresolvedElement(field.Name, index) ?? string.Empty;
@@ -172,14 +172,14 @@ internal static partial class ManagedTypeMetadataCache
             foreach (string itemText in values) text.Append(InteropText.GetUtf8ByteCount(itemText)).Append(':').Append(itemText);
             return Script.WriteHostField(host, field.Name, GetSerializedTypeName(field.FieldType, field.Kind), text.ToString(), field.InspectorVisible);
         }
-        if (field.Kind == InteropValueKind.EnsId && field.Getter(script) is EnsId ensId)
+        if (field.Kind == NativeValueKind.EnsId && field.Getter(script) is EnsId ensId)
         {
             string key = ensId.IsNull ? string.Empty : Ens.FromId(ensId).ResourceKey ?? string.Empty;
             //未解析的引用继续写回原路径，避免一次保存把目标抹成空。
             if (key.Length == 0 && !explicitEdit) key = script.GetUnresolvedReference(field.Name) ?? string.Empty;
             return Script.WriteHostField(host, field.Name, "EnsId", key, field.InspectorVisible);
         }
-        if (field.Kind == InteropValueKind.Object)
+        if (field.Kind == NativeValueKind.Object)
         {
             Object? reference = field.Getter(script) as Object;
             string key = reference?.ResourceKey ?? string.Empty;
@@ -188,7 +188,7 @@ internal static partial class ManagedTypeMetadataCache
             return Script.WriteHostField(host, field.Name,
                 GetSerializedTypeName(field.FieldType, field.Kind), key, field.InspectorVisible);
         }
-        if (!TryToInterop(field.Getter(script), field.FieldType, out InteropValue value)) return false;
+        if (!TryToInterop(field.Getter(script), field.FieldType, out object? value)) return false;
         return Script.WriteHostField(host, field.Name,
             GetSerializedTypeName(field.FieldType, field.Kind),
             FormatSerialized(value),
@@ -196,52 +196,53 @@ internal static partial class ManagedTypeMetadataCache
     }
 
     //获取与 World Field 一致的类型名称。
-    private static string GetSerializedTypeName(Type type, InteropValueKind kind) => kind switch
+    private static string GetSerializedTypeName(Type type, NativeValueKind kind) => kind switch
     {
-        InteropValueKind.Bool => "bool",
-        InteropValueKind.Int32 => "int32",
-        InteropValueKind.UInt32 => "uint32",
-        InteropValueKind.UInt64 => "uint64",
-        InteropValueKind.Float32 => "float32",
-        InteropValueKind.String => "string",
-        InteropValueKind.Vector2 => "vector2",
-        InteropValueKind.Vector3 => "vector3",
-        InteropValueKind.Color => "color",
-        InteropValueKind.Quaternion => "quaternion",
-        InteropValueKind.EnsId => "EnsId",
-        InteropValueKind.Object => $"Ref<{type.FullName}>",
-        InteropValueKind.Array => $"{(type.IsArray ? "Array" : "List")}<{GetCollectionSerializedElementType(type)}>",
+        NativeValueKind.Bool => "bool",
+        NativeValueKind.Int32 => "int32",
+        NativeValueKind.UInt32 => "uint32",
+        NativeValueKind.UInt64 => "uint64",
+        NativeValueKind.Float32 => "float32",
+        NativeValueKind.String => "string",
+        NativeValueKind.StringId => "StringId",
+        NativeValueKind.Vector2 => "vector2",
+        NativeValueKind.Vector3 => "vector3",
+        NativeValueKind.Color => "color",
+        NativeValueKind.Quaternion => "quaternion",
+        NativeValueKind.EnsId => "EnsId",
+        NativeValueKind.Object => $"Ref<{type.FullName}>",
+        NativeValueKind.Array => $"{(type.IsArray ? "Array" : "List")}<{GetCollectionSerializedElementType(type)}>",
         _ => string.Empty,
     };
 
     //把互操作值格式化为 World Field 的稳定文本。
-    private static string FormatSerialized(InteropValue value)
+    private static string FormatSerialized(object? value)
     {
-        switch (value.Kind)
+        switch (value.GetValueKind())
         {
-            case InteropValueKind.Bool when value.TryGet(out bool boolean):
+            case NativeValueKind.Bool when value.TryGet(out bool boolean):
                 return boolean ? "true" : "false";
-            case InteropValueKind.Int32 when value.TryGet(out int integer):
+            case NativeValueKind.Int32 when value.TryGet(out int integer):
                 return integer.ToString(CultureInfo.InvariantCulture);
-            case InteropValueKind.UInt32 when value.TryGet(out uint unsigned):
+            case NativeValueKind.UInt32 when value.TryGet(out uint unsigned):
                 return unsigned.ToString(CultureInfo.InvariantCulture);
-            case InteropValueKind.UInt64 when value.TryGet(out ulong unsignedLong):
+            case NativeValueKind.UInt64 when value.TryGet(out ulong unsignedLong):
                 return unsignedLong.ToString(CultureInfo.InvariantCulture);
-            case InteropValueKind.Float32 when value.TryGet(out float number):
+            case NativeValueKind.Float32 when value.TryGet(out float number):
                 return FormatFloat(number);
-            case InteropValueKind.String when value.TryGet(out string text):
+            case NativeValueKind.String or NativeValueKind.StringId when value.TryGet(out string text):
                 return text;
-            case InteropValueKind.Vector2 when value.TryGet(out vector2 pair):
+            case NativeValueKind.Vector2 when value.TryGet(out vector2 pair):
                 return string.Join(" ", FormatFloat(pair.x), FormatFloat(pair.y));
-            case InteropValueKind.Vector3 when value.TryGet(out vector3 vector):
+            case NativeValueKind.Vector3 when value.TryGet(out vector3 vector):
                 return string.Join(" ", FormatFloat(vector.x), FormatFloat(vector.y), FormatFloat(vector.z));
-            case InteropValueKind.Color when value.TryGet(out color color):
+            case NativeValueKind.Color when value.TryGet(out color color):
                 return string.Join(" ", FormatFloat(color.r), FormatFloat(color.g), FormatFloat(color.b), FormatFloat(color.a));
-            case InteropValueKind.Quaternion when value.TryGet(out quaternion rotation):
+            case NativeValueKind.Quaternion when value.TryGet(out quaternion rotation):
                 return string.Join(" ", FormatFloat(rotation.x), FormatFloat(rotation.y), FormatFloat(rotation.z), FormatFloat(rotation.w));
-            case InteropValueKind.EnsId when value.TryGet(out EnsId ens):
+            case NativeValueKind.EnsId when value.TryGet(out EnsId ens):
                 return $"{ens.id}:{ens.version}";
-            case InteropValueKind.Object when value.TryGet(out int objectId):
+            case NativeValueKind.Object when value.TryGet(out int objectId):
                 return objectId.ToString(CultureInfo.InvariantCulture);
             default:
                 return string.Empty;
@@ -263,7 +264,7 @@ internal static partial class ManagedTypeMetadataCache
             result = parsed;
             return true;
         }
-        if (field.Kind == InteropValueKind.Array)
+        if (field.Kind == NativeValueKind.Array)
         {
             result = null;
             Type element = GetCollectionElementType(field.FieldType)!;
@@ -278,12 +279,12 @@ internal static partial class ManagedTypeMetadataCache
                 string text = InteropText.DecodeUtf8(bytes, position, length);
                 position += length;
                 object? itemValue;
-                if (kind == InteropValueKind.Object)
+                if (kind == NativeValueKind.Object)
                 {
                     itemValue = Script.ResolveReference(text, element);
                     if (itemValue == null && text.Length != 0) script.RememberUnresolvedElement(field.Name, index, text);
                 }
-                else if (kind == InteropValueKind.EnsId)
+                else if (kind == NativeValueKind.EnsId)
                 {
                     if (text.Length == 0) itemValue = EnsId.Null;
                     else
@@ -306,11 +307,11 @@ internal static partial class ManagedTypeMetadataCache
             }
             return true;
         }
-        if (field.Kind is InteropValueKind.EnsId or InteropValueKind.Object)
+        if (field.Kind is NativeValueKind.EnsId or NativeValueKind.Object)
         {
             //每次加载都按当前世界重建保留表：解析成功即丢弃旧路径，失败则记下原路径。
             script.ClearUnresolvedReferences(field.Name);
-            if (field.Kind == InteropValueKind.EnsId)
+            if (field.Kind == NativeValueKind.EnsId)
             {
                 if (string.IsNullOrEmpty(stored.Value)) result = EnsId.Null;
                 else
@@ -327,7 +328,7 @@ internal static partial class ManagedTypeMetadataCache
             return true;
         }
         result = null;
-        return TryParseSerialized(field.Kind, stored.Value, out InteropValue value)
+        return TryParseSerialized(field.Kind, stored.Value, out object? value)
             && TryFromInterop(value, field.FieldType, out result);
     }
 

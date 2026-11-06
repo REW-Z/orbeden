@@ -351,11 +351,25 @@ void Write_InstanceDrawOptions(NativeBindingWriter& writer, InstanceDrawOptions 
 }
 InstanceDrawOptions Read_InstanceDrawOptions(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(uint32) + sizeof(uint8) + sizeof(uint8) + sizeof(EnsId));
+    const uint8* cursor = block.data();
     InstanceDrawOptions value{};
-    value.drawLayer = Read_uint32(reader);
-    value.castShadows = Read_bool(reader);
-    value.receiveShadows = Read_bool(reader);
-    value.camera = Read_EnsId(reader);
+    uint32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.drawLayer = static_cast<uint32>(raw0);
+    uint8 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.castShadows = static_cast<bool>(raw1);
+    uint8 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.receiveShadows = static_cast<bool>(raw2);
+    EnsId raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.camera = static_cast<EnsId>(raw3);
     return value;
 }
 void Write_List_MaterialColorSlot_(NativeBindingWriter& writer, List<MaterialColorSlot> const& value)
@@ -402,8 +416,35 @@ void Write_List_ParticleBurst_(NativeBindingWriter& writer, List<ParticleBurst> 
 List<ParticleBurst> Read_List_ParticleBurst_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    List<ParticleBurst> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_ParticleBurst(reader));
+    List<ParticleBurst> value{};
+    auto block = reader.Block(count, sizeof(float32) + sizeof(uint32) + sizeof(uint32) + sizeof(float32) + sizeof(float32));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        ParticleBurst element{};
+        float32 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element.time = static_cast<float32>(raw0);
+        uint32 raw1;
+        std::memcpy(&raw1, cursor, sizeof(raw1));
+        cursor += sizeof(raw1);
+        element.count = static_cast<uint32>(raw1);
+        uint32 raw2;
+        std::memcpy(&raw2, cursor, sizeof(raw2));
+        cursor += sizeof(raw2);
+        element.cycles = static_cast<uint32>(raw2);
+        float32 raw3;
+        std::memcpy(&raw3, cursor, sizeof(raw3));
+        cursor += sizeof(raw3);
+        element.interval = static_cast<float32>(raw3);
+        float32 raw4;
+        std::memcpy(&raw4, cursor, sizeof(raw4));
+        cursor += sizeof(raw4);
+        element.probability = static_cast<float32>(raw4);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_List_ParticleCurveKey_(NativeBindingWriter& writer, List<ParticleCurveKey> const& value)
@@ -414,8 +455,35 @@ void Write_List_ParticleCurveKey_(NativeBindingWriter& writer, List<ParticleCurv
 List<ParticleCurveKey> Read_List_ParticleCurveKey_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    List<ParticleCurveKey> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_ParticleCurveKey(reader));
+    List<ParticleCurveKey> value{};
+    auto block = reader.Block(count, sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(uint32));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        ParticleCurveKey element{};
+        float32 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element.time = static_cast<float32>(raw0);
+        float32 raw1;
+        std::memcpy(&raw1, cursor, sizeof(raw1));
+        cursor += sizeof(raw1);
+        element.value = static_cast<float32>(raw1);
+        float32 raw2;
+        std::memcpy(&raw2, cursor, sizeof(raw2));
+        cursor += sizeof(raw2);
+        element.inTangent = static_cast<float32>(raw2);
+        float32 raw3;
+        std::memcpy(&raw3, cursor, sizeof(raw3));
+        cursor += sizeof(raw3);
+        element.outTangent = static_cast<float32>(raw3);
+        uint32 raw4;
+        std::memcpy(&raw4, cursor, sizeof(raw4));
+        cursor += sizeof(raw4);
+        element.interpolation = static_cast<ParticleCurveInterpolation>(raw4);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_List_ParticleGradientKey_(NativeBindingWriter& writer, List<ParticleGradientKey> const& value)
@@ -426,8 +494,23 @@ void Write_List_ParticleGradientKey_(NativeBindingWriter& writer, List<ParticleG
 List<ParticleGradientKey> Read_List_ParticleGradientKey_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    List<ParticleGradientKey> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_ParticleGradientKey(reader));
+    List<ParticleGradientKey> value{};
+    auto block = reader.Block(count, sizeof(float32) + sizeof(color));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        ParticleGradientKey element{};
+        float32 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element.time = static_cast<float32>(raw0);
+        color raw1;
+        std::memcpy(&raw1, cursor, sizeof(raw1));
+        cursor += sizeof(raw1);
+        element.value = static_cast<color>(raw1);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_List_ParticleSubEmitterRule_(NativeBindingWriter& writer, List<ParticleSubEmitterRule> const& value)
@@ -438,8 +521,43 @@ void Write_List_ParticleSubEmitterRule_(NativeBindingWriter& writer, List<Partic
 List<ParticleSubEmitterRule> Read_List_ParticleSubEmitterRule_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    List<ParticleSubEmitterRule> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_ParticleSubEmitterRule(reader));
+    List<ParticleSubEmitterRule> value{};
+    auto block = reader.Block(count, sizeof(uint32) + sizeof(uint32) + sizeof(uint32) + sizeof(float32) + sizeof(uint8) + sizeof(uint8) + sizeof(uint8));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        ParticleSubEmitterRule element{};
+        uint32 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element.targetSlot = static_cast<uint32>(raw0);
+        uint32 raw1;
+        std::memcpy(&raw1, cursor, sizeof(raw1));
+        cursor += sizeof(raw1);
+        element.event = static_cast<ParticleSubEmitterEvent>(raw1);
+        uint32 raw2;
+        std::memcpy(&raw2, cursor, sizeof(raw2));
+        cursor += sizeof(raw2);
+        element.count = static_cast<uint32>(raw2);
+        float32 raw3;
+        std::memcpy(&raw3, cursor, sizeof(raw3));
+        cursor += sizeof(raw3);
+        element.probability = static_cast<float32>(raw3);
+        uint8 raw4;
+        std::memcpy(&raw4, cursor, sizeof(raw4));
+        cursor += sizeof(raw4);
+        element.inheritVelocity = static_cast<bool>(raw4);
+        uint8 raw5;
+        std::memcpy(&raw5, cursor, sizeof(raw5));
+        cursor += sizeof(raw5);
+        element.inheritColor = static_cast<bool>(raw5);
+        uint8 raw6;
+        std::memcpy(&raw6, cursor, sizeof(raw6));
+        cursor += sizeof(raw6);
+        element.inheritSize = static_cast<bool>(raw6);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_List_Ref_Material__(NativeBindingWriter& writer, List<Ref<Material>> const& value)
@@ -522,8 +640,19 @@ void Write_List_uint32_(NativeBindingWriter& writer, List<uint32> const& value)
 List<uint32> Read_List_uint32_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    List<uint32> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_uint32(reader));
+    List<uint32> value{};
+    auto block = reader.Block(count, sizeof(uint32));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        uint32 element{};
+        uint32 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element = static_cast<uint32>(raw0);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_List_uint8_(NativeBindingWriter& writer, List<uint8> const& value)
@@ -534,8 +663,19 @@ void Write_List_uint8_(NativeBindingWriter& writer, List<uint8> const& value)
 List<uint8> Read_List_uint8_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    List<uint8> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_uint8(reader));
+    List<uint8> value{};
+    auto block = reader.Block(count, sizeof(uint8));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        uint8 element{};
+        uint8 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element = static_cast<uint8>(raw0);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_List_vector2_(NativeBindingWriter& writer, List<vector2> const& value)
@@ -546,8 +686,19 @@ void Write_List_vector2_(NativeBindingWriter& writer, List<vector2> const& value
 List<vector2> Read_List_vector2_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    List<vector2> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_vector2(reader));
+    List<vector2> value{};
+    auto block = reader.Block(count, sizeof(vector2));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        vector2 element{};
+        vector2 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element = static_cast<vector2>(raw0);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_List_vector3_(NativeBindingWriter& writer, List<vector3> const& value)
@@ -558,8 +709,19 @@ void Write_List_vector3_(NativeBindingWriter& writer, List<vector3> const& value
 List<vector3> Read_List_vector3_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    List<vector3> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_vector3(reader));
+    List<vector3> value{};
+    auto block = reader.Block(count, sizeof(vector3));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        vector3 element{};
+        vector3 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element = static_cast<vector3>(raw0);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_MaterialColorSlot(NativeBindingWriter& writer, MaterialColorSlot const& value)
@@ -624,12 +786,29 @@ void Write_MeshInstanceData(NativeBindingWriter& writer, MeshInstanceData const&
 }
 MeshInstanceData Read_MeshInstanceData(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(vector3) + sizeof(quaternion) + sizeof(vector3) + sizeof(color) + sizeof(color));
+    const uint8* cursor = block.data();
     MeshInstanceData value{};
-    value.position = Read_vector3(reader);
-    value.rotation = Read_quaternion(reader);
-    value.scale = Read_vector3(reader);
-    value.tint = Read_color(reader);
-    value.uvRect = Read_color(reader);
+    vector3 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.position = static_cast<vector3>(raw0);
+    quaternion raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.rotation = static_cast<quaternion>(raw1);
+    vector3 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.scale = static_cast<vector3>(raw2);
+    color raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.tint = static_cast<color>(raw3);
+    color raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.uvRect = static_cast<color>(raw4);
     return value;
 }
 void Write_Mesh_(NativeBindingWriter& writer, Mesh* const& value)
@@ -658,12 +837,29 @@ void Write_ParticleBurst(NativeBindingWriter& writer, ParticleBurst const& value
 }
 ParticleBurst Read_ParticleBurst(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(float32) + sizeof(uint32) + sizeof(uint32) + sizeof(float32) + sizeof(float32));
+    const uint8* cursor = block.data();
     ParticleBurst value{};
-    value.time = Read_float32(reader);
-    value.count = Read_uint32(reader);
-    value.cycles = Read_uint32(reader);
-    value.interval = Read_float32(reader);
-    value.probability = Read_float32(reader);
+    float32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.time = static_cast<float32>(raw0);
+    uint32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.count = static_cast<uint32>(raw1);
+    uint32 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.cycles = static_cast<uint32>(raw2);
+    float32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.interval = static_cast<float32>(raw3);
+    float32 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.probability = static_cast<float32>(raw4);
     return value;
 }
 void Write_ParticleCollisionResponse(NativeBindingWriter& writer, ParticleCollisionResponse const& value)
@@ -686,14 +882,37 @@ void Write_ParticleCollisionSettings(NativeBindingWriter& writer, ParticleCollis
 }
 ParticleCollisionSettings Read_ParticleCollisionSettings(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(uint8) + sizeof(uint32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(uint32));
+    const uint8* cursor = block.data();
     ParticleCollisionSettings value{};
-    value.enabled = Read_bool(reader);
-    value.layerMask = Read_uint32(reader);
-    value.radiusScale = Read_float32(reader);
-    value.restitution = Read_float32(reader);
-    value.friction = Read_float32(reader);
-    value.lifetimeLoss = Read_float32(reader);
-    value.response = Read_ParticleCollisionResponse(reader);
+    uint8 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.enabled = static_cast<bool>(raw0);
+    uint32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.layerMask = static_cast<uint32>(raw1);
+    float32 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.radiusScale = static_cast<float32>(raw2);
+    float32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.restitution = static_cast<float32>(raw3);
+    float32 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.friction = static_cast<float32>(raw4);
+    float32 raw5;
+    std::memcpy(&raw5, cursor, sizeof(raw5));
+    cursor += sizeof(raw5);
+    value.lifetimeLoss = static_cast<float32>(raw5);
+    uint32 raw6;
+    std::memcpy(&raw6, cursor, sizeof(raw6));
+    cursor += sizeof(raw6);
+    value.response = static_cast<ParticleCollisionResponse>(raw6);
     return value;
 }
 void Write_ParticleCurve(NativeBindingWriter& writer, ParticleCurve const& value)
@@ -724,12 +943,29 @@ void Write_ParticleCurveKey(NativeBindingWriter& writer, ParticleCurveKey const&
 }
 ParticleCurveKey Read_ParticleCurveKey(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(uint32));
+    const uint8* cursor = block.data();
     ParticleCurveKey value{};
-    value.time = Read_float32(reader);
-    value.value = Read_float32(reader);
-    value.inTangent = Read_float32(reader);
-    value.outTangent = Read_float32(reader);
-    value.interpolation = Read_ParticleCurveInterpolation(reader);
+    float32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.time = static_cast<float32>(raw0);
+    float32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.value = static_cast<float32>(raw1);
+    float32 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.inTangent = static_cast<float32>(raw2);
+    float32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.outTangent = static_cast<float32>(raw3);
+    uint32 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.interpolation = static_cast<ParticleCurveInterpolation>(raw4);
     return value;
 }
 void Write_ParticleEmissionSettings(NativeBindingWriter& writer, ParticleEmissionSettings const& value)
@@ -753,9 +989,17 @@ void Write_ParticleFloatRange(NativeBindingWriter& writer, ParticleFloatRange co
 }
 ParticleFloatRange Read_ParticleFloatRange(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(float32) + sizeof(float32));
+    const uint8* cursor = block.data();
     ParticleFloatRange value{};
-    value.min = Read_float32(reader);
-    value.max = Read_float32(reader);
+    float32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.min = static_cast<float32>(raw0);
+    float32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.max = static_cast<float32>(raw1);
     return value;
 }
 void Write_ParticleGradient(NativeBindingWriter& writer, ParticleGradient const& value)
@@ -775,9 +1019,17 @@ void Write_ParticleGradientKey(NativeBindingWriter& writer, ParticleGradientKey 
 }
 ParticleGradientKey Read_ParticleGradientKey(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(float32) + sizeof(color));
+    const uint8* cursor = block.data();
     ParticleGradientKey value{};
-    value.time = Read_float32(reader);
-    value.value = Read_color(reader);
+    float32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.time = static_cast<float32>(raw0);
+    color raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.value = static_cast<color>(raw1);
     return value;
 }
 void Write_ParticleMainSettings(NativeBindingWriter& writer, ParticleMainSettings const& value)
@@ -797,19 +1049,73 @@ void Write_ParticleMainSettings(NativeBindingWriter& writer, ParticleMainSetting
 }
 ParticleMainSettings Read_ParticleMainSettings(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(uint32) + sizeof(float32) + sizeof(uint8) + sizeof(uint8) + sizeof(float32) + sizeof(uint32) + sizeof(uint32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(color));
+    const uint8* cursor = block.data();
     ParticleMainSettings value{};
-    value.maxParticles = Read_uint32(reader);
-    value.duration = Read_float32(reader);
-    value.looping = Read_bool(reader);
-    value.playOnAwake = Read_bool(reader);
-    value.startDelay = Read_float32(reader);
-    value.simulationSpace = Read_ParticleSimulationSpace(reader);
-    value.randomSeed = Read_uint32(reader);
-    value.startLifetime = Read_ParticleFloatRange(reader);
-    value.startSpeed = Read_ParticleFloatRange(reader);
-    value.startSize = Read_ParticleFloatRange(reader);
-    value.startRotation = Read_ParticleFloatRange(reader);
-    value.startColor = Read_color(reader);
+    uint32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.maxParticles = static_cast<uint32>(raw0);
+    float32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.duration = static_cast<float32>(raw1);
+    uint8 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.looping = static_cast<bool>(raw2);
+    uint8 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.playOnAwake = static_cast<bool>(raw3);
+    float32 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.startDelay = static_cast<float32>(raw4);
+    uint32 raw5;
+    std::memcpy(&raw5, cursor, sizeof(raw5));
+    cursor += sizeof(raw5);
+    value.simulationSpace = static_cast<ParticleSimulationSpace>(raw5);
+    uint32 raw6;
+    std::memcpy(&raw6, cursor, sizeof(raw6));
+    cursor += sizeof(raw6);
+    value.randomSeed = static_cast<uint32>(raw6);
+    float32 raw7;
+    std::memcpy(&raw7, cursor, sizeof(raw7));
+    cursor += sizeof(raw7);
+    value.startLifetime.min = static_cast<float32>(raw7);
+    float32 raw8;
+    std::memcpy(&raw8, cursor, sizeof(raw8));
+    cursor += sizeof(raw8);
+    value.startLifetime.max = static_cast<float32>(raw8);
+    float32 raw9;
+    std::memcpy(&raw9, cursor, sizeof(raw9));
+    cursor += sizeof(raw9);
+    value.startSpeed.min = static_cast<float32>(raw9);
+    float32 raw10;
+    std::memcpy(&raw10, cursor, sizeof(raw10));
+    cursor += sizeof(raw10);
+    value.startSpeed.max = static_cast<float32>(raw10);
+    float32 raw11;
+    std::memcpy(&raw11, cursor, sizeof(raw11));
+    cursor += sizeof(raw11);
+    value.startSize.min = static_cast<float32>(raw11);
+    float32 raw12;
+    std::memcpy(&raw12, cursor, sizeof(raw12));
+    cursor += sizeof(raw12);
+    value.startSize.max = static_cast<float32>(raw12);
+    float32 raw13;
+    std::memcpy(&raw13, cursor, sizeof(raw13));
+    cursor += sizeof(raw13);
+    value.startRotation.min = static_cast<float32>(raw13);
+    float32 raw14;
+    std::memcpy(&raw14, cursor, sizeof(raw14));
+    cursor += sizeof(raw14);
+    value.startRotation.max = static_cast<float32>(raw14);
+    color raw15;
+    std::memcpy(&raw15, cursor, sizeof(raw15));
+    cursor += sizeof(raw15);
+    value.startColor = static_cast<color>(raw15);
     return value;
 }
 void Write_ParticleMotionSettings(NativeBindingWriter& writer, ParticleMotionSettings const& value)
@@ -843,13 +1149,33 @@ void Write_ParticlePlaybackInfo(NativeBindingWriter& writer, ParticlePlaybackInf
 }
 ParticlePlaybackInfo Read_ParticlePlaybackInfo(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(uint32) + sizeof(float32) + sizeof(uint32) + sizeof(uint32) + sizeof(uint64) + sizeof(uint64));
+    const uint8* cursor = block.data();
     ParticlePlaybackInfo value{};
-    value.state = Read_ParticlePlaybackState(reader);
-    value.time = Read_float32(reader);
-    value.aliveCount = Read_uint32(reader);
-    value.trailCount = Read_uint32(reader);
-    value.emittedCount = Read_uint64(reader);
-    value.rejectedCount = Read_uint64(reader);
+    uint32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.state = static_cast<ParticlePlaybackState>(raw0);
+    float32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.time = static_cast<float32>(raw1);
+    uint32 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.aliveCount = static_cast<uint32>(raw2);
+    uint32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.trailCount = static_cast<uint32>(raw3);
+    uint64 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.emittedCount = static_cast<uint64>(raw4);
+    uint64 raw5;
+    std::memcpy(&raw5, cursor, sizeof(raw5));
+    cursor += sizeof(raw5);
+    value.rejectedCount = static_cast<uint64>(raw5);
     return value;
 }
 void Write_ParticlePlaybackState(NativeBindingWriter& writer, ParticlePlaybackState const& value)
@@ -888,14 +1214,37 @@ void Write_ParticleRenderSettings(NativeBindingWriter& writer, ParticleRenderSet
 }
 ParticleRenderSettings Read_ParticleRenderSettings(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(uint32) + sizeof(uint32) + sizeof(uint32) + sizeof(uint32) + sizeof(uint32) + sizeof(float32) + sizeof(uint8));
+    const uint8* cursor = block.data();
     ParticleRenderSettings value{};
-    value.path = Read_ParticleRenderPath(reader);
-    value.mode = Read_ParticleRenderMode(reader);
-    value.blendMode = Read_BlendMode(reader);
-    value.tilesX = Read_uint32(reader);
-    value.tilesY = Read_uint32(reader);
-    value.animationCycles = Read_float32(reader);
-    value.randomStartFrame = Read_bool(reader);
+    uint32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.path = static_cast<ParticleRenderPath>(raw0);
+    uint32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.mode = static_cast<ParticleRenderMode>(raw1);
+    uint32 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.blendMode = static_cast<BlendMode>(raw2);
+    uint32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.tilesX = static_cast<uint32>(raw3);
+    uint32 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.tilesY = static_cast<uint32>(raw4);
+    float32 raw5;
+    std::memcpy(&raw5, cursor, sizeof(raw5));
+    cursor += sizeof(raw5);
+    value.animationCycles = static_cast<float32>(raw5);
+    uint8 raw6;
+    std::memcpy(&raw6, cursor, sizeof(raw6));
+    cursor += sizeof(raw6);
+    value.randomStartFrame = static_cast<bool>(raw6);
     return value;
 }
 void Write_ParticleSettings(NativeBindingWriter& writer, ParticleSettings const& value)
@@ -954,12 +1303,29 @@ void Write_ParticleShapeSettings(NativeBindingWriter& writer, ParticleShapeSetti
 }
 ParticleShapeSettings Read_ParticleShapeSettings(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(uint32) + sizeof(float32) + sizeof(vector3) + sizeof(float32) + sizeof(uint8));
+    const uint8* cursor = block.data();
     ParticleShapeSettings value{};
-    value.shape = Read_ParticleShape(reader);
-    value.radius = Read_float32(reader);
-    value.boxExtents = Read_vector3(reader);
-    value.coneAngle = Read_float32(reader);
-    value.surfaceOnly = Read_bool(reader);
+    uint32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.shape = static_cast<ParticleShape>(raw0);
+    float32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.radius = static_cast<float32>(raw1);
+    vector3 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.boxExtents = static_cast<vector3>(raw2);
+    float32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.coneAngle = static_cast<float32>(raw3);
+    uint8 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.surfaceOnly = static_cast<bool>(raw4);
     return value;
 }
 void Write_ParticleSimulationSpace(NativeBindingWriter& writer, ParticleSimulationSpace const& value)
@@ -990,14 +1356,37 @@ void Write_ParticleSubEmitterRule(NativeBindingWriter& writer, ParticleSubEmitte
 }
 ParticleSubEmitterRule Read_ParticleSubEmitterRule(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(uint32) + sizeof(uint32) + sizeof(uint32) + sizeof(float32) + sizeof(uint8) + sizeof(uint8) + sizeof(uint8));
+    const uint8* cursor = block.data();
     ParticleSubEmitterRule value{};
-    value.targetSlot = Read_uint32(reader);
-    value.event = Read_ParticleSubEmitterEvent(reader);
-    value.count = Read_uint32(reader);
-    value.probability = Read_float32(reader);
-    value.inheritVelocity = Read_bool(reader);
-    value.inheritColor = Read_bool(reader);
-    value.inheritSize = Read_bool(reader);
+    uint32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.targetSlot = static_cast<uint32>(raw0);
+    uint32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.event = static_cast<ParticleSubEmitterEvent>(raw1);
+    uint32 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.count = static_cast<uint32>(raw2);
+    float32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.probability = static_cast<float32>(raw3);
+    uint8 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.inheritVelocity = static_cast<bool>(raw4);
+    uint8 raw5;
+    std::memcpy(&raw5, cursor, sizeof(raw5));
+    cursor += sizeof(raw5);
+    value.inheritColor = static_cast<bool>(raw5);
+    uint8 raw6;
+    std::memcpy(&raw6, cursor, sizeof(raw6));
+    cursor += sizeof(raw6);
+    value.inheritSize = static_cast<bool>(raw6);
     return value;
 }
 void Write_ParticleTrailSettings(NativeBindingWriter& writer, ParticleTrailSettings const& value)
@@ -1151,11 +1540,25 @@ void Write_ShaderPassState(NativeBindingWriter& writer, ShaderPassState const& v
 }
 ShaderPassState Read_ShaderPassState(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(int32) + sizeof(int32) + sizeof(int32) + sizeof(uint32));
+    const uint8* cursor = block.data();
     ShaderPassState value{};
-    value.depthTest = Read_ShaderPassToggle(reader);
-    value.depthWrite = Read_ShaderPassToggle(reader);
-    value.blend = Read_ShaderPassToggle(reader);
-    value.cull = Read_CullMode(reader);
+    int32 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.depthTest = static_cast<ShaderPassToggle>(raw0);
+    int32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.depthWrite = static_cast<ShaderPassToggle>(raw1);
+    int32 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.blend = static_cast<ShaderPassToggle>(raw2);
+    uint32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.cull = static_cast<CullMode>(raw3);
     return value;
 }
 void Write_ShaderPassToggle(NativeBindingWriter& writer, ShaderPassToggle const& value)
@@ -1258,10 +1661,21 @@ void Write_bounds3(NativeBindingWriter& writer, bounds3 const& value)
 }
 bounds3 Read_bounds3(NativeBindingReader& reader)
 {
+    auto block = reader.Block(1, sizeof(vector3) + sizeof(vector3) + sizeof(uint8));
+    const uint8* cursor = block.data();
     bounds3 value{};
-    value.center = Read_vector3(reader);
-    value.extents = Read_vector3(reader);
-    value.valid = Read_bool(reader);
+    vector3 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.center = static_cast<vector3>(raw0);
+    vector3 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.extents = static_cast<vector3>(raw1);
+    uint8 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.valid = static_cast<bool>(raw2);
     return value;
 }
 void Write_color(NativeBindingWriter& writer, color const& value)
@@ -1319,7 +1733,17 @@ std::array<EnsId,16> Read_std__array_EnsId_16_(NativeBindingReader& reader)
     int32 count = reader.Count();
     std::array<EnsId,16> value{};
     if (count != static_cast<int32>(value.size())) throw NativeBindingError(NativeBindingStatus::InvalidArgument, "Fixed array size mismatch");
-    for (int32 index = 0; index < count; ++index) value[index] = Read_EnsId(reader);
+    auto block = reader.Block(count, sizeof(EnsId));
+    const uint8* cursor = block.data();
+    for (int32 index = 0; index < count; ++index)
+    {
+        EnsId element{};
+        EnsId raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element = static_cast<EnsId>(raw0);
+        value[index] = std::move(element);
+    }
     return value;
 }
 void Write_std__shared_ptr_ResourceLoadOperation_(NativeBindingWriter& writer, std::shared_ptr<ResourceLoadOperation> const& value)
@@ -1347,8 +1771,19 @@ void Write_std__vector_float32_(NativeBindingWriter& writer, std::vector<float32
 std::vector<float32> Read_std__vector_float32_(NativeBindingReader& reader)
 {
     int32 count = reader.Count();
-    std::vector<float32> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_float32(reader));
+    std::vector<float32> value{};
+    auto block = reader.Block(count, sizeof(float32));
+    const uint8* cursor = block.data();
+    value.reserve(count);
+    for (int32 index = 0; index < count; ++index)
+    {
+        float32 element{};
+        float32 raw0;
+        std::memcpy(&raw0, cursor, sizeof(raw0));
+        cursor += sizeof(raw0);
+        element = static_cast<float32>(raw0);
+        value.push_back(std::move(element));
+    }
     return value;
 }
 void Write_uint32(NativeBindingWriter& writer, uint32 const& value)

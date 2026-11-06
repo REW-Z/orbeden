@@ -1,4 +1,4 @@
-# Orbeden 构建与打包说明
+﻿# Orbeden 构建与打包说明
 
 本文说明 Orbeden 的 C++ / C# 构建关系，以及 Core、Editor、Game 在开发测试和发布打包时的职责边界。
 
@@ -24,6 +24,7 @@
 跨平台表示 Core/Game 的 Release 架构和构建入口按目标平台区分，不表示仓库中的每个预留目标都已经可用。当前 Windows x64 是默认验证目标，Linux x64 需要对应环境和平台库；FreeBSD 与 Switch 仍受后文所列工具链、PhysX 和厂商 SDK 限制。
 
 ## 工程、产物与依赖
+
 
 两张图均使用以下约定：
 
@@ -116,7 +117,7 @@ IDE 的设计时项目加载（`DesignTimeBuild=true`）在未显式设置 `Orbe
 
 `Orbeden.Editor.dll` 通过 `ManagedAssemblySession` 动态加载游戏及其 Editor 扩展，这与游戏的编译引用是两种关系，因此不构成编译循环。Core C# 与 Editor C# 在编辑器托管上下文中常驻；游戏及其 Editor 扩展加载到同一个可回收的 `SessionLoadContext`，并共享宿主已经加载的 Core / Editor 程序集。Inspector、场景回调与脚本域使用同一份游戏类型，重编译时一起卸载和重载。
 
-Core C# 与游戏 C# 通过原生 API 函数表访问 Core 类型，通过 ComponentProxy 访问游戏 C++ 组件，不通过托管程序集引用原生 DLL。签名已知的方法在绑定时解析元数据，随后由 Core 的 NativeMethod / NativeAction 调用器通过具体类型函数指针传值；类型已知的字段通过 NativeField<T> 直接读写；动态方法与动态字段继续使用 InteropValue 协议。游戏原生模块只生成类型、字段、方法与生命周期元数据，不生成 C# 绑定。Editor 动态加载 `<ProjectName>Native.dll`；Player 直接编译同一批游戏 C++ 源码和反射生成代码到可执行文件，不分发这个 Editor 模块 DLL。
+Core C# 与游戏 C# 通过原生 API 函数表访问 Core 类型，通过 ComponentProxy 访问游戏 C++ 组件，不通过托管程序集引用原生 DLL。签名已知的方法在绑定时解析元数据，随后由 Core 的 NativeMethod / NativeAction 调用器通过函数指针传递每个参数的原生布局；类型已知的字段通过 NativeField<T> 直接读写；动态方法与动态字段使用普通托管值，仅在动态跨域边界编码内部协议。游戏原生模块只生成类型、字段、方法与生命周期元数据，不生成 C# 绑定。Editor 动态加载 `<ProjectName>Native.dll`；Player 直接编译同一批游戏 C++ 源码和反射生成代码到可执行文件，不分发这个 Editor 模块 DLL。
 
 ## 构建入口与输出
 
@@ -581,6 +582,24 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+#### 版本 131：预编译委托支持反向已知签名调用
+
+C++ 使用现有 `ComponentProxy.TryBindMethod` 与 `ManagedMethod<TResult(TArgs...)>` 绑定 C# 公开实例方法；C# 在现有 Core 中通过 `ManagedMethodSignatures.Register` / `RegisterAction` 登记完整签名。绑定阶段创建强类型委托，调用阶段通过固定 `UnmanagedCallersOnly` 入口及预编译泛型适配函数执行，不做反射调用、运行时代码生成或源生成，不新增工程。支持 0～16 参数，自动封送字符串、数组、对象引用与指针。标量调用不装箱、不分配托管参数数组，反向入口使用每参数原生布局地址。用法与 NativeAOT 签名登记、裁剪要求见[脚本系统](ScriptSystem.md#85-c-调用-c已知签名绑定)。
+
+完整运行时 ABI 为 14，托管回调表为 14 个指针槽，游戏原生模块 ABI 为 10；Editor 引擎子表仍为 ABI 8。需重建 Core、Editor，重启 Editor 后同步项目 SDK，并重建游戏原生与托管代码，Player 重新发布。无需修改资源或场景内容。
+
+#### 版本 130：移除反向已知签名直调
+
+删除独立 C# 脚本生成器及其构建、SDK 发布引用，移除 C++ 反向类型化方法和字段模板、托管入口注册与相关缓存。C++ → C# 保留 `ComponentProxy.Invoke` 的固定托管入口和反射调用；C# → C++ 的 `NativeMethod`、`NativeField` 与自动组件绑定继续使用现有实现。不新增项目。
+
+完整运行时 ABI 为 13，托管回调表恢复为 11 个指针槽，游戏原生模块 ABI 为 9。重建 Core、Editor 并同步项目 SDK，重新构建游戏原生和托管代码；场景及资源内容格式不变。通过现有编译工具和临时源码完成 CLR、NativeAOT 回归，开发结束后清理验证源码及脚本。
+
+#### 版本 129：双向类型化互操作与自动绑定热路径
+
+公开动态值接口改为普通 C# 值，类型化 `NativeMethod` / `NativeField` 自动封送字符串、数组与对象引用，全 blittable 输入按值直调，并支持 `nint/nuint` 对应裸指针。脚本源生成器提供 C++ → C# 的已知签名入口，随 SDK 发布。Core 自动组件绑定移除 C# 与 C++ 重复的对象存活查询，保留包装代次与原生对象类型验证；固定布局记录和数组改为一次验证完整块后读取字段，保留边界和溢出检查。
+
+重建 Core 与 Editor，同步项目 SDK 并重新构建游戏原生与托管程序集；完整运行时 ABI 为 12，游戏原生模块 ABI 为 8。旧的公开 `InteropValue` 调用改用普通值；不迁移场景与资源内容格式。已完成 CLR 与 NativeAOT 互操作验证，临时检查工程在开发完成后清理。
 
 #### 版本 128：属性输入框空值与标签交互
 

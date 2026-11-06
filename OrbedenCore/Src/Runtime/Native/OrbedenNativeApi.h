@@ -38,7 +38,7 @@ struct ScriptBindApi
 struct OrbedenNativeApi
 {
 public:
-    uint32 abiVersion = 10;
+    uint32 abiVersion = 14;
     uint32 structSize = sizeof(OrbedenNativeApi);
     RuntimeGuiApi Gui;
     WorldBind World;

@@ -27,7 +27,7 @@ public sealed class LayoutBoxEditor : ComponentEditor
             EditorGUI.Label(mixed ? "Cross Alignment (Mixed)" : "Cross Alignment");
             int selected = alignmentPicker.Draw("layout_alignment", mixed ? -1 : (int)alignment,
                 (UILayoutOrientation)direction);
-            if (selected >= 0) SetValue(property.Name, InteropValue.From((uint)selected));
+            if (selected >= 0) SetValue(property.Name, (uint)selected);
         }
     }
 }

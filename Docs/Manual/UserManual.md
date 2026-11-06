@@ -325,7 +325,7 @@ Inspector 的添加菜单用 `[C++]` 和 `[C#]` 区分语言，每个 C# 脚本�
 
 ### C++ / C# 互操作
 
-游戏原生模块不生成 C# 绑定类，使用 `ens.GetNativeComponent("MoveBehaviour")` 得到 `ComponentProxy`。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。MetaGen 仍为游戏 C++ 类型生成字段、方法和生命周期元数据，Inspector 编辑与场景序列化继续工作。Core 的 `Transform` 等内置类型保留强类型 C# 包装。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
+游戏原生模块不生成 C# 绑定类，使用 `ens.GetNativeComponent("MoveBehaviour")` 得到 `ComponentProxy`。例如 `proxy.SetField("speed", 4.0f)`。MetaGen 仍为游戏 C++ 类型生成字段、方法和生命周期元数据，Inspector 编辑与场景序列化继续工作。Core 的 `Transform` 等内置类型保留强类型 C# 包装。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
 
 签名已知的 C# → C++ 方法调用，在 `OnStart` 通过 `TryBindMethod` / `TryBindAction` 绑定，并把结果保存到脚本字段；逐帧通过 `NativeMethod` / `NativeAction` 直接传具体值。下面使用飞行模板已有的方法：
 
@@ -341,7 +341,7 @@ if (getAirspeed != null)
     Console.WriteLine(getAirspeed());
 ```
 
-`NativeMethod` / `NativeAction` 是 C# 委托，通过 `method(args)` 调用并直接返回结果；绑定失败输出 null。调用失败抛出 `NativeCallException`，`Status` 属性保留原始互操作状态。`NativeMethod<T0, ..., TResult>` 的最后一个类型是返回值，无返回值使用 `NativeAction<T0, ...>`；最多支持 16 个输入参数。数值、向量等按具体 ABI 类型传递，不经过 `InteropValue`；字符串使用 `NativeUtf8` / `NativeStringId` 视图。签名必须与 C++ 完全匹配，不做隐式数值转换。
+`NativeMethod` / `NativeAction` 是 C# 委托，通过 `method(args)` 调用并直接返回结果；绑定失败输出 null。调用失败抛出 `NativeCallException`，`Status` 属性保留原始互操作状态。`NativeMethod<T0, ..., TResult>` 的最后一个类型是返回值，无返回值使用 `NativeAction<T0, ...>`；最多支持 16 个输入参数。数值和向量使用明确的原生布局；字符串直接使用 `string`，文本标识使用 `StringId`，对象引用和受支持的数组也由绑定层自动封送。返回的字符串和数组已复制为托管值，可以直接保存。签名必须与 C++ 完全匹配，不做隐式数值转换。
 
 类型已知的 C++ 字段也可以直接绑定，初始化时保存 `NativeField<T>`，后续无需按名称查询：
 
@@ -356,7 +356,41 @@ if (flight != null && flight.TryBindField("throttleRate", out NativeField<float>
 
 实际脚本将 throttleRate 保存为字段。读写仍经过原生 setter、变更通知及 World 脏标记；`CanRead` / `CanWrite` 表示绑定的读写能力，只读或只写限制会被保留。运行时才知道签名的方法和字段继续使用 `ComponentMethod`、动态 `Invoke`、`SetField` / `TryGetField`。`Invoke` 自带有效性检查，不需要每次先检查 `IsValid`。程序集、World 或原生模块重载，以及反射成员表变化后，应重新获取组件并绑定方法；旧句柄不会自行恢复；字段绑定同样需要重新获取。调用应在主线程执行，按返回状态判断成功。
 
-完整缓存示例见模板 FlightHud / SampleBehaviour；字符串生命周期、错误状态和动态协议见[脚本系统](../ScriptSystem.md#8-跨语言代理)。大量互操作仍可通过批量接口减少跨语言调用次数。
+C++ → C# 的已知签名调用使用 `ManagedMethod<TResult(TArgs...)>`，包含 `ScriptInteropInvoke.h` 后，在两端脚本已初始化的首次 Update 中绑定并缓存。例如调用 `FlightTraining.SampleBehaviour.ReceiveNativePing(float)`：
+
+```cpp
+#include "Scripting/ScriptInteropInvoke.h"
+
+//初始化时绑定，实际脚本将 receivePing 保存为成员
+ScriptInterop::ManagedMethod<void(float32)> receivePing;
+auto managed = ScriptInterop::FindManagedComponent(ensId, "FlightTraining.SampleBehaviour");
+if (managed.TryBindMethod("ReceiveNativePing", receivePing) == ScriptInterop::InteropStatus::Ok)
+{
+    receivePing(1.0f);
+}
+```
+
+`void` 表示无返回值，最多支持 16 个参数。绑定成功后直接通过 `receivePing(value)` 调用，失败时不要调用输出对象。调用失败抛出 `ManagedCallException`，其 `status` 保存原始状态。每次调用由 Core 检查线程与绑定是否失效，无需额外执行 `IsValid`；重载或组件注册表变化后重新查找和绑定。
+
+此方向在绑定时通过反射查找 C# 公开实例方法并创建强类型委托，调用时经 Core 的固定 `UnmanagedCallersOnly` 入口和预编译适配函数执行，不再反射调用。游戏方法保持普通 C# 方法，不需要添加 `UnmanagedCallersOnly`，不需要源生成器或额外工程。底层使用各参数的原生布局地址；这不是取得任意 C# 方法的原始非托管函数指针。
+
+常用签名已内置，例如上面的 `(float) → void`。其他组合在首次 C++ 绑定之前，通过 C# 脚本静态构造函数或初始化代码登记一次：
+
+```csharp
+//参数依次为 string、int、bool，返回 string
+ManagedMethodSignatures.Register<string, int, bool, string>();
+
+//参数依次为 string、int，无返回值
+ManagedMethodSignatures.RegisterAction<string, int>();
+```
+
+`Register<T0, ..., TResult>()` 的最后一个类型是返回类型；无参返回值使用 `Register<TResult>()`，无参且无返回值使用 `RegisterAction()`。登记按完整 CLR 签名复用，同签名的方法无需分别登记。枚举、对象派生类等必须使用方法声明的精确类型。未登记的签名返回 `UnsupportedType`，不自动退回动态调用。NativeAOT 需要这些显式泛型调用使适配函数参与编译，并继续保留目标脚本构造函数和方法的反射元数据。
+
+双向类型化调用都支持字符串、StringId、受支持的数组和对象引用自动 Marshal。C++ 的 `std::string` 对应 C# `string`，`List<T>` 对应 `T[]`，`Ref<T>` 对应 Object 包装；字符串和数组返回值在结束调用前复制，调用方可以直接保存。C++ 裸指针（如 `void*`、`T*`）对应 C# `nint/nuint`（`IntPtr/UIntPtr`），传递指针位值，生命周期由业务管理；与 `Ref<T>` 的对象身份语义不同。自定义结构、嵌套数组、`ref/out` 和泛型方法不自动推断封送规则。
+
+动态调用和自定义 Inspector 使用普通 C# 值。从旧版升级时，删除 `InteropValue.From(...)` 包装，例如直接调用 `SetValue(nameof(speed), 4.0f)`；动态结果通过 `object?` 接收。
+
+C# → C++ 的完整缓存示例见模板 FlightHud / SampleBehaviour；封送范围、默认签名、错误状态和动态协议见[脚本系统](../ScriptSystem.md#8-跨语言代理)。大量互操作仍可通过批量接口减少跨语言调用次数。
 
 开发速度优先时使用 C#；需要大量计算或稳定高性能逻辑时使用 C++。
 

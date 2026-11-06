@@ -45,12 +45,12 @@ public sealed class ImageEditor : ComponentEditor
         {
             float value = borders[index];
             if (EditorGUI.SliderFloat(labels[index] + " (px)", ref value, 0, index < 2 ? width : height))
-                SetValue(names[index], InteropValue.From(value));
+                SetValue(names[index], value);
         }
         if (EditorGUI.Button("Split into Thirds"))
         {
             for (int index = 0; index < 4; ++index)
-                SetValue(names[index], InteropValue.From((index < 2 ? width : height) / 3));
+                SetValue(names[index], (index < 2 ? width : height) / 3);
         }
         if (borders[0] + borders[1] + borders[2] + borders[3] == 0)
             EditorGUI.Warning("All borders are zero; nine-slice has no effect.");
@@ -82,7 +82,7 @@ public sealed class ImageEditor : ComponentEditor
                 2 => y - uvMin.y * texture.height,
                 _ => uvMax.y * texture.height - y,
             };
-            SetValue(names[selectedBorder], InteropValue.From(Math.Clamp(value, 0, selectedBorder < 2 ? width : height)));
+            SetValue(names[selectedBorder], Math.Clamp(value, 0, selectedBorder < 2 ? width : height));
         }
 
         //复用渲染切分公式标出实际九宫格边界

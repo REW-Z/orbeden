@@ -313,6 +313,9 @@
     <ClInclude Include="Src\Scripting\ScriptInterop.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Scripting\ScriptInteropInvoke.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Runtime\Object\Script.h">
       <Filter>头文件</Filter>
     </ClInclude>

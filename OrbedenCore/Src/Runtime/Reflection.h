@@ -14,7 +14,7 @@
 class OrbEvent;
 namespace ScriptInterop
 {
-    struct InteropValueAbi;
+    struct DynamicValueAbi;
     enum class InteropStatus : uint32;
 }
 
@@ -39,6 +39,7 @@ namespace Reflection
         //容器条目：payload 是元素个数，元素本身各自成条（编辑器属性快照用）
         Array,
         Vector2,
+        Pointer,
     };
 
     //可序列化字段的类型分类
@@ -68,7 +69,7 @@ namespace Reflection
     {
     private:
         ValueKind kind = ValueKind::Empty;
-        std::variant<std::monostate, bool, int32, uint32, uint64, float32, std::string, StringId, vector2, vector3, color, quaternion, EnsId, Object*> data;
+        std::variant<std::monostate, bool, int32, uint32, uint64, float32, std::string, StringId, vector2, vector3, color, quaternion, EnsId, Object*, const void*> data;
 
     public:
         Value() = default;
@@ -114,6 +115,9 @@ namespace Reflection
 
         //创建 Object 指针反射值
         Value(Object* value);
+
+        //创建裸指针反射值
+        Value(const void* value);
 
         //获取当前反射值类型
         ValueKind GetKind() const;
@@ -162,6 +166,9 @@ namespace Reflection
 
         //尝试读取 Object 指针值
         bool TryGet(Object*& value) const;
+
+        //读取裸指针值
+        bool TryGet(const void*& value) const;
 
         //按字段类型从文本构造反射值
         static bool FromString(FieldKind kind, const std::string& text, Value& value);
@@ -272,6 +279,16 @@ namespace Reflection
         return true;
     }
 
+    //按原始位表示读取裸指针
+    template<typename T>
+    bool SetFromValue(T*& target, const Value& value)
+    {
+        const void* pointer = nullptr;
+        if (!value.TryGet(pointer)) return false;
+        target = static_cast<T*>(const_cast<void*>(pointer));
+        return true;
+    }
+
     //从对象身份反射值写入原生对象软引用。
     template<typename T>
     bool SetFromValue(Ref<T>& target, const Value& value)
@@ -321,7 +338,7 @@ namespace Reflection
     typedef Value (*MethodSpanInvoker)(Object* object, std::span<const Value> args, bool& success);
 
     //直接读取 ABI 参数并调用原生方法
-    using MethodAbiInvoker = ScriptInterop::InteropStatus (*)(Object*, const ScriptInterop::InteropValueAbi*, ScriptInterop::InteropValueAbi*, std::string&);
+    using MethodAbiInvoker = ScriptInterop::InteropStatus (*)(Object*, const ScriptInterop::DynamicValueAbi*, ScriptInterop::DynamicValueAbi*, std::string&);
 
     //反射字段元数据和读写入口
     struct FieldInfo
@@ -343,11 +360,12 @@ namespace Reflection
         ValueKind directKind = ValueKind::Empty;
         void* directGetter = nullptr;
         void* directSetter = nullptr;
+        void* directValueSetter = nullptr;
 
         FieldInfo() = default;
 
         //创建字段元数据
-        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr, FieldListSizeGetter getListSize = nullptr, FieldListResizer resizeList = nullptr, FieldKind arrayElementKind = FieldKind::Unsupported, bool isFixedSize = false, ValueKind fieldValueKind = ValueKind::Empty, void* getDirect = nullptr, void* setDirect = nullptr);
+        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr, FieldListSizeGetter getListSize = nullptr, FieldListResizer resizeList = nullptr, FieldKind arrayElementKind = FieldKind::Unsupported, bool isFixedSize = false, ValueKind fieldValueKind = ValueKind::Empty, void* getDirect = nullptr, void* setDirect = nullptr, void* setDirectValue = nullptr);
 
         //读取引用列表槽位数；不是引用列表字段时返回 0
         int32 GetListSize(Object* object) const;
@@ -380,6 +398,7 @@ namespace Reflection
         MethodSpanInvoker spanInvoker = nullptr;
         MethodAbiInvoker abiInvoker = nullptr;
         void* directInvoker = nullptr;
+        void* valueInvoker = nullptr;
 
         MethodInfo() = default;
 
@@ -387,7 +406,7 @@ namespace Reflection
         MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodInvoker invokeMethod);
 
         //创建使用连续参数视图的方法元数据
-        MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodSpanInvoker invokeMethod, MethodAbiInvoker invokeAbi = nullptr, void* invokeDirect = nullptr);
+        MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodSpanInvoker invokeMethod, MethodAbiInvoker invokeAbi = nullptr, void* invokeDirect = nullptr, void* invokeValue = nullptr);
 
         //调用反射方法
         Value Invoke(Object* object, const List<Value>& args, bool* success = nullptr) const;

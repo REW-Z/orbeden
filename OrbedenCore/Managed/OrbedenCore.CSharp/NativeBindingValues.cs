@@ -48,6 +48,13 @@ public ref struct NativeBindingReader(ReadOnlySpan<byte> data)
         if (remaining.Length < size) throw new InvalidDataException("Truncated native binding value.");
         T result = MemoryMarshal.Read<T>(remaining); remaining = remaining[size..]; return result;
     }
+    /// <summary>校验并借出连续字段或数组元素的完整布局。</summary>
+    public ReadOnlySpan<byte> Block(int size)
+    {
+        ReadOnlySpan<byte> block = remaining[..size];
+        remaining = remaining[size..];
+        return block;
+    }
     public int Count()
     {
         int length = Scalar<int>();

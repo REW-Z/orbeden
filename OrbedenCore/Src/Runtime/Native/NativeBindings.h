@@ -58,6 +58,22 @@ public:
         if (remaining < static_cast<int32>(sizeof(T))) throw NativeBindingError(NativeBindingStatus::InvalidArgument, "Truncated binding value");
         T value; std::memcpy(&value, data, sizeof(T)); data += sizeof(T); remaining -= sizeof(T); return value;
     }
+    //校验并借出连续元素的完整布局
+    std::span<const uint8> Block(int32 count, std::size_t stride)
+    {
+        if (count < 0 || stride == 0 || static_cast<std::size_t>(count) > static_cast<std::size_t>(remaining) / stride)
+        {
+            throw NativeBindingError(NativeBindingStatus::InvalidArgument, "Truncated binding block");
+        }
+        const std::size_t size = static_cast<std::size_t>(count) * stride;
+        std::span<const uint8> block(data, size);
+        if (size != 0)
+        {
+            data += size;
+        }
+        remaining -= static_cast<int32>(size);
+        return block;
+    }
     int32 Count()
     {
         int32 count = Scalar<int32>();

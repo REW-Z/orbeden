@@ -3,7 +3,7 @@ using Orbeden;
 namespace OrbedenEditor;
 
 //TypeName 是字段的声明类型名：枚举字段靠它找回同名枚举画下拉框，其余字段留空
-internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind, string ReferenceType = "",
+internal readonly record struct PropertyDescriptor(string Name, NativeValueKind Kind, string ReferenceType = "",
     string Label = "", bool IsFixedSize = false, string TypeName = "");
 
 internal interface IPropertyTarget
@@ -13,9 +13,9 @@ internal interface IPropertyTarget
     void Refresh() { }
     string Identity { get; }
     IReadOnlyList<PropertyDescriptor> Properties { get; }
-    InteropStatus TryGet(string name, out InteropValue value);
-    InteropStatus Validate(string name, InteropValue value);
-    InteropStatus Set(string name, InteropValue value);
+    InteropStatus TryGet(string name, out object? value);
+    InteropStatus Validate(string name, object? value);
+    InteropStatus Set(string name, object? value);
     void MarkDirty();
 }
 
@@ -112,10 +112,10 @@ public static class EditorPropertyHistory
 public sealed class PropertyValue
 {
     private readonly PropertyDocument document;
-    private InteropValue value;
+    private object? value;
 
     public string Name { get; }
-    public InteropValueKind Kind { get; }
+    public NativeValueKind Kind { get; }
     public string ReferenceType { get; }
     //字段的声明类型名，枚举字段画下拉框时用来找枚举；其余字段为空
     public string TypeName { get; }
@@ -126,11 +126,11 @@ public sealed class PropertyValue
     public bool IsFixedSize { get; }
     public bool AllowsSceneReferences => document.AllowsSceneReferences;
     public bool HasMultipleDifferentValues { get; internal set; }
-    public InteropValue Value => value;
+    public object? Value => value;
     internal bool Modified { get; private set; }
     internal bool IsReadable { get; set; } = true;
 
-    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType, string label,
+    internal PropertyValue(PropertyDocument owner, string name, NativeValueKind kind, string referenceType, string label,
         bool isFixedSize = false, string typeName = "", (long Value, string Label)[]? enumOptions = null)
     {
         document = owner;
@@ -143,16 +143,16 @@ public sealed class PropertyValue
         EnumOptions = enumOptions;
     }
 
-    public void SetValue(InteropValue newValue)
+    public void SetValue(object? newValue)
     {
-        if (newValue.Kind != Kind) throw new ArgumentException($"Property '{Name}' expects {Kind}, got {newValue.Kind}.", nameof(newValue));
+        if (!NativeValues.Matches(newValue, Kind)) throw new ArgumentException($"Property '{Name}' expects {Kind}, got {newValue.GetValueKind()}.", nameof(newValue));
         value = newValue;
         HasMultipleDifferentValues = false;
         Modified = true;
         document.MarkModified();
     }
 
-    internal void SetSnapshot(InteropValue newValue, bool mixed)
+    internal void SetSnapshot(object? newValue, bool mixed)
     {
         value = newValue;
         HasMultipleDifferentValues = mixed;
@@ -167,7 +167,7 @@ public sealed class PropertyValue
 
 /// <summary>统一编辑 Edit/PIE World 中 C++ 与 C# 组件的事务文档。</summary>
 /// <summary>一次属性事务里的单条写入，供自定义编辑器把多个字段合成一条撤销。</summary>
-internal readonly record struct PropertyTargetWrite(IPropertyTarget Target, string Name, InteropValue Value);
+internal readonly record struct PropertyTargetWrite(IPropertyTarget Target, string Name, object? Value);
 
 public sealed class PropertyDocument
 {
@@ -228,18 +228,18 @@ public sealed class PropertyDocument
         //更新当前值与多选混合状态
         foreach (PropertyValue property in properties)
         {
-            InteropValue first = default;
+            object? first = default;
             bool mixed = false;
             bool readable = targets.Count != 0;
             for (int index = 0; index < targets.Count; ++index)
             {
-                if (targets[index].TryGet(property.Name, out InteropValue current) != InteropStatus.Ok)
+                if (targets[index].TryGet(property.Name, out object? current) != InteropStatus.Ok)
                 {
                     readable = false;
                     break;
                 }
                 if (index == 0) first = current;
-                else if (!first.Equals(current)) mixed = true;
+                else if (!Equals(first, current)) mixed = true;
             }
             property.IsReadable = readable;
             property.SetSnapshot(first, mixed);
@@ -327,11 +327,11 @@ public sealed class PropertyDocument
 
         foreach (IPropertyTarget target in targets) target.Refresh();
 
-        List<(IPropertyTarget Target, string Name, InteropValue OldValue, InteropValue NewValue)> resolved = [];
+        List<(IPropertyTarget Target, string Name, object? OldValue, object? NewValue)> resolved = [];
         foreach (PropertyTargetWrite write in writes)
         {
             if (write.Target.Validate(write.Name, write.Value) != InteropStatus.Ok) return false;
-            if (write.Target.TryGet(write.Name, out InteropValue oldValue) != InteropStatus.Ok) return false;
+            if (write.Target.TryGet(write.Name, out object? oldValue) != InteropStatus.Ok) return false;
             resolved.Add((write.Target, write.Name, oldValue, write.Value));
         }
 
@@ -365,15 +365,15 @@ public sealed class PropertyDocument
         modified = true;
     }
 
-    private static void ApplyHistory(IReadOnlyList<(IPropertyTarget Target, string Name, InteropValue OldValue, InteropValue NewValue)> writes, bool useNewValue)
+    private static void ApplyHistory(IReadOnlyList<(IPropertyTarget Target, string Name, object? OldValue, object? NewValue)> writes, bool useNewValue)
     {
         foreach (IPropertyTarget target in writes.Select(write => write.Target).Distinct()) target.Refresh();
-        List<InteropValue> previous = [];
+        List<object?> previous = [];
         foreach (var write in writes)
         {
-            InteropValue value = useNewValue ? write.NewValue : write.OldValue;
+            object? value = useNewValue ? write.NewValue : write.OldValue;
             if (write.Target.Validate(write.Name, value) != InteropStatus.Ok
-                || write.Target.TryGet(write.Name, out InteropValue current) != InteropStatus.Ok)
+                || write.Target.TryGet(write.Name, out object? current) != InteropStatus.Ok)
                 throw new InvalidOperationException($"Cannot restore property {write.Name}.");
             previous.Add(current);
         }

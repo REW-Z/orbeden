@@ -36,7 +36,7 @@ public abstract class ComponentEditor
     public PropertyValue? FindProperty(string name) => Properties.FindProperty(name);
 
     /// <summary>暂存字段修改，回调结束时统一提交并记录撤销。</summary>
-    public void SetValue(string name, InteropValue value)
+    public void SetValue(string name, object? value)
     {
         PropertyValue property = FindProperty(name) ?? throw new ArgumentException($"Property not found: {name}", nameof(name));
         property.SetValue(value);

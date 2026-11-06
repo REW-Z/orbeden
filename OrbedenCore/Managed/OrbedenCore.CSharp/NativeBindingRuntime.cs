@@ -64,9 +64,12 @@ public static unsafe class NativeBindingRuntime
     /// <summary>为生成代码取得签名校验后的类型化函数指针。</summary>
     public static IntPtr GetFunction(Type type, int slot, Object? instance = null)
     {
-        if (!ReferenceEquals(instance, null) && (!instance.IsAlive || instance.BindingGeneration != Generation))
-            throw new ObjectDisposedException(instance.GetType().FullName, "Native binding instance was destroyed or its module was unloaded.");
         Entry entry = Resolve(type);
+        //校验包装代次，原生入口负责对象存活与实际类型
+        if (!ReferenceEquals(instance, null) && (instance.InstanceId == 0 || instance.BindingGeneration != entry.Generation))
+        {
+            throw new ObjectDisposedException(instance.GetType().FullName, "Native binding instance was destroyed or its module was unloaded.");
+        }
         return (IntPtr)entry.Functions[slot];
     }
 
@@ -74,7 +77,8 @@ public static unsafe class NativeBindingRuntime
     public static int GetObjectId(Object? value)
     {
         if (ReferenceEquals(value, null)) return 0;
-        if (!value.IsAlive || value.BindingGeneration != Generation)
+        //原生入口统一检查 ObjectId 是否存活及其实际类型
+        if (value.InstanceId == 0 || value.BindingGeneration != Generation)
             throw new ObjectDisposedException(value.GetType().FullName);
         return value.InstanceId;
     }
@@ -264,6 +268,7 @@ public static unsafe class NativeBindingRuntime
     /// <summary>卸载程序集前释放生成工厂及类型引用。</summary>
     public static void UnregisterAssembly(Assembly assembly)
     {
+        ManagedScriptInterop.RemoveTypedSignatures(assembly);
         lock (asyncGate)
         {
             Object.DisconnectAssembly(assembly);

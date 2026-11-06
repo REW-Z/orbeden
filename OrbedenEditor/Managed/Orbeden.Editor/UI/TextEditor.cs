@@ -15,7 +15,7 @@ public sealed class TextEditor : ComponentEditor
         DrawProperty("enabled");
         string content = text.GetText();
         string label = FindProperty("text")?.HasMultipleDifferentValues == true ? "Text (Mixed)" : "Text";
-        if (EditorGUI.InputTextMultiline(label, ref content)) SetValue("text", InteropValue.From(content));
+        if (EditorGUI.InputTextMultiline(label, ref content)) SetValue("text", content);
         DrawProperty("font");
         DrawProperty("fontSize");
         DrawProperty("tint");
@@ -31,8 +31,8 @@ public sealed class TextEditor : ComponentEditor
         int selected = alignmentPicker.Draw("text_alignment", current);
         if (selected >= 0)
         {
-            SetValue("horizontalAlignment", InteropValue.From((uint)(selected % 3)));
-            SetValue("verticalAlignment", InteropValue.From((uint)(selected / 3)));
+            SetValue("horizontalAlignment", (uint)(selected % 3));
+            SetValue("verticalAlignment", (uint)(selected / 3));
         }
         DrawProperty("raycastTarget");
         DrawProperty("material");

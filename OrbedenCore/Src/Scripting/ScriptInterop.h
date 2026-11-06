@@ -43,6 +43,9 @@ namespace ScriptInterop
         Method,
         DirectMethod,
         DirectField,
+        ValueMethod,
+        ValueField,
+        ManagedMethod,
     };
 
 #pragma pack(push, 8)
@@ -65,7 +68,7 @@ namespace ScriptInterop
     };
 
     //固定 24 字节的跨域值；字符串 payload 保存 UTF-8 指针和字节数。
-    struct InteropValueAbi
+    struct DynamicValueAbi
     {
         uint32 kind = 0;
         uint32 reserved = 0;
@@ -110,6 +113,9 @@ namespace ScriptInterop
         void* HostDetached = nullptr;
         void* HostEnabledChanged = nullptr;
         void* HostFieldChanged = nullptr;
+        void* BindTypedMethod = nullptr;
+        void* InvokeTypedMethod = nullptr;
+        void* CompleteTypedMethod = nullptr;
     };
 
     //随 OrbedenNativeApi 传入托管域的原生组件操作表。
@@ -132,7 +138,9 @@ namespace ScriptInterop
 
     static_assert(sizeof(ComponentHandle) == 16);
     static_assert(sizeof(MemberHandle) == 24);
-    static_assert(sizeof(InteropValueAbi) == 24);
+    static_assert(sizeof(DynamicValueAbi) == 24);
+
+    template<typename Signature> class ManagedMethod;
 
     //统一的跨域组件代理；字符串成员名仅在首次解析时使用。
     class ComponentProxy
@@ -172,6 +180,9 @@ namespace ScriptInterop
 
         //通过预解析方法句柄调用；适用于重复调用，避免再次处理方法名和参数签名。
         InteropStatus Invoke(const MemberHandle& method, std::span<const Reflection::Value> args, Reflection::Value& result) const;
+
+        //绑定预编译签名，后续通过强类型委托调用托管方法
+        template<typename Signature> InteropStatus TryBindMethod(std::string_view name, ManagedMethod<Signature>& method) const;
     };
 
     //获取 Core 持有的类型化调用函数表
@@ -182,6 +193,15 @@ namespace ScriptInterop
 
     //判断当前线程是否正在执行受保护的互操作调用
     bool HasActiveCalls();
+
+    //绑定托管签名并缓存本次组件的调用上下文
+    InteropStatus BindManagedMethod(ComponentHandle component, std::string_view name, uint32 result, std::span<const uint32> arguments, MemberHandle& member);
+
+    //校验生命周期并进入托管调用保护
+    InteropStatus PrepareManagedCall(ComponentHandle component, MemberHandle member, void*& entry, void*& context, void*& complete);
+
+    //释放本次托管返回存储并退出调用保护
+    void CompleteManagedCall(void* complete, bool invoked);
 
     //复制字符串返回值，视图在下次字符串调用前有效
     NativeUtf8 StoreDirectString(std::string_view text);
@@ -217,7 +237,7 @@ namespace ScriptInterop
     bool NotifyManagedHostFieldChanged(Script* host, std::string_view fieldName);
 }
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ManagedScriptInteropApi, 11);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ManagedScriptInteropApi, 14);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ScriptInteropApi, 9);
 
 static_assert(sizeof(ScriptInterop::NativeUtf8) == 16);

@@ -89,6 +89,58 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
     private readonly List<BindingValue> codecValues = [];
     private readonly HashSet<string> codecKeys = new(StringComparer.Ordinal);
 
+    //展开具有固定编码尺寸的值字段
+    private List<(string Path, BindingValue Value)>? GetFixedFields(BindingValue value, string path = "")
+    {
+        if (value.Kind is "bool" or "builtin" or "enum" || value.Kind == "scalar" && value.Cpp != "void")
+        {
+            return [(path, value)];
+        }
+        if (value.Kind != "record")
+        {
+            return null;
+        }
+
+        List<(string, BindingValue)> fields = [];
+        foreach (CppMember member in model.ExportedMembers(value.Declaration!).Where(member => !member.IsMethod && !member.IsStatic))
+        {
+            if (member.FixedArray)
+            {
+                return null;
+            }
+            var nested = GetFixedFields(types.Resolve(member.Type, value.Declaration!), path + "." + member.Name);
+            if (nested == null)
+            {
+                return null;
+            }
+            fields.AddRange(nested);
+        }
+        return fields.Count == 0 ? null : fields;
+    }
+
+    //在已校验的块内按编译期偏移读取字段
+    private static void EmitFixedReads(StringBuilder output, List<(string Path, BindingValue Value)> fields, string target, bool managed, string indent)
+    {
+        for (int index = 0; index < fields.Count; ++index)
+        {
+            var (path, value) = fields[index];
+            if (managed)
+            {
+                string read = $"Unsafe.ReadUnaligned<{value.WireManaged}>(ref cursor)";
+                string converted = value.Kind == "bool" ? read + " != 0" : $"({value.Managed}){read}";
+                output.AppendLine($"{indent}{target}{path.Replace(".", ".@", StringComparison.Ordinal)} = {converted};");
+                output.AppendLine($"{indent}cursor = ref Unsafe.Add(ref cursor, sizeof({value.WireManaged}));");
+            }
+            else
+            {
+                output.AppendLine($"{indent}{value.WireCpp} raw{index};");
+                output.AppendLine($"{indent}std::memcpy(&raw{index}, cursor, sizeof(raw{index}));");
+                output.AppendLine($"{indent}cursor += sizeof(raw{index});");
+                output.AppendLine($"{indent}{target}{path} = static_cast<{value.Cpp}>(raw{index});");
+            }
+        }
+    }
+
     private void RequireCodec(BindingValue value)
     {
         if (value.Kind == "scalar" && value.Cpp == "void") return;
@@ -190,6 +242,37 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
         output.AppendLine("}");
         if (value.Kind == "recordptr") return;
         output.AppendLine($"{value.Cpp} Read_{value.Key}(NativeBindingReader& reader)\n{{");
+        BindingValue element = value.Element ?? value;
+        var fixedFields = GetFixedFields(element);
+        if (fixedFields != null && value.Kind is "record" or "array")
+        {
+            string stride = string.Join(" + ", fixedFields.Select(field => $"sizeof({field.Value.WireCpp})"));
+            if (value.Kind == "array")
+            {
+                output.AppendLine($"    int32 count = reader.Count();\n    {value.Cpp} value{{}};");
+                if (value.Cpp.StartsWith("std::array<", StringComparison.Ordinal))
+                {
+                    output.AppendLine("    if (count != static_cast<int32>(value.size())) throw NativeBindingError(NativeBindingStatus::InvalidArgument, \"Fixed array size mismatch\");");
+                }
+                output.AppendLine($"    auto block = reader.Block(count, {stride});\n    const uint8* cursor = block.data();");
+                if (!value.Cpp.StartsWith("std::array<", StringComparison.Ordinal))
+                {
+                    output.AppendLine("    value.reserve(count);");
+                }
+                output.AppendLine($"    for (int32 index = 0; index < count; ++index)\n    {{\n        {element.Cpp} element{{}};");
+                EmitFixedReads(output, fixedFields, "element", false, "        ");
+                output.AppendLine(value.Cpp.StartsWith("std::array<", StringComparison.Ordinal)
+                    ? "        value[index] = std::move(element);" : "        value.push_back(std::move(element));");
+                output.AppendLine("    }");
+            }
+            else
+            {
+                output.AppendLine($"    auto block = reader.Block(1, {stride});\n    const uint8* cursor = block.data();\n    {value.Cpp} value{{}};");
+                EmitFixedReads(output, fixedFields, "value", false, "    ");
+            }
+            output.AppendLine("    return value;\n}");
+            return;
+        }
         switch (value.Kind)
         {
             case "event": output.AppendLine("    auto text = reader.Text(); List<Reflection::ValueKind> signature;\n    if (!OrbEvent::ReadSignature(text, signature)) throw NativeBindingError(NativeBindingStatus::InvalidArgument, \"Invalid OrbEvent\");\n    OrbEvent value(std::move(signature));\n    if (!value.Deserialize(text)) throw NativeBindingError(NativeBindingStatus::InvalidArgument, \"Invalid OrbEvent\");\n    return value;"); break;
@@ -343,6 +426,25 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
         }
         output.AppendLine("    }");
         output.AppendLine($"    internal static {value.Managed} Read_{value.Key}(ref NativeBindingReader reader)\n    {{");
+        BindingValue element = value.Element ?? value;
+        var fixedFields = GetFixedFields(element);
+        if (fixedFields != null && value.Kind is "record" or "array")
+        {
+            string stride = string.Join(" + ", fixedFields.Select(field => $"sizeof({field.Value.WireManaged})"));
+            if (value.Kind == "array")
+            {
+                output.AppendLine($"        int length = reader.Count();\n        var block = reader.Block(checked(length * ({stride})));\n        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);\n        var value = new {element.Managed}[length];\n        for (int index = 0; index < length; ++index)\n        {{\n            {element.Managed} element = default;");
+                EmitFixedReads(output, fixedFields, "element", true, "            ");
+                output.AppendLine("            value[index] = element;\n        }");
+            }
+            else
+            {
+                output.AppendLine($"        var block = reader.Block({stride});\n        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);\n        {value.Managed} value = default;");
+                EmitFixedReads(output, fixedFields, "value", true, "        ");
+            }
+            output.AppendLine("        return value;\n    }");
+            return;
+        }
         switch (value.Kind)
         {
             case "event": output.AppendLine("        return global::Orbeden.OrbEvent.Parse(reader.Text());"); break;

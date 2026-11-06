@@ -75,7 +75,7 @@ public static unsafe class OrbedenCoreRuntime
             return;
         }
 
-        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi), 10);
+        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi), 14);
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
         RetainedGuiApi = api.GetRetainedGuiApi;
         //原生表已就位，UI 才能接入并登记帧系统；早于世界附着。
@@ -160,7 +160,6 @@ public static unsafe class OrbedenCoreRuntime
         ValidateSize<NativeBindingSlice>(nameof(NativeBindingSlice), IntPtr.Size == 8 ? 16 : 8);
         ValidateSize<NativeBindingBuffer>(nameof(NativeBindingBuffer), IntPtr.Size == 8 ? 16 : 8);
         ValidateSize<NativeUtf8>(nameof(NativeUtf8), 16);
-        ValidateSize<NativeStringId>(nameof(NativeStringId), 16);
         ValidateSize<EnsId>(nameof(EnsId), 8);
         ValidateSize<vector2>(nameof(vector2), 8);
         ValidateSize<vector3>(nameof(vector3), 12);
@@ -183,7 +182,7 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<NativeTypedFieldsApi>(nameof(NativeTypedFieldsApi), 3);
         ValidateFunctionTable<NativeTypedMethodsApi>(nameof(NativeTypedMethodsApi), 3);
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
-        ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
+        ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 14);
         ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 17);
         ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 80 * IntPtr.Size);
         ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 123 * IntPtr.Size);

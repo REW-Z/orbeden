@@ -131,20 +131,29 @@ void Script::OnWorldActiveChanged(bool worldActive)
 
 void Script::RegisterReflection()
 {
-    //继承的 enabled 字段也通过业务 setter 直接读写
-    auto getDirect = +[](Object* object, uint8* output) -> ScriptInterop::InteropStatus
+    //按值写入继承字段
+    auto setValueDirect = +[](Object* object, uint8 value) -> ScriptInterop::InteropStatus
     {
-        if (!object || !output) return ScriptInterop::InteropStatus::InvalidArgument;
-        *output = static_cast<Script*>(object)->GetEnabled() ? uint8(1) : uint8(0);
+        try
+        {
+            static_cast<Script*>(object)->SetEnabled(value != 0);
+            if (World* world = object->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    };
+    //继承的 enabled 字段也通过业务 setter 直接读写
+    auto getDirect = +[](Object* object, void* output) -> ScriptInterop::InteropStatus
+    {
+        *static_cast<uint8*>(output) = static_cast<Script*>(object)->GetEnabled() ? uint8(1) : uint8(0);
         return ScriptInterop::InteropStatus::Ok;
     };
-    auto setDirect = +[](Object* object, uint8 value) -> ScriptInterop::InteropStatus
+    auto setDirect = +[](Object* object, const void* input) -> ScriptInterop::InteropStatus
     {
-        if (!object) return ScriptInterop::InteropStatus::InvalidArgument;
         try
         {
             auto* script = static_cast<Script*>(object);
-            script->SetEnabled(value != 0);
+            script->SetEnabled(*static_cast<const uint8*>(input) != 0);
             if (World* world = script->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -159,7 +168,7 @@ void Script::RegisterReflection()
             Reflection::FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true,
                 &Script::GetEnabledField, &Script::SetEnabledField, nullptr,
                 &Script::GetEnabledValue, &Script::SetEnabledValue, nullptr, nullptr, Reflection::FieldKind::Unsupported, false,
-                Reflection::ValueKind::Bool, reinterpret_cast<void*>(getDirect), reinterpret_cast<void*>(setDirect)),
+                Reflection::ValueKind::Bool, reinterpret_cast<void*>(getDirect), reinterpret_cast<void*>(setDirect), reinterpret_cast<void*>(setValueDirect)),
         });
 }
 

@@ -15,7 +15,7 @@ public sealed class NativeCallException : InvalidOperationException
 
 /// <summary>按值传递的 UTF-8 视图；输入指针须保持有效，输出应在下次字符串调用前复制。</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
-public readonly unsafe struct NativeUtf8
+internal readonly unsafe struct NativeUtf8
 {
     public readonly byte* Data;
     public readonly int Length;
@@ -32,22 +32,8 @@ public readonly unsafe struct NativeUtf8
     /// <summary>复制视图中的文本。</summary>
     public override string ToString()
     {
-        if (Length < 0 || Length > 0 && Data == null) throw new InvalidOperationException("Invalid native UTF-8 view.");
         return Length == 0 ? string.Empty : InteropText.DecodeUtf8(Data, Length);
     }
-}
-
-/// <summary>StringId 的 UTF-8 视图；与普通字符串使用不同的绑定签名。</summary>
-[StructLayout(LayoutKind.Sequential, Pack = 8)]
-public readonly unsafe struct NativeStringId
-{
-    public readonly NativeUtf8 Text;
-
-    /// <summary>引用 StringId 的 UTF-8 数据。</summary>
-    public NativeStringId(byte* data, int length) => Text = new(data, length);
-
-    /// <summary>复制 StringId 文本。</summary>
-    public override string ToString() => Text.ToString();
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -113,51 +99,28 @@ internal unsafe ref struct NativeCallFrame
     }
 }
 
-internal static class NativeValueType<T> where T : unmanaged
-{
-    internal static readonly InteropValueKind Kind = GetKind();
-
-    //只允许 ABI 已明确的值类型
-    private static InteropValueKind GetKind()
-    {
-        if (typeof(T) == typeof(bool)) return InteropValueKind.Bool;
-        if (typeof(T) == typeof(int)) return InteropValueKind.Int32;
-        if (typeof(T) == typeof(uint)) return InteropValueKind.UInt32;
-        if (typeof(T) == typeof(ulong)) return InteropValueKind.UInt64;
-        if (typeof(T) == typeof(float)) return InteropValueKind.Float32;
-        if (typeof(T) == typeof(vector2)) return InteropValueKind.Vector2;
-        if (typeof(T) == typeof(vector3)) return InteropValueKind.Vector3;
-        if (typeof(T) == typeof(color)) return InteropValueKind.Color;
-        if (typeof(T) == typeof(quaternion)) return InteropValueKind.Quaternion;
-        if (typeof(T) == typeof(EnsId)) return InteropValueKind.EnsId;
-        if (typeof(T) == typeof(NativeUtf8)) return InteropValueKind.String;
-        if (typeof(T) == typeof(NativeStringId)) return InteropValueKind.StringId;
-        return (InteropValueKind)uint.MaxValue;
-    }
-}
-
 internal static unsafe class NativeMethodRuntime
 {
     internal static NativeTypedMethodsApi Api;
     internal static void Initialize(NativeTypedMethodsApi api) => Api = api;
 
     //冷路径校验签名，热路径只保存组件和成员句柄
-    internal static InteropStatus Bind(ComponentHandle component, string name, InteropValueKind returnKind,
-        ReadOnlySpan<InteropValueKind> parameters, out NativeMethodBinding binding)
+    internal static InteropStatus Bind(ComponentHandle component, string name, NativeValueKind returnKind,
+        ReadOnlySpan<NativeValueKind> parameters, bool valueArguments, out NativeMethodBinding binding)
     {
         binding = default;
         if (component.Domain != ComponentDomain.Native) return InteropStatus.UnsupportedType;
         if (Api.Resolve == null) return InteropStatus.StaleHandle;
         if (string.IsNullOrEmpty(name)) return InteropStatus.InvalidArgument;
         if ((uint)returnKind == uint.MaxValue) return InteropStatus.UnsupportedType;
-        foreach (InteropValueKind parameter in parameters)
+        foreach (NativeValueKind parameter in parameters)
             if ((uint)parameter == uint.MaxValue) return InteropStatus.UnsupportedType;
         byte[] bytes = InteropText.EncodeUtf8(name);
         MemberHandle member;
         fixed (byte* pointer = bytes)
-        fixed (uint* kinds = MemoryMarshal.Cast<InteropValueKind, uint>(parameters))
+        fixed (uint* kinds = MemoryMarshal.Cast<NativeValueKind, uint>(parameters))
         {
-            InteropStatus status = Api.Resolve(component, pointer, bytes.Length, (uint)returnKind, kinds, parameters.Length, &member);
+            InteropStatus status = Api.Resolve(component, pointer, bytes.Length, ((uint)returnKind | (valueArguments ? 0x80000000u : 0u)), kinds, parameters.Length, &member);
             if (status == InteropStatus.Ok) binding = new(component, member);
             return status;
         }

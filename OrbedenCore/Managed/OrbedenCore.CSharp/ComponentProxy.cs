@@ -1,10 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Orbeden;
 
@@ -24,7 +20,7 @@ public enum InteropStatus : uint
 }
 
 /// <summary>脚本互操作支持的值类型。</summary>
-public enum InteropValueKind : uint
+public enum NativeValueKind : uint
 {
     Empty,
     Bool,
@@ -42,6 +38,7 @@ public enum InteropValueKind : uint
     //容器条目：值是元素个数，元素本身各自成条（与 Reflection::ValueKind 逐值对应）
     Array,
     Vector2,
+    Pointer,
 }
 
 internal enum ComponentDomain : uint
@@ -58,6 +55,8 @@ internal enum InteropMemberKind : uint
     Method,
     DirectMethod,
     DirectField,
+    ValueMethod,
+    ValueField,
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -95,174 +94,11 @@ internal readonly struct MemberHandle
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
-internal unsafe struct InteropValueAbi
+internal unsafe struct DynamicValueAbi
 {
     public uint Kind;
     public uint Reserved;
     public fixed byte Payload[16];
-}
-
-/// <summary>跨 C++/C# 边界复制的受限值。</summary>
-public readonly unsafe struct InteropValue : IEquatable<InteropValue>
-{
-    internal readonly InteropValueAbi Abi;
-    private readonly string? text;
-
-    public InteropValueKind Kind => (InteropValueKind)Abi.Kind;
-
-    /// <summary>按需取得对象表示；数值仅在访问此属性时装箱。</summary>
-    public object? Value => Kind switch
-    {
-        InteropValueKind.Bool => Read<bool>(),
-        InteropValueKind.Int32 or InteropValueKind.Object or InteropValueKind.Array => Read<int>(),
-        InteropValueKind.UInt32 => Read<uint>(),
-        InteropValueKind.UInt64 => Read<ulong>(),
-        InteropValueKind.Float32 => Read<float>(),
-        InteropValueKind.Vector2 => Read<vector2>(),
-        InteropValueKind.Vector3 => Read<vector3>(),
-        InteropValueKind.Color => Read<color>(),
-        InteropValueKind.Quaternion => Read<quaternion>(),
-        InteropValueKind.EnsId => Read<EnsId>(),
-        InteropValueKind.String or InteropValueKind.StringId => text,
-        _ => null,
-    };
-
-    internal InteropValue(InteropValueAbi abi, string? value = null)
-    {
-        Abi = abi;
-        text = value;
-    }
-
-    //内联保存受支持的值类型
-    private static InteropValue Scalar<T>(InteropValueKind kind, T value) where T : unmanaged
-    {
-        InteropValueAbi abi = default;
-        abi.Kind = (uint)kind;
-        Unsafe.WriteUnaligned(abi.Payload, value);
-        return new(abi);
-    }
-
-    //读取内联数值
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private T Read<T>()
-    {
-        InteropValueAbi abi = Abi;
-        return Unsafe.ReadUnaligned<T>(abi.Payload);
-    }
-
-    public static InteropValue Empty => default;
-    public static InteropValue From(bool value) => Scalar(InteropValueKind.Bool, value);
-    public static InteropValue From(int value) => Scalar(InteropValueKind.Int32, value);
-    public static InteropValue From(uint value) => Scalar(InteropValueKind.UInt32, value);
-    public static InteropValue From(ulong value) => Scalar(InteropValueKind.UInt64, value);
-    public static InteropValue From(float value) => Scalar(InteropValueKind.Float32, value);
-    public static InteropValue From(string? value) => new(new InteropValueAbi { Kind = (uint)InteropValueKind.String }, value ?? string.Empty);
-    public static InteropValue FromStringId(string? value) => new(new InteropValueAbi { Kind = (uint)InteropValueKind.StringId }, value ?? string.Empty);
-    public static InteropValue From(vector2 value) => Scalar(InteropValueKind.Vector2, value);
-    public static InteropValue From(vector3 value) => Scalar(InteropValueKind.Vector3, value);
-    public static InteropValue From(color value) => Scalar(InteropValueKind.Color, value);
-    public static InteropValue From(quaternion value) => Scalar(InteropValueKind.Quaternion, value);
-    public static InteropValue From(EnsId value) => Scalar(InteropValueKind.EnsId, value);
-    public static InteropValue FromObject(Object? value) => FromObjectId(value?.InstanceId ?? 0);
-    public static InteropValue FromObjectId(int value) => Scalar(InteropValueKind.Object, value);
-    public static InteropValue FromArray(int count) => Scalar(InteropValueKind.Array, count);
-
-    /// <summary>按精确类型读取数值；值类型读取不装箱。</summary>
-    public bool TryGet<T>(out T value)
-    {
-        bool scalar = typeof(T) == typeof(bool) && Kind == InteropValueKind.Bool
-            || typeof(T) == typeof(int) && Kind is InteropValueKind.Int32 or InteropValueKind.Object or InteropValueKind.Array
-            || typeof(T) == typeof(uint) && Kind == InteropValueKind.UInt32
-            || typeof(T) == typeof(ulong) && Kind == InteropValueKind.UInt64
-            || typeof(T) == typeof(float) && Kind == InteropValueKind.Float32
-            || typeof(T) == typeof(vector2) && Kind == InteropValueKind.Vector2
-            || typeof(T) == typeof(vector3) && Kind == InteropValueKind.Vector3
-            || typeof(T) == typeof(color) && Kind == InteropValueKind.Color
-            || typeof(T) == typeof(quaternion) && Kind == InteropValueKind.Quaternion
-            || typeof(T) == typeof(EnsId) && Kind == InteropValueKind.EnsId;
-        if (scalar)
-        {
-            value = Read<T>();
-            return true;
-        }
-        if (typeof(T) == typeof(string) && Kind is InteropValueKind.String or InteropValueKind.StringId)
-        {
-            string current = text!;
-            value = Unsafe.As<string, T>(ref current);
-            return true;
-        }
-        //对象类型读取保留显式装箱语义
-        if (!typeof(T).IsValueType && Value is T boxed)
-        {
-            value = boxed;
-            return true;
-        }
-        value = default!;
-        return false;
-    }
-
-    //按浮点数值比较向量，保留 NaN 和正负零的相等语义
-    private bool FloatComponentsEqual(InteropValue other, int count)
-    {
-        InteropValueAbi left = Abi;
-        InteropValueAbi right = other.Abi;
-        for (int i = 0; i < count; i++)
-            if (!Unsafe.ReadUnaligned<float>(left.Payload + i * 4).Equals(Unsafe.ReadUnaligned<float>(right.Payload + i * 4))) return false;
-        return true;
-    }
-
-    /// <summary>比较内联值，不为数值创建对象表示。</summary>
-    public bool Equals(InteropValue other)
-    {
-        if (Kind != other.Kind) return false;
-        return Kind switch
-        {
-            InteropValueKind.Empty => true,
-            InteropValueKind.Bool => Read<bool>() == other.Read<bool>(),
-            InteropValueKind.Int32 or InteropValueKind.Object or InteropValueKind.Array => Read<int>() == other.Read<int>(),
-            InteropValueKind.UInt32 => Read<uint>() == other.Read<uint>(),
-            InteropValueKind.UInt64 or InteropValueKind.EnsId => Read<ulong>() == other.Read<ulong>(),
-            InteropValueKind.Float32 => Read<float>().Equals(other.Read<float>()),
-            InteropValueKind.Vector2 => FloatComponentsEqual(other, 2),
-            InteropValueKind.Vector3 => FloatComponentsEqual(other, 3),
-            InteropValueKind.Color or InteropValueKind.Quaternion => FloatComponentsEqual(other, 4),
-            InteropValueKind.String or InteropValueKind.StringId => string.Equals(text, other.text, StringComparison.Ordinal),
-            _ => false,
-        };
-    }
-
-    public override bool Equals(object? obj) => obj is InteropValue other && Equals(other);
-
-    /// <summary>计算内联值的哈希，不为数值创建对象表示。</summary>
-    public override int GetHashCode()
-    {
-        int count = Kind switch
-        {
-            InteropValueKind.Vector2 => 2,
-            InteropValueKind.Vector3 => 3,
-            InteropValueKind.Color or InteropValueKind.Quaternion => 4,
-            _ => 0,
-        };
-        if (count > 0)
-        {
-            HashCode hash = new();
-            hash.Add(Kind);
-            InteropValueAbi abi = Abi;
-            for (int i = 0; i < count; i++) hash.Add(Unsafe.ReadUnaligned<float>(abi.Payload + i * 4));
-            return hash.ToHashCode();
-        }
-        return Kind switch
-        {
-            InteropValueKind.Bool => HashCode.Combine(Kind, Read<bool>()),
-            InteropValueKind.Int32 or InteropValueKind.Object or InteropValueKind.Array => HashCode.Combine(Kind, Read<int>()),
-            InteropValueKind.UInt32 => HashCode.Combine(Kind, Read<uint>()),
-            InteropValueKind.UInt64 or InteropValueKind.EnsId => HashCode.Combine(Kind, Read<ulong>()),
-            InteropValueKind.Float32 => HashCode.Combine(Kind, Read<float>()),
-            InteropValueKind.String or InteropValueKind.StringId => HashCode.Combine(Kind, text),
-            _ => HashCode.Combine(Kind, 0),
-        };
-    }
-    public override string ToString() => Value?.ToString() ?? string.Empty;
 }
 
 /// <summary>绑定到一个组件实例的预解析方法，可重复调用而不再按名称查找。</summary>
@@ -281,13 +117,13 @@ public readonly struct ComponentMethod
     public bool IsValid => ScriptInteropDispatch.IsValid(component) == InteropStatus.Ok;
 
     /// <summary>使用已解析的方法句柄同步调用。</summary>
-    public InteropStatus Invoke(ReadOnlySpan<InteropValue> arguments, out InteropValue result)
+    public InteropStatus Invoke(ReadOnlySpan<object?> arguments, out object? result)
     {
         return ScriptInteropDispatch.Invoke(component, method, arguments, out result);
     }
 
     /// <summary>使用已解析的方法句柄同步调用。</summary>
-    public InteropStatus Invoke(out InteropValue result, params ReadOnlySpan<InteropValue> arguments)
+    public InteropStatus Invoke(out object? result, params ReadOnlySpan<object?> arguments)
     {
         return Invoke(arguments, out result);
     }
@@ -300,12 +136,12 @@ public sealed class BindableMethod
     public string Name { get; }
 
     /// <summary>返回种类；无返回值为 Empty。</summary>
-    public InteropValueKind ReturnKind { get; }
+    public NativeValueKind ReturnKind { get; }
 
     /// <summary>参数种类，按声明顺序。</summary>
-    public IReadOnlyList<InteropValueKind> ParameterKinds { get; }
+    public IReadOnlyList<NativeValueKind> ParameterKinds { get; }
 
-    internal BindableMethod(string name, InteropValueKind returnKind, InteropValueKind[] parameterKinds)
+    internal BindableMethod(string name, NativeValueKind returnKind, NativeValueKind[] parameterKinds)
     {
         Name = name;
         ReturnKind = returnKind;
@@ -318,7 +154,7 @@ public sealed partial class ComponentProxy
 {
     private readonly ComponentHandle handle;
     private readonly Dictionary<string, MemberHandle> fieldCache = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, List<(InteropValueKind[] Kinds, MemberHandle Member)>> methodCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<(NativeValueKind[] Kinds, MemberHandle Member)>> methodCache = new(StringComparer.Ordinal);
 
     internal ComponentProxy(ComponentHandle value)
     {
@@ -364,13 +200,13 @@ public sealed partial class ComponentProxy
         return ResolveFieldHandle(name, out _);
     }
 
-    public InteropStatus ResolveMethod(string name, params ReadOnlySpan<InteropValueKind> parameterKinds)
+    public InteropStatus ResolveMethod(string name, params ReadOnlySpan<NativeValueKind> parameterKinds)
     {
         return ResolveMethodHandle(name, parameterKinds, out _);
     }
 
     /// <summary>解析一次方法名和参数签名，返回可重复调用的方法对象。</summary>
-    public InteropStatus TryResolveMethod(string name, ReadOnlySpan<InteropValueKind> parameterKinds, out ComponentMethod method)
+    public InteropStatus TryResolveMethod(string name, ReadOnlySpan<NativeValueKind> parameterKinds, out ComponentMethod method)
     {
         InteropStatus status = ResolveMethodHandle(name, parameterKinds, out MemberHandle member);
         method = status == InteropStatus.Ok ? new ComponentMethod(handle, member) : default;
@@ -378,34 +214,34 @@ public sealed partial class ComponentProxy
     }
 
     /// <summary>解析一次方法名和参数签名，返回可重复调用的方法对象。</summary>
-    public InteropStatus TryResolveMethod(string name, out ComponentMethod method, params ReadOnlySpan<InteropValueKind> parameterKinds)
+    public InteropStatus TryResolveMethod(string name, out ComponentMethod method, params ReadOnlySpan<NativeValueKind> parameterKinds)
     {
         return TryResolveMethod(name, parameterKinds, out method);
     }
 
-    public InteropStatus TryGetField(string name, out InteropValue value)
+    public InteropStatus TryGetField(string name, out object? value)
     {
         value = default;
         InteropStatus status = ResolveFieldHandle(name, out MemberHandle member);
         return status == InteropStatus.Ok ? ScriptInteropDispatch.GetField(handle, member, out value) : status;
     }
 
-    public InteropStatus SetField(string name, InteropValue value)
+    public InteropStatus SetField(string name, object? value)
     {
         InteropStatus status = ResolveFieldHandle(name, out MemberHandle member);
         return status == InteropStatus.Ok ? ScriptInteropDispatch.SetField(handle, member, value) : status;
     }
 
-    public InteropStatus Invoke(string name, ReadOnlySpan<InteropValue> arguments, out InteropValue result)
+    public InteropStatus Invoke(string name, ReadOnlySpan<object?> arguments, out object? result)
     {
         result = default;
-        Span<InteropValueKind> kinds = arguments.Length <= 16 ? stackalloc InteropValueKind[arguments.Length] : new InteropValueKind[arguments.Length];
-        for (int index = 0; index < arguments.Length; ++index) kinds[index] = arguments[index].Kind;
+        Span<NativeValueKind> kinds = arguments.Length <= 16 ? stackalloc NativeValueKind[arguments.Length] : new NativeValueKind[arguments.Length];
+        for (int index = 0; index < arguments.Length; ++index) kinds[index] = arguments[index].GetValueKind();
         InteropStatus status = ResolveMethodHandle(name, kinds, out MemberHandle member);
         return status == InteropStatus.Ok ? ScriptInteropDispatch.Invoke(handle, member, arguments, out result) : status;
     }
 
-    public InteropStatus Invoke(string name, out InteropValue result, params ReadOnlySpan<InteropValue> arguments)
+    public InteropStatus Invoke(string name, out object? result, params ReadOnlySpan<object?> arguments)
     {
         return Invoke(name, arguments, out result);
     }
@@ -424,7 +260,7 @@ public sealed partial class ComponentProxy
         return status;
     }
 
-    private InteropStatus ResolveMethodHandle(string name, ReadOnlySpan<InteropValueKind> kinds, out MemberHandle member)
+    private InteropStatus ResolveMethodHandle(string name, ReadOnlySpan<NativeValueKind> kinds, out MemberHandle member)
     {
         member = default;
         if (string.IsNullOrEmpty(name)) return InteropStatus.InvalidArgument;
@@ -453,9 +289,9 @@ internal unsafe struct NativeScriptInteropApi
     public delegate* unmanaged[Cdecl]<ComponentHandle, InteropStatus> IsValid;
     public delegate* unmanaged[Cdecl]<ComponentHandle, byte*, int, MemberHandle*, InteropStatus> ResolveField;
     public delegate* unmanaged[Cdecl]<ComponentHandle, byte*, int, uint*, int, MemberHandle*, InteropStatus> ResolveMethod;
-    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, InteropStatus> GetField;
-    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, InteropStatus> SetField;
-    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, int, InteropValueAbi*, InteropStatus> Invoke;
+    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, DynamicValueAbi*, InteropStatus> GetField;
+    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, DynamicValueAbi*, InteropStatus> SetField;
+    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, DynamicValueAbi*, int, DynamicValueAbi*, InteropStatus> Invoke;
     public delegate* unmanaged[Cdecl]<ManagedScriptInteropApi*, InteropStatus> RegisterManagedApi;
 }
 
@@ -466,13 +302,16 @@ internal unsafe struct ManagedScriptInteropApi
     public delegate* unmanaged[Cdecl]<ComponentHandle, InteropStatus> IsValid;
     public delegate* unmanaged[Cdecl]<ComponentHandle, byte*, int, MemberHandle*, InteropStatus> ResolveField;
     public delegate* unmanaged[Cdecl]<ComponentHandle, byte*, int, uint*, int, MemberHandle*, InteropStatus> ResolveMethod;
-    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, InteropStatus> GetField;
-    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, InteropStatus> SetField;
-    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, int, InteropValueAbi*, InteropStatus> Invoke;
+    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, DynamicValueAbi*, InteropStatus> GetField;
+    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, DynamicValueAbi*, InteropStatus> SetField;
+    public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, DynamicValueAbi*, int, DynamicValueAbi*, InteropStatus> Invoke;
     public delegate* unmanaged[Cdecl]<IntPtr, InteropStatus> HostAttached;
     public delegate* unmanaged[Cdecl]<IntPtr, InteropStatus> HostDetached;
     public delegate* unmanaged[Cdecl]<IntPtr, InteropStatus> HostEnabledChanged;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, InteropStatus> HostFieldChanged;
+    public delegate* unmanaged[Cdecl]<ComponentHandle, byte*, int, uint, uint*, int, nint*, InteropStatus> BindTypedMethod;
+    public delegate* unmanaged[Cdecl]<nint, void**, void*, InteropStatus> InvokeTypedMethod;
+    public delegate* unmanaged[Cdecl]<void> CompleteTypedMethod;
 }
 
 internal static unsafe class ScriptInteropDispatch
@@ -547,7 +386,7 @@ internal static unsafe class ScriptInteropDispatch
         }
     }
 
-    internal static InteropStatus ResolveMethod(ComponentHandle handle, string name, ReadOnlySpan<InteropValueKind> kinds, out MemberHandle member)
+    internal static InteropStatus ResolveMethod(ComponentHandle handle, string name, ReadOnlySpan<NativeValueKind> kinds, out MemberHandle member)
     {
         if (handle.Domain == ComponentDomain.Managed)
         {
@@ -574,7 +413,7 @@ internal static unsafe class ScriptInteropDispatch
         }
     }
 
-    internal static InteropStatus GetField(ComponentHandle handle, MemberHandle member, out InteropValue value)
+    internal static InteropStatus GetField(ComponentHandle handle, MemberHandle member, out object? value)
     {
         if (handle.Domain == ComponentDomain.Managed)
         {
@@ -589,13 +428,13 @@ internal static unsafe class ScriptInteropDispatch
         }
         value = default;
         if (nativeApi.GetField == null) return InteropStatus.StaleHandle;
-        InteropValueAbi abi = default;
+        DynamicValueAbi abi = default;
         InteropStatus status = nativeApi.GetField(handle, member, &abi);
         if (status != InteropStatus.Ok) return status;
         return InteropAbiConverter.TryDecode(abi, out value) ? InteropStatus.Ok : InteropStatus.UnsupportedType;
     }
 
-    internal static InteropStatus SetField(ComponentHandle handle, MemberHandle member, InteropValue value)
+    internal static InteropStatus SetField(ComponentHandle handle, MemberHandle member, object? value)
     {
         if (handle.Domain == ComponentDomain.Managed)
         {
@@ -607,11 +446,11 @@ internal static unsafe class ScriptInteropDispatch
         if (nativeApi.SetField == null) return InteropStatus.StaleHandle;
         using InteropAbiConverter.EncodedValue encoded = InteropAbiConverter.Encode(value);
         if (!encoded.Success) return InteropStatus.UnsupportedType;
-        InteropValueAbi abi = encoded.Abi;
+        DynamicValueAbi abi = encoded.Abi;
         return nativeApi.SetField(handle, member, &abi);
     }
 
-    internal static InteropStatus Invoke(ComponentHandle handle, MemberHandle member, ReadOnlySpan<InteropValue> arguments, out InteropValue result)
+    internal static InteropStatus Invoke(ComponentHandle handle, MemberHandle member, ReadOnlySpan<object?> arguments, out object? result)
     {
         if (handle.Domain == ComponentDomain.Managed)
         {
@@ -630,20 +469,20 @@ internal static unsafe class ScriptInteropDispatch
         //无参数调用直接传空指针
         if (arguments.IsEmpty)
         {
-            InteropValueAbi emptyOutput = default;
+            DynamicValueAbi emptyOutput = default;
             InteropStatus emptyStatus = nativeApi.Invoke(handle, member, null, 0, &emptyOutput);
             if (emptyStatus != InteropStatus.Ok) return emptyStatus;
             return InteropAbiConverter.TryDecode(emptyOutput, out result) ? InteropStatus.Ok : InteropStatus.UnsupportedType;
         }
 
-        Span<InteropValueAbi> values = arguments.Length <= 16 ? stackalloc InteropValueAbi[arguments.Length] : new InteropValueAbi[arguments.Length];
+        Span<DynamicValueAbi> values = arguments.Length <= 16 ? stackalloc DynamicValueAbi[arguments.Length] : new DynamicValueAbi[arguments.Length];
         Span<InteropAbiConverter.EncodedValue> resources = arguments.Length <= 16
             ? stackalloc InteropAbiConverter.EncodedValue[arguments.Length] : new InteropAbiConverter.EncodedValue[arguments.Length];
         using InteropAbiConverter.EncodedValues encoded = new(arguments, values, resources);
         if (!encoded.Success) return InteropStatus.UnsupportedType;
-        InteropValueAbi output = default;
+        DynamicValueAbi output = default;
         InteropStatus status;
-        fixed (InteropValueAbi* pointer = values)
+        fixed (DynamicValueAbi* pointer = values)
             status = nativeApi.Invoke(handle, member, pointer, arguments.Length, &output);
         if (status != InteropStatus.Ok) return status;
         return InteropAbiConverter.TryDecode(output, out result) ? InteropStatus.Ok : InteropStatus.UnsupportedType;
@@ -659,7 +498,7 @@ internal static unsafe class InteropAbiConverter
 {
     internal struct EncodedValue : IDisposable
     {
-        internal InteropValueAbi Abi;
+        internal DynamicValueAbi Abi;
         internal bool Success;
         private GCHandle pin;
 
@@ -684,7 +523,7 @@ internal static unsafe class InteropAbiConverter
         private Span<EncodedValue> resources;
         internal bool Success { get; }
 
-        internal EncodedValues(ReadOnlySpan<InteropValue> input, Span<InteropValueAbi> values, Span<EncodedValue> storage)
+        internal EncodedValues(ReadOnlySpan<object?> input, Span<DynamicValueAbi> values, Span<EncodedValue> storage)
         {
             resources = storage;
             resources.Clear();
@@ -712,37 +551,60 @@ internal static unsafe class InteropAbiConverter
         }
     }
 
-    //复制内联 ABI，仅为字符串分配编码缓冲
-    internal static EncodedValue Encode(InteropValue value)
+    //动态协议只在动态调用边界编码普通托管值
+    internal static EncodedValue Encode(object? value)
     {
-        EncodedValue result = new() { Abi = value.Abi, Success = IsSupported(value.Kind) };
-        if (value.Kind is InteropValueKind.String or InteropValueKind.StringId)
+        NativeValueKind kind = value.GetValueKind();
+        EncodedValue result = new() { Abi = new() { Kind = (uint)kind }, Success = IsSupported(kind) };
+        if (!result.Success) return result;
+        if (kind is NativeValueKind.String or NativeValueKind.StringId)
         {
-            value.TryGet(out string text);
-            result.Pin(InteropText.EncodeUtf8(text));
+            result.Pin(InteropText.EncodeUtf8(value?.ToString() ?? string.Empty));
+            return result;
         }
+        NativeMarshallingScope scope = new();
+        try
+        {
+            byte* output = result.Abi.Payload;
+            NativeMarshaller.Write(output, value?.GetType() ?? typeof(Object), value, ref scope);
+        }
+        finally { scope.Dispose(); }
         return result;
     }
 
-    private static bool IsSupported(InteropValueKind kind) => kind <= InteropValueKind.Object || kind == InteropValueKind.Vector2;
+    private static bool IsSupported(NativeValueKind kind) => kind <= NativeValueKind.Object || kind is NativeValueKind.Vector2 or NativeValueKind.Pointer;
 
-    //直接保存数值 ABI，字符串在返回前复制
-    internal static bool TryDecode(InteropValueAbi abi, out InteropValue value)
+    //动态结果直接还原为 CLR 值
+    internal static bool TryDecode(DynamicValueAbi abi, out object? value)
     {
-        InteropValueKind kind = (InteropValueKind)abi.Kind;
-        value = default;
+        NativeValueKind kind = (NativeValueKind)abi.Kind;
+        value = null;
         if (!IsSupported(kind)) return false;
-        if (kind is InteropValueKind.String or InteropValueKind.StringId)
+        if (kind == NativeValueKind.Empty) return true;
+        Type type = kind switch
         {
-            byte* payload = abi.Payload;
-            byte* pointer = *(byte**)payload;
-            int length = *(int*)(payload + 8);
-            if (length < 0 || length > 0 && pointer == null) return false;
-            string text = length == 0 ? string.Empty : InteropText.DecodeUtf8(pointer, length);
-            value = kind == InteropValueKind.String ? InteropValue.From(text) : InteropValue.FromStringId(text);
-            return true;
+            NativeValueKind.Bool => typeof(bool),
+            NativeValueKind.Int32 => typeof(int),
+            NativeValueKind.UInt32 => typeof(uint),
+            NativeValueKind.UInt64 => typeof(ulong),
+            NativeValueKind.Float32 => typeof(float),
+            NativeValueKind.String => typeof(string),
+            NativeValueKind.StringId => typeof(StringId),
+            NativeValueKind.Vector2 => typeof(vector2),
+            NativeValueKind.Vector3 => typeof(vector3),
+            NativeValueKind.Color => typeof(color),
+            NativeValueKind.Quaternion => typeof(quaternion),
+            NativeValueKind.EnsId => typeof(EnsId),
+            NativeValueKind.Object => typeof(Object),
+            NativeValueKind.Pointer => typeof(nint),
+            _ => throw new InvalidOperationException(),
+        };
+        if (kind is NativeValueKind.String or NativeValueKind.StringId)
+        {
+            NativeUtf8 view = *(NativeUtf8*)abi.Payload;
+            if (view.Length < 0 || view.Length > 0 && view.Data == null) return false;
         }
-        value = new InteropValue(abi);
+        value = NativeMarshaller.Read(abi.Payload, type);
         return true;
     }
 }

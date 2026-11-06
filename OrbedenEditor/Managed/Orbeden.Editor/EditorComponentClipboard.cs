@@ -7,7 +7,7 @@ internal sealed record ComponentClipboardEntry(
     string TypeName,
     bool IsManaged,
     bool CopiedAsNew,
-    IReadOnlyList<(string Name, InteropValueKind Kind, InteropValue Value)> Values);
+    IReadOnlyList<(string Name, NativeValueKind Kind, object? Value)> Values);
 
 /// <summary>
 /// 组件复制粘贴的进程内剪贴板。只活在本次编辑器会话内，不经过系统剪贴板：
@@ -36,11 +36,11 @@ internal static class EditorComponentClipboard
     {
         NativeComponentPropertyTarget target = new(component, static () => { });
         target.Refresh();
-        List<(string, InteropValueKind, InteropValue)> values = [];
+        List<(string, NativeValueKind, object?)> values = [];
         foreach (PropertyDescriptor descriptor in target.Properties)
         {
-            if (target.TryGet(descriptor.Name, out InteropValue value) != InteropStatus.Ok) continue;
-            values.Add((descriptor.Name, value.Kind, value));
+            if (target.TryGet(descriptor.Name, out object? value) != InteropStatus.Ok) continue;
+            values.Add((descriptor.Name, descriptor.Kind, value));
         }
         Entry = new ComponentClipboardEntry(component.TypeName, component.IsManaged, asNew, values);
     }
