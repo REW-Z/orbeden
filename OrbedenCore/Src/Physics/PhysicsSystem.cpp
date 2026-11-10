@@ -2113,3 +2113,79 @@ bool PhysicsSystem::GetConvexWireframe(Mesh& mesh, List<vector3>& lines)
     }
     return true;
 }
+
+//接收后台烘焙的三角网格
+bool PhysicsSystem::InstallTriangleMesh(Mesh& mesh, const List<uint8>& bytes)
+{
+    if (!IsInitialized() || bytes.empty())
+    {
+        return false;
+    }
+    PxDefaultMemoryInputData input(bytes.data(), static_cast<PxU32>(bytes.size()));
+    PxTriangleMesh* cooked = impl->physics->createTriangleMesh(input);
+    if (!cooked)
+    {
+        return false;
+    }
+    impl->InvalidateCookedMeshes(mesh);
+    impl->triangleMeshes[&mesh] = cooked;
+    mesh.ClearDirty(MeshDirtyFlags::Physics);
+    return true;
+}
+
+//旋转并平移物理坐标与运动状态
+void PhysicsSystem::RebaseCoordinates(World& world, const quaternion& rotation, const vector3& translation)
+{
+    if (!IsInitialized())
+    {
+        return;
+    }
+    PxQuat q = ToPx(rotation);
+    PxTransform change(ToPx(translation), q);
+    world.ForEachComponent<RigidBody>([&](RigidBody* body)
+    {
+        body->linearVelocity = FromPx(q.rotate(ToPx(body->linearVelocity)));
+        body->angularVelocity = FromPx(q.rotate(ToPx(body->angularVelocity)));
+        body->pendingForce = FromPx(q.rotate(ToPx(body->pendingForce)));
+        body->pendingTorque = FromPx(q.rotate(ToPx(body->pendingTorque)));
+    });
+    for (auto& entry : impl->bodies)
+    {
+        auto& record = *entry.second;
+        record.actor->setGlobalPose(change * record.actor->getGlobalPose(), false);
+        if (PxRigidDynamic* body = record.actor->is<PxRigidDynamic>())
+        {
+            if (body->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC)
+            {
+                PxTransform target;
+                if (body->getKinematicTarget(target))
+                {
+                    body->setKinematicTarget(change * target);
+                }
+            }
+            else
+            {
+                body->setLinearVelocity(q.rotate(body->getLinearVelocity()), false);
+                body->setAngularVelocity(q.rotate(body->getAngularVelocity()), false);
+            }
+        }
+        record.lastPosition = FromPx(change.transform(ToPx(record.lastPosition)));
+        record.lastRotation = FromPx(q * ToPx(record.lastRotation));
+    }
+    for (auto& entry : impl->heightFields)
+    {
+        auto& record = *entry.second;
+        record.actor->setGlobalPose(change * record.actor->getGlobalPose());
+    }
+    for (auto& entry : impl->controllers)
+    {
+        auto& record = *entry.second;
+        PxExtendedVec3 foot = record.controller->getFootPosition();
+        PxVec3 position = change.transform(PxVec3(static_cast<float>(foot.x), static_cast<float>(foot.y), static_cast<float>(foot.z)));
+        record.controller->setUpDirection(q.rotate(record.controller->getUpDirection()));
+        record.controller->setFootPosition(PxExtendedVec3(position.x, position.y, position.z));
+        record.lastFootPosition = FromPx(position);
+    }
+    impl->scene->flushQueryUpdates();
+    ClearEvents();
+}

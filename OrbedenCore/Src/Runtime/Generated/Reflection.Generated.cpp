@@ -2581,8 +2581,70 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //调用 TriangleMeshCollider.PrepareMeshAsync 方法
+    static Reflection::Value Invoke_TriangleMeshCollider_PrepareMeshAsync_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->PrepareMeshAsync();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 TriangleMeshCollider.PrepareMeshAsync 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_PrepareMeshAsync_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        return ScriptInterop::WriteResult(instance->PrepareMeshAsync(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //封送并调用 TriangleMeshCollider.PrepareMeshAsync
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_0(Object* object, void* output)
+    {
+        try
+        {
+            TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+            ScriptInterop::WriteDirectValue(instance->PrepareMeshAsync(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 TriangleMeshCollider.ApplyPreparedMesh 方法
+    static Reflection::Value Invoke_TriangleMeshCollider_ApplyPreparedMesh_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->ApplyPreparedMesh();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 TriangleMeshCollider.ApplyPreparedMesh 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        return ScriptInterop::WriteResult(instance->ApplyPreparedMesh(), Reflection::ValueKind::Int32, output, stringStorage);
+    }
+
+    //封送并调用 TriangleMeshCollider.ApplyPreparedMesh
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_1(Object* object, void* output)
+    {
+        try
+        {
+            TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+            ScriptInterop::WriteDirectValue(instance->ApplyPreparedMesh(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 TriangleMeshCollider.OnDetach 方法
-    static Reflection::Value Invoke_TriangleMeshCollider_OnDetach_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_TriangleMeshCollider_OnDetach_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
@@ -2594,7 +2656,7 @@ public:
     }
 
     //直接调用 TriangleMeshCollider.OnDetach 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_OnDetach_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_OnDetach_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
         instance->OnDetach();
@@ -2603,7 +2665,7 @@ public:
     }
 
     //封送并调用 TriangleMeshCollider.OnDetach
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_OnDetach_0(Object* object)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_OnDetach_2(Object* object)
     {
         try
         {
@@ -14022,12 +14084,18 @@ namespace Reflection
 
         RegisterTypeFields(TriangleMeshCollider::StaticType(),
             {
+                FieldInfo("cooking", "std::shared_ptr<ThreadOperation>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("cookedBytes", "std::shared_ptr<List<uint8>>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("cookingVersion", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("cookingMeshId", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_TriangleMeshCollider_mesh, ReflectionGeneratedAccess::Set_TriangleMeshCollider_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_TriangleMeshCollider_mesh, ReflectionGeneratedAccess::SetValue_TriangleMeshCollider_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Object, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_TriangleMeshCollider_mesh), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_TriangleMeshCollider_mesh), nullptr),
             });
 
         RegisterTypeMethods(TriangleMeshCollider::StaticType(),
             {
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_0, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_OnDetach_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_0)),
+                MethodInfo("PrepareMeshAsync", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_PrepareMeshAsync_0, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_PrepareMeshAsync_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_0)),
+                MethodInfo("ApplyPreparedMesh", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_ApplyPreparedMesh_1, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_1)),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_2, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_OnDetach_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_2)),
             });
 
         RegisterTypeFields(Component::StaticType(),

@@ -10,6 +10,9 @@ namespace OrbedenEditor;
 internal static unsafe class EditorPanelRegistry
 {
     private static readonly List<EditorPanel> panels = [];
+    private static EditorPanelNativeApi nativeApi;
+    private static int builtinCount;
+    private static ulong gameGeneration;
     //与 panels 同索引：选择系统要知道持有选中项的面板是否还在显示
     private static readonly List<bool> panelVisible = [];
 
@@ -24,12 +27,22 @@ internal static unsafe class EditorPanelRegistry
             return false;
         }
 
+        nativeApi = api;
+        RegisterAssemblyPanels(typeof(EditorPanelRegistry).Assembly);
+        builtinCount = panels.Count;
+        return true;
+    }
+
+    //发现并注册指定程序集的面板
+    private static void RegisterAssemblyPanels(Assembly assembly)
+    {
+        EditorPanelNativeApi api = nativeApi;
         //创建面板并读取元数据
         List<(EditorPanel Panel, EditorPanelInfo Info, string TypeName)> candidates = [];
         IEnumerable<Type?> discoveredTypes;
         try
         {
-            discoveredTypes = typeof(EditorPanelRegistry).Assembly.GetTypes();
+            discoveredTypes = assembly.GetTypes();
         }
         catch (ReflectionTypeLoadException ex)
         {
@@ -107,7 +120,6 @@ internal static unsafe class EditorPanelRegistry
             }
         }
 
-        return true;
     }
 
     /// <summary>绘制指定 C# Panel。</summary>
@@ -150,6 +162,18 @@ internal static unsafe class EditorPanelRegistry
     /// <summary>向全部 C# Panel 广播游戏程序集加载事件。</summary>
     public static void LoadGameAssembly(string assemblyPath)
     {
+        ulong generation = ManagedAssemblySession.GetGeneration();
+        if (gameGeneration != generation)
+        {
+            gameGeneration = generation;
+            Assembly? assembly = ManagedAssemblySession.GetEditorAssembly();
+            if (assembly != null && nativeApi.RegisterPanel != null)
+            {
+                RegisterAssemblyPanels(assembly);
+            }
+            ManagedAssemblySession.RegisterUnloadHandler(UnloadGameAssembly);
+        }
+
         foreach (EditorPanel panel in panels)
         {
             try
@@ -178,6 +202,21 @@ internal static unsafe class EditorPanelRegistry
                 Console.Error.WriteLine($"Editor Panel game assembly unload failed: {panel.GetType().FullName}: {ex}");
             }
         }
+        //注销项目面板并释放程序集引用
+        for (int index = panels.Count - 1; index >= builtinCount; index--)
+        {
+            byte[] id = InteropText.EncodeUtf8(panels[index].Info.Id);
+            fixed (byte* pointer = id)
+            {
+                if (nativeApi.UnregisterPanel != null)
+                {
+                    nativeApi.UnregisterPanel(nativeApi.Context, pointer, id.Length);
+                }
+            }
+            panels.RemoveAt(index);
+            panelVisible.RemoveAt(index);
+        }
+        gameGeneration = 0;
     }
 
     /// <summary>是否有 Panel 存在未提交的暂存数据。</summary>

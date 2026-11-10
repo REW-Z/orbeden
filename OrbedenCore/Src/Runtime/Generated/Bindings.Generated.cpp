@@ -91,6 +91,8 @@ void Write_DrawStrategy(NativeBindingWriter& writer, DrawStrategy const& value);
 DrawStrategy Read_DrawStrategy(NativeBindingReader& reader);
 void Write_EnsId(NativeBindingWriter& writer, EnsId const& value);
 EnsId Read_EnsId(NativeBindingReader& reader);
+void Write_Ens_(NativeBindingWriter& writer, Ens* const& value);
+Ens* Read_Ens_(NativeBindingReader& reader);
 void Write_FontRasterMode(NativeBindingWriter& writer, FontRasterMode const& value);
 FontRasterMode Read_FontRasterMode(NativeBindingReader& reader);
 void Write_InstanceDrawOptions(NativeBindingWriter& writer, InstanceDrawOptions const& value);
@@ -333,6 +335,14 @@ void Write_EnsId(NativeBindingWriter& writer, EnsId const& value)
 EnsId Read_EnsId(NativeBindingReader& reader)
 {
     return static_cast<EnsId>(reader.Scalar<EnsId>());
+}
+void Write_Ens_(NativeBindingWriter& writer, Ens* const& value)
+{
+    writer.Scalar(NativeBindings::Id(value));
+}
+Ens* Read_Ens_(NativeBindingReader& reader)
+{
+    return NativeBindings::Optional<Ens>(reader.Scalar<int32>());
 }
 void Write_FontRasterMode(NativeBindingWriter& writer, FontRasterMode const& value)
 {
@@ -1960,13 +1970,62 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Component_0(int32 objectId, EnsId* 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_0(int32 objectId, EnsId* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_0(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Ens>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_std__string(writer, instance->CaptureSnapshot()); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_1(int32 objectId, EnsId* result)
 {
     try
     {
         auto* instance = NativeBindings::Require<Ens>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
         *result = static_cast<EnsId>(instance->GetId());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_2(int32 objectId, NativeBindingSlice text, uint8 preserveIdentity, int32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Ens>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingReader reader_text(text);
+        auto decoded_text = Read_std__string(reader_text);
+        reader_text.Complete();
+        *result = NativeBindings::Id(instance->InstantiateSnapshot(decoded_text, static_cast<bool>(preserveIdentity)));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_3(int32 objectId, quaternion rotation, vector3 translation)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Ens>(objectId);
+        instance->RebaseCoordinates(rotation, translation);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_4(int32 objectId, float64 radius, float64 centerX, float64 centerY, float64 centerZ)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Ens>(objectId);
+        instance->SetPlanetEnvironment(radius, centerX, centerY, centerZ);
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -7235,7 +7294,19 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_SphereCollider_2(int32 objectId, fl
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_0(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_0(int32 objectId, int32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<TriangleMeshCollider>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<int32>(instance->ApplyPreparedMesh());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_1(int32 objectId, uint32* result)
 {
     try
     {
@@ -7247,7 +7318,19 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_0(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_1(int32 objectId, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_2(int32 objectId, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<TriangleMeshCollider>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->PrepareMeshAsync());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_3(int32 objectId, int32* result)
 {
     try
     {
@@ -7259,7 +7342,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_1(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_2(int32 objectId, int32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_4(int32 objectId, int32 value)
 {
     try
     {
@@ -7352,8 +7435,8 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(Orbeden::Object::StaticType(), 11880064706505753351ULL, { functions_Orbeden_Object, 10 });
     static void* functions_Component[] = { reinterpret_cast<void*>(&Call_Component_0) };
     NativeBindings::Register(Component::StaticType(), 3730866753121215061ULL, { functions_Component, 1 });
-    static void* functions_Ens[] = { reinterpret_cast<void*>(&Call_Ens_0) };
-    NativeBindings::Register(Ens::StaticType(), 6039789372024472840ULL, { functions_Ens, 1 });
+    static void* functions_Ens[] = { reinterpret_cast<void*>(&Call_Ens_0), reinterpret_cast<void*>(&Call_Ens_1), reinterpret_cast<void*>(&Call_Ens_2), reinterpret_cast<void*>(&Call_Ens_3), reinterpret_cast<void*>(&Call_Ens_4) };
+    NativeBindings::Register(Ens::StaticType(), 4849731042518187294ULL, { functions_Ens, 5 });
     static void* functions_Font[] = { reinterpret_cast<void*>(&Call_Font_0), reinterpret_cast<void*>(&Call_Font_1), reinterpret_cast<void*>(&Call_Font_2), reinterpret_cast<void*>(&Call_Font_3), reinterpret_cast<void*>(&Call_Font_4), reinterpret_cast<void*>(&Call_Font_5), reinterpret_cast<void*>(&Call_Font_6), reinterpret_cast<void*>(&Call_Font_7), reinterpret_cast<void*>(&Call_Font_8), reinterpret_cast<void*>(&Call_Font_9), reinterpret_cast<void*>(&Call_Font_10), reinterpret_cast<void*>(&Call_Font_11), reinterpret_cast<void*>(&Call_Font_12), reinterpret_cast<void*>(&Call_Font_13), reinterpret_cast<void*>(&Call_Font_14), reinterpret_cast<void*>(&Call_Font_15), reinterpret_cast<void*>(&Call_Font_16), reinterpret_cast<void*>(&Call_Font_17), reinterpret_cast<void*>(&Call_Font_18), reinterpret_cast<void*>(&Call_Font_19), reinterpret_cast<void*>(&Call_Font_20), reinterpret_cast<void*>(&Call_Font_21), reinterpret_cast<void*>(&Call_Font_22), reinterpret_cast<void*>(&Call_Font_23), reinterpret_cast<void*>(&Call_Font_24) };
     NativeBindings::Register(Font::StaticType(), 8904294447050588615ULL, { functions_Font, 25 });
     static void* functions_InstanceDrawList[] = { reinterpret_cast<void*>(&Call_InstanceDrawList_0), reinterpret_cast<void*>(&Call_InstanceDrawList_1), reinterpret_cast<void*>(&Call_InstanceDrawList_2), reinterpret_cast<void*>(&Call_InstanceDrawList_3), reinterpret_cast<void*>(&Call_InstanceDrawList_4) };
@@ -7400,8 +7483,8 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(ConvexMeshCollider::StaticType(), 4227940251415473256ULL, { functions_ConvexMeshCollider, 3 });
     static void* functions_SphereCollider[] = { reinterpret_cast<void*>(&Call_SphereCollider_0), reinterpret_cast<void*>(&Call_SphereCollider_1), reinterpret_cast<void*>(&Call_SphereCollider_2) };
     NativeBindings::Register(SphereCollider::StaticType(), 13173887832813750021ULL, { functions_SphereCollider, 3 });
-    static void* functions_TriangleMeshCollider[] = { reinterpret_cast<void*>(&Call_TriangleMeshCollider_0), reinterpret_cast<void*>(&Call_TriangleMeshCollider_1), reinterpret_cast<void*>(&Call_TriangleMeshCollider_2) };
-    NativeBindings::Register(TriangleMeshCollider::StaticType(), 16886362217598776389ULL, { functions_TriangleMeshCollider, 3 });
+    static void* functions_TriangleMeshCollider[] = { reinterpret_cast<void*>(&Call_TriangleMeshCollider_0), reinterpret_cast<void*>(&Call_TriangleMeshCollider_1), reinterpret_cast<void*>(&Call_TriangleMeshCollider_2), reinterpret_cast<void*>(&Call_TriangleMeshCollider_3), reinterpret_cast<void*>(&Call_TriangleMeshCollider_4) };
+    NativeBindings::Register(TriangleMeshCollider::StaticType(), 13497566024380503589ULL, { functions_TriangleMeshCollider, 5 });
     static void* functions_ResourceLoadOperation[] = { reinterpret_cast<void*>(&Call_ResourceLoadOperation_0), reinterpret_cast<void*>(&Call_ResourceLoadOperation_1), reinterpret_cast<void*>(&Call_ResourceLoadOperation_2), reinterpret_cast<void*>(&Call_ResourceLoadOperation_3), reinterpret_cast<void*>(&Call_ResourceLoadOperation_4), reinterpret_cast<void*>(&Call_ResourceLoadOperation_5), reinterpret_cast<void*>(&ReleaseHandle_ResourceLoadOperation) };
     NativeBindings::Register("ResourceLoadOperation", 14895700534675878464ULL, { functions_ResourceLoadOperation, 7 });
 }

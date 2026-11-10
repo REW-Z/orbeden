@@ -4176,6 +4176,25 @@
           "Parameters": []
         },
         {
+          "Name": "transmittanceRadius",
+          "Type": "float64",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "cachedTransmittanceProgram",
           "Type": "uint32",
           "Access": "private",
@@ -5038,6 +5057,25 @@
         {
           "Name": "denseFog",
           "Type": "DenseFogSettings",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "planetRadiusMeters",
+          "Type": "float64",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -12882,6 +12920,125 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "CaptureSnapshot",
+          "Type": "std::string",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "InstantiateSnapshot",
+          "Type": "Ens*",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "text",
+              "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "preserveIdentity",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "RebaseCoordinates",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "rotation",
+              "Type": "const quaternion\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "translation",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetPlanetEnvironment",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "radius",
+              "Type": "float64",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "centerX",
+              "Type": "float64",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "centerY",
+              "Type": "float64",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "centerZ",
+              "Type": "float64",
+              "DefaultValue": ""
+            }
+          ]
         },
         {
           "Name": "GetLayer",
@@ -46358,6 +46515,71 @@
           "Parameters": []
         },
         {
+          "Name": "InstallTriangleMesh",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "mesh",
+              "Type": "Mesh\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "bytes",
+              "Type": "const List\u003Cuint8\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "RebaseCoordinates",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "world",
+              "Type": "World\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "rotation",
+              "Type": "const quaternion\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "translation",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "ResetWorld",
           "Type": "void",
           "Access": "public",
@@ -72457,6 +72679,120 @@
       "IsFinal": true,
       "Members": [
         {
+          "Name": "cooking",
+          "Type": "std::shared_ptr\u003CThreadOperation\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "cookedBytes",
+          "Type": "std::shared_ptr\u003CList\u003Cuint8\u003E\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "cookingVersion",
+          "Type": "uint64",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "cookingMeshId",
+          "Type": "int32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "PrepareMeshAsync",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "ApplyPreparedMesh",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "mesh",
           "Type": "Ref\u003CMesh\u003E",
           "Access": "public",
@@ -81826,6 +82162,36 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "RebaseCoordinates",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "rotation",
+              "Type": "const quaternion\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "translation",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
         },
         {
           "Name": "IsPreparing",

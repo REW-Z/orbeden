@@ -67,6 +67,8 @@ public:
     DenseFogSettings denseFog;
 
     //地心在当前世界原点坐标系内的位置，单位为米。
+    //球面参考半径，单位米
+    float64 planetRadiusMeters = 6371000.0;
     float64 planetCenterX = 0.0;
     float64 planetCenterY = -6371000.0;
     float64 planetCenterZ = 0.0;

@@ -3,7 +3,8 @@
 //密度只随距地心的高度变化，地形起伏不参与，因此所有函数都是径向对称的。
 
 const float AtmospherePi = 3.141592653589793;
-const float AtmosphereGroundRadius = 6371.0;
+uniform float u_AtmosphereGroundRadiusKm;
+#define AtmosphereGroundRadius u_AtmosphereGroundRadiusKm
 const float AtmosphereTopHeight = 100.0;
 const float AtmosphereRayleighHeight = 8.0;
 const float AtmosphereMieHeight = 1.2;

@@ -127,6 +127,7 @@ namespace
     {
     public:
         void* context = nullptr;
+        void* unregisterPanel = nullptr;
         void* registerPanel = nullptr;
     };
 
@@ -300,7 +301,7 @@ namespace
 
     #pragma pack(pop)
 
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 3);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 21);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 16);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 25);
@@ -311,7 +312,7 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 196);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 197);
     static_assert(sizeof(EditorProfileScopeAbi) == 16);
     static_assert(sizeof(ProfileFrameSummary) == 104);
     static_assert(sizeof(ProfileGpuEvent) == 24);
@@ -319,20 +320,20 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 98);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 114);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 123);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 125);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 146);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 171);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 176);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 184);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 186);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 188);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 189);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 190);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 191);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 192);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 193);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getWorldEnsState, 194);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, readEnsHeader, 195);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 126);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 147);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 172);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 177);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 185);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 187);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 189);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 190);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 191);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 192);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 193);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 194);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getWorldEnsState, 195);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, readEnsHeader, 196);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -2020,6 +2021,15 @@ namespace
         return component ? component->GetObjectId() : 0;
     }
 
+    //注销项目程序集的面板
+    void ORBEDEN_NATIVE_CALL UnregisterManagedPanel(void* context, const uint8* id, int32 length)
+    {
+        auto* registration = static_cast<ManagedPanelRegistrationContext*>(context);
+        if (!registration || !registration->panelManager) return;
+        std::string panelId = ReadUtf8(id, length);
+        registration->panelManager->UnregisterPanel(panelId.c_str());
+    }
+
     //把一个 C# Panel 注册到原生 PanelManager
     uint8 ORBEDEN_NATIVE_CALL RegisterManagedPanel(void* context,
         int32 handle,
@@ -2304,7 +2314,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
 
     //初始化托管运行时和面板元数据
     OrbedenEngineNativeApi engineApi = OrbedenEngineNativeApi::Create();
-    ManagedPanelRegistrationContext panelContext { &editor, &panelManager };
+    static ManagedPanelRegistrationContext panelContext;
+    panelContext = { &editor, &panelManager };
     EditorManagedApi editorApi;
     editorApi.engineApi = &engineApi;
     editorApi.gui = editorGUI.GetNativeApi();
@@ -2328,6 +2339,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.reimport.getLoadedSources = reinterpret_cast<void*>(&GetLoadedSources);
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
+    editorApi.panels.unregisterPanel = reinterpret_cast<void*>(&UnregisterManagedPanel);
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
     editorApi.assets.context = &editor;
     editorApi.assets.canModifyAssets = reinterpret_cast<void*>(&CanModifyManagedAssets);

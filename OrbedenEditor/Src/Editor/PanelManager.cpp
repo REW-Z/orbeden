@@ -72,8 +72,39 @@ bool PanelManager::RegisterPanel(std::unique_ptr<IEditorPanel> panel)
         if (left.info.order != right.info.order) return left.info.order < right.info.order;
         return left.info.id < right.info.id;
     });
-    defaultLayoutPending = true;
+    if (dockRoot < 0)
+    {
+        defaultLayoutPending = true;
+    }
+    else if (info.defaultVisible && info.defaultDock != PanelDockPlacement::Floating)
+    {
+        DockPanel(info.id, FindWorkspaceNode(), info.defaultDock);
+    }
+    repaintPending = true;
     return true;
+}
+
+//注销项目面板并移除停靠状态
+void PanelManager::UnregisterPanel(const char* id)
+{
+    PanelEntry* entry = FindPanel(id);
+    if (!entry) return;
+
+    std::string panelId = entry->info.id;
+    int32 node = entry->dockNode;
+    ApplyVisibility(*entry, false);
+    DestroyFloatingOsWindow(*entry);
+    RemovePanelFromDock(panelId);
+    panels.erase(std::remove_if(panels.begin(), panels.end(), [&panelId](const PanelEntry& item)
+    {
+        return item.info.id == panelId;
+    }), panels.end());
+    if (node >= 0) CompactDockNode(node);
+    if (draggedPanel == panelId) draggedPanel.clear();
+    if (pendingClosePanel == panelId) pendingClosePanel.clear();
+    if (pendingDock.panelId == panelId) pendingDock = {};
+    if (pendingFloat.panelId == panelId) pendingFloat = {};
+    repaintPending = true;
 }
 
 //绘制 Views 菜单内容

@@ -791,9 +791,9 @@ void EditorSystem::FinishProjectLoad(const std::string& successLabel, const std:
         Log::Error(projectStatus.c_str());
     }
 
+    RefreshInspectorGameAssembly();
     ApplyEditorLayout();
     ApplyEditorGuiConfig();
-    RefreshInspectorGameAssembly();
     if (!sdkSyncError.empty())
     {
         projectStatus += " SDK sync failed: " + sdkSyncError;
@@ -1982,7 +1982,11 @@ bool EditorSystem::RefreshInspectorGameAssembly()
         return false;
     }
 
+    //保留项目面板重注册前的布局
+    EditorLayoutState layout;
+    panelManager.WriteLayout(layout);
     managedBridge.LoadGameAssembly(assemblyPath);
+    panelManager.ApplyLayout(layout);
     //托管会话刚刚整体换过（同路径重编译也换），编辑态脚本域必须按新会话重建。
     ReloadEditorScriptRuntime();
     return true;

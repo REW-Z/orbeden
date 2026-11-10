@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Defines/types.h"
+#include "Runtime/Coroutines/ThreadOperation.h"
+#include <memory>
 #include "Runtime/Object/Component.h"
 #include "Runtime/Object/Mesh.h"
 
@@ -83,7 +85,21 @@ class TriangleMeshCollider final : public Collider
 {
     OBJECT_TYPE_DECLARE(TriangleMeshCollider)
 
+private:
+    ORBEDEN_BIND_IGNORE
+    std::shared_ptr<ThreadOperation> cooking;
+    ORBEDEN_BIND_IGNORE
+    std::shared_ptr<List<uint8>> cookedBytes;
+    uint64 cookingVersion = 0;
+    int32 cookingMeshId = 0;
+
 public:
+    //后台烘焙当前网格快照
+    bool PrepareMeshAsync();
+
+    //提交后台结果，返回等待、成功或失败
+    int32 ApplyPreparedMesh();
+
     Ref<Mesh> mesh;
 
     ColliderGeometryType GetGeometryType() const override;

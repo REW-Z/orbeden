@@ -95,6 +95,10 @@ private:
 public:
     RenderSettings renderSettings;
 
+    //整体转换世界根节点和物理状态
+    void RebaseCoordinates(const quaternion& rotation, const vector3& translation);
+
+
     World();
     World(const World&) = delete;
     World& operator=(const World&) = delete;

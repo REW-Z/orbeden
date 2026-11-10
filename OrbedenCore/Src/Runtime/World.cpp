@@ -3,6 +3,8 @@
 #include "Memory/MemoryManager.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Transform.h"
+#include "Rendering/RenderMath.h"
+#include "Physics/PhysicsSystem.h"
 #include "Scripting/ScriptSystem.h"
 
 #include <algorithm>
@@ -1116,5 +1118,27 @@ void World::VisitEns(EnsVisitorFunction visitor, void* userData) const
         if (!ens || !ens->alive) continue;
 
         visitor(ens, userData);
+    }
+}
+
+//整体转换世界根节点和物理状态
+void World::RebaseCoordinates(const quaternion& rotation, const vector3& translation)
+{
+    matrix4x4 matrix = RenderMath::TRS(translation, rotation, { 1, 1, 1 });
+    bool previous = runtimeActive;
+    runtimeActive = false;
+    ForEachEns([&](Ens& node)
+    {
+        ::Transform* transform = node.Transform();
+        if (transform && transform->GetParent().IsNull())
+        {
+            transform->SetLocalPosition(RenderMath::TransformPoint(matrix, transform->GetLocalPosition()));
+            transform->SetLocalRotation(RenderMath::Mul(rotation, transform->GetLocalRotation()));
+        }
+    });
+    runtimeActive = previous;
+    if (PhysicsSystem* physics = PhysicsSystem::Current())
+    {
+        physics->RebaseCoordinates(*this, rotation, translation);
     }
 }

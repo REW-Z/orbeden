@@ -42,6 +42,9 @@ public static class GameScriptRuntime
     /// <summary>关闭当前 World 的脚本运行时。</summary>
     public static void Shutdown() => ScriptRuntime.Shutdown();
 
+    /// <summary>将活动脚本字段写回可序列化快照</summary>
+    public static void FlushHostFields() => ScriptRuntime.FlushHostFields();
+
     /// <summary>批量执行 Update delegate 表。</summary>
     public static void Update(float deltaTime) => ScriptRuntime.Update(deltaTime);
 

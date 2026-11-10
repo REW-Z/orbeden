@@ -4,6 +4,7 @@
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Log/Log.h"
 #include "Runtime/World.h"
+#include "Runtime/WorldSerializer.h"
 #include "Runtime/Object/Script.h"
 #include "Scripting/ScriptInterop.h"
 #include "Scripting/ScriptSystem.h"
@@ -325,4 +326,44 @@ bool Ens::MoveComponent(Component* component, int32 index)
         else if (ScriptSystem* system = ScriptSystem::Current()) system->RefreshNativeScript(script);
     }
     return true;
+}
+
+//捕获子树的运行时快照
+std::string Ens::CaptureSnapshot()
+{
+    bool previous = dontSave;
+    dontSave = false;
+    std::string text = WorldSerializer::CaptureEns(*this);
+    dontSave = previous;
+    return text;
+}
+
+//从文本恢复或复制独立子树
+Ens* Ens::InstantiateSnapshot(const std::string& text, bool preserveIdentity)
+{
+    std::string error;
+    World* world = GetWorld();
+    Ens* result = preserveIdentity ? WorldSerializer::RestoreEns(*world, text, EnsId(), error)
+        : WorldSerializer::CopyEns(*world, text, EnsId(), error);
+    if (!result)
+    {
+        Log::Error(error.c_str());
+    }
+    return result;
+}
+
+//迁移当前世界的局部坐标系
+void Ens::RebaseCoordinates(const quaternion& rotation, const vector3& translation)
+{
+    GetWorld()->RebaseCoordinates(rotation, translation);
+}
+
+//设置球形大气的地心和半径
+void Ens::SetPlanetEnvironment(float64 radius, float64 centerX, float64 centerY, float64 centerZ)
+{
+    auto& atmosphere = GetWorld()->renderSettings.atmosphere;
+    atmosphere.planetRadiusMeters = radius;
+    atmosphere.planetCenterX = centerX;
+    atmosphere.planetCenterY = centerY;
+    atmosphere.planetCenterZ = centerZ;
 }

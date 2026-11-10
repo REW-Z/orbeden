@@ -20,7 +20,6 @@ namespace
     constexpr const char* SkyShaderKey = "Builtin/Shaders/atmosphere_sky.orbshader";
 
     //地球半径与大气顶高度，与 Shader 内的常数一致
-    constexpr float64 EarthRadiusKm = 6371.0;
     //MOR 的 5% 透射阈值，浓雾能见度按它换算消光系数
     constexpr float64 VisibilityExtinctionFactor = 2.995732273553991;
 
@@ -294,6 +293,7 @@ void AtmosphereRenderer::BindLutUniforms()
     const float32 atlasWidth = static_cast<float32>(quality.aerialWidth * quality.atlasColumns);
     const float32 atlasHeight = static_cast<float32>(quality.aerialHeight * (quality.aerialSlices / quality.atlasColumns));
 
+    backend->GetParameters().SetFloat("u_AtmosphereGroundRadiusKm", static_cast<float32>(frame.settings.planetRadiusMeters / 1000.0));
     backend->GetParameters().SetFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
     backend->GetParameters().SetVector3("u_AtmosphereCameraUp", frame.cameraUp);
     backend->GetParameters().SetVector3("u_AtmosphereSunDirection", frame.sunDirection);
@@ -361,7 +361,7 @@ bool AtmosphereRenderer::UpdateTransmittance(const AtmosphereQualityDesc& qualit
 
     //键一致且查找表仍有效时跳过重建
     if (transmittanceValid && cachedTransmittanceProgram == transmittancePass.id &&
-        transmittanceQuality == frame.quality && transmittanceDensity == frame.settings.aerosolDensity)
+        transmittanceQuality == frame.quality && transmittanceDensity == frame.settings.aerosolDensity && transmittanceRadius == frame.settings.planetRadiusMeters)
     {
         return true;
     }
@@ -375,6 +375,7 @@ bool AtmosphereRenderer::UpdateTransmittance(const AtmosphereQualityDesc& qualit
     cachedTransmittanceProgram = transmittancePass.id;
     transmittanceQuality = frame.quality;
     transmittanceDensity = frame.settings.aerosolDensity;
+    transmittanceRadius = frame.settings.planetRadiusMeters;
     return true;
 }
 
@@ -438,6 +439,7 @@ bool AtmosphereRenderer::MatchesFrame(const AtmosphereFrame& current, const Atmo
         && current.groundBackground.b == other.groundBackground.b && current.groundBackground.a == other.groundBackground.a
         && current.settings.fogEnabled == other.settings.fogEnabled
         && current.settings.quality == other.settings.quality
+        && current.settings.planetRadiusMeters == other.settings.planetRadiusMeters
         && current.settings.planetCenterX == other.settings.planetCenterX
         && current.settings.planetCenterY == other.settings.planetCenterY
         && current.settings.planetCenterZ == other.settings.planetCenterZ
@@ -457,7 +459,7 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
     const uint32 quality = static_cast<uint32>(atmosphere.quality);
 
     //非法设置停用本相机大气
-    const bool valid = std::isfinite(atmosphere.metersPerWorldUnit) && atmosphere.metersPerWorldUnit > 0.0f
+    const bool valid = std::isfinite(atmosphere.planetRadiusMeters) && atmosphere.planetRadiusMeters > 0 && std::isfinite(atmosphere.metersPerWorldUnit) && atmosphere.metersPerWorldUnit > 0.0f
         && std::isfinite(atmosphere.aerosolDensity) && std::isfinite(atmosphere.sunRadianceScale)
         && std::isfinite(atmosphere.planetCenterX) && std::isfinite(atmosphere.planetCenterY)
         && std::isfinite(atmosphere.planetCenterZ) && skyMode <= 1u && quality <= 1u
@@ -496,8 +498,8 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
 
     //相机可以在大气层外：保留真实高度，由着色器求入射与出射，不按高度停用
     //半径为零或落到地心以下属于无效位置，不是低海拔地形
-    const float64 heightKm = radius / 1000.0 - EarthRadiusKm;
-    if (heightKm <= -EarthRadiusKm)
+    const float64 heightKm = radius / 1000.0 - (atmosphere.planetRadiusMeters / 1000.0);
+    if (heightKm <= -(atmosphere.planetRadiusMeters / 1000.0))
     {
         ReportConfigError("Atmosphere camera position is invalid: the camera is at or below the planet center.");
         return false;
@@ -587,7 +589,7 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
 
         //提交雾顶高度与雾顶衰减尺度，衰减尺度不超过雾顶高度
         const float32 topKm = denseFog.topHeightMeters * 0.001f;
-        outFrame.denseFogProfile = { topKm, 0.0f, 0.0f, static_cast<float32>(EarthRadiusKm) };
+        outFrame.denseFogProfile = { topKm, 0.0f, 0.0f, static_cast<float32>((atmosphere.planetRadiusMeters / 1000.0)) };
         outFrame.denseFogTopFadeKm = std::clamp(std::max(denseFog.topFadeMeters, 0.0f) * 0.001f, 0.0f, std::max(topKm, 0.0f));
     }
 
@@ -646,6 +648,7 @@ void AtmosphereRenderer::BindMaterialUniforms()
     backend->GetParameters().SetInt("u_AtmosphereFogEnabled", frame.fogActive ? 1 : 0);
     backend->GetParameters().SetFloat("u_AtmosphereMaxDistanceKm", frame.maxDistanceKm);
     backend->GetParameters().SetFloat("u_AtmosphereMetersPerWorldUnit", frame.settings.metersPerWorldUnit);
+    backend->GetParameters().SetFloat("u_AtmosphereGroundRadiusKm", static_cast<float32>(frame.settings.planetRadiusMeters / 1000.0));
     backend->GetParameters().SetFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
     backend->GetParameters().SetVector3("u_AtmosphereCameraUp", frame.cameraUp);
     backend->GetParameters().SetInt("u_AtmosphereDenseFogEnabled", frame.denseFogExtinction > 0.0f ? 1 : 0);
@@ -699,6 +702,7 @@ bool AtmosphereRenderer::RenderSky()
     backend->GetParameters().SetFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
     backend->GetParameters().SetMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
     backend->GetParameters().SetMatrix4("u_AtmosphereCameraWorldRotation", frame.cameraWorldRotation);
+    backend->GetParameters().SetFloat("u_AtmosphereGroundRadiusKm", static_cast<float32>(frame.settings.planetRadiusMeters / 1000.0));
     backend->GetParameters().SetFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
     backend->GetParameters().SetVector3("u_AtmosphereCameraUp", frame.cameraUp);
     backend->GetParameters().SetVector3("u_AtmosphereSunDirection", frame.sunDirection);

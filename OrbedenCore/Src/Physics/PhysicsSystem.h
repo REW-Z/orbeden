@@ -50,6 +50,13 @@ public:
     /// <summary>读取物理场景当前重力加速度。</summary>
     vector3 GetGravity() const;
 
+    //接收后台烘焙的三角网格
+    bool InstallTriangleMesh(Mesh& mesh, const List<uint8>& bytes);
+
+    //旋转并平移物理坐标与运动状态
+    void RebaseCoordinates(World& world, const quaternion& rotation, const vector3& translation);
+
+
     //清空当前 World 对应的原生 Actor、CCT 和事件
     void ResetWorld();
 

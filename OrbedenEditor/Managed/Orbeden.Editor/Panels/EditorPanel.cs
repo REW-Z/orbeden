@@ -4,7 +4,7 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-internal enum PanelDockPlacement
+public enum PanelDockPlacement
 {
     Center,
     Left,
@@ -15,7 +15,7 @@ internal enum PanelDockPlacement
 }
 
 /// <summary>Panel 名称和默认布局信息。</summary>
-internal readonly struct EditorPanelInfo
+public readonly struct EditorPanelInfo
 {
     public string Id { get; }
     public string Title { get; }
@@ -51,7 +51,7 @@ internal readonly struct EditorPanelInfo
 }
 
 /// <summary>当前 Panel 绘制所需的编辑器上下文。</summary>
-internal readonly struct EditorPanelContext
+public readonly struct EditorPanelContext
 {
     public EnsId SelectedEns { get; }
     public IReadOnlyList<EnsId> SelectedEnsList { get; }
@@ -70,7 +70,7 @@ internal readonly struct EditorPanelContext
 }
 
 /// <summary>C# Editor Panel 基类。</summary>
-internal abstract class EditorPanel
+public abstract class EditorPanel
 {
     private vector2 scroll;
     private ulong contentHost;
@@ -158,6 +158,7 @@ internal abstract class EditorPanel
 internal unsafe struct EditorPanelNativeApi
 {
     public IntPtr Context;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, void> UnregisterPanel;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte, float, float, int, float, int, byte, byte, byte> RegisterPanel;
 }
 #pragma warning restore CS0649

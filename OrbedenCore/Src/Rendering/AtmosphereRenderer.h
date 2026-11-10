@@ -105,6 +105,7 @@ private:
     bool transmittanceValid = false;
     AtmosphereQuality transmittanceQuality = AtmosphereQuality::Low;
     float32 transmittanceDensity = -1.0f;
+    float64 transmittanceRadius = -1.0;
     uint32 cachedTransmittanceProgram = 0;
 
     //视图缓存键：上次重建图集与天空时的帧数据与 program

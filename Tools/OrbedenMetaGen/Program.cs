@@ -338,6 +338,8 @@ static bool IsPersistentField(string className, string fieldName)
     if (className is "Object") return false;
     if (className == "Component" && fieldName == "owner") return false;
     if (className == "Camera" && fieldName == "renderTargetId") return false;
+    //碰撞烘焙任务与结果只保存在运行时
+    if (className == "TriangleMeshCollider") return fieldName == "mesh";
     if (className == "StaticMeshRenderer" && fieldName is "renderState" or "runtimeMesh") return false;
     //显式实例提交只活在运行时，配置与实例都不进场景文件与 Prefab
     if (className == "InstanceDrawList") return false;

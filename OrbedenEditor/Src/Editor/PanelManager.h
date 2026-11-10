@@ -107,6 +107,9 @@ public:
     //注册一个面板实例
     bool RegisterPanel(std::unique_ptr<IEditorPanel> panel);
 
+    //注销项目面板并移除停靠状态
+    void UnregisterPanel(const char* id);
+
     //绘制 Views 菜单内容
     void DrawViewsMenu();
 

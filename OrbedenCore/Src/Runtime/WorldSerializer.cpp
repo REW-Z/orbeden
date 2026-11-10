@@ -763,6 +763,7 @@ namespace
                     return false;
                 }
 
+                if (!ReadFloat64Attribute(token, "planetRadiusMeters", atmosphere.planetRadiusMeters)) return false;
                 if (!ReadFloat64Attribute(token, "planetCenterX", atmosphere.planetCenterX)) return false;
                 if (!ReadFloat64Attribute(token, "planetCenterY", atmosphere.planetCenterY)) return false;
                 if (!ReadFloat64Attribute(token, "planetCenterZ", atmosphere.planetCenterZ)) return false;
@@ -1018,6 +1019,7 @@ std::string WorldSerializer::CaptureWorld(const World& world)
         << "\" atmosphereFogEnabled=\"" << (world.renderSettings.atmosphere.fogEnabled ? "true" : "false")
         << "\" atmosphereQuality=\"" << static_cast<uint32>(world.renderSettings.atmosphere.quality)
         << "\" planetCenterX=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterX);
+    output << "\" planetRadiusMeters=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetRadiusMeters);
     output << "\" planetCenterY=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterY);
     output << "\" planetCenterZ=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterZ);
     output << "\" denseFogEnabled=\"" << (world.renderSettings.atmosphere.denseFog.enabled ? "true" : "false")

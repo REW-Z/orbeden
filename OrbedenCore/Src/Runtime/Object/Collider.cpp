@@ -1,4 +1,7 @@
 #include "Runtime/Object/Collider.h"
+#include "Physics/PhysicsSystem.h"
+#include "PxPhysicsAPI.h"
+#include <stdexcept>
 
 OBJECT_TYPE_IMPLEMENT_ABSTRACT(Collider, Component)
 OBJECT_TYPE_IMPLEMENT(BoxCollider, Collider)
@@ -47,4 +50,58 @@ ColliderGeometryType TriangleMeshCollider::GetGeometryType() const
 void TriangleMeshCollider::OnDetach()
 {
     mesh.SetInstanceId(StringId());
+}
+
+//后台烘焙当前网格快照
+bool TriangleMeshCollider::PrepareMeshAsync()
+{
+    PhysicsSystem* physics = PhysicsSystem::Current();
+    Mesh* source = mesh.Get();
+    if (!source || !physics || !physics->IsInitialized() || (cooking && !cooking->IsFinished()))
+    {
+        return false;
+    }
+    auto positions = source->vertices;
+    auto indices = source->indices;
+    auto bytes = std::make_shared<List<uint8>>();
+    auto params = *physics->GetCookingParams();
+    cookingVersion = source->GetContentVersion();
+    cookingMeshId = source->GetObjectId();
+    cookedBytes = bytes;
+    cooking = std::make_shared<ThreadOperation>([positions = std::move(positions), indices = std::move(indices), bytes, params]
+    {
+        physx::PxTriangleMeshDesc description;
+        description.points.count = static_cast<physx::PxU32>(positions.size());
+        description.points.stride = sizeof(vector3);
+        description.points.data = positions.data();
+        description.triangles.count = static_cast<physx::PxU32>(indices.size() / 3);
+        description.triangles.stride = sizeof(uint32) * 3;
+        description.triangles.data = indices.data();
+        physx::PxDefaultMemoryOutputStream output;
+        if (!PxCookTriangleMesh(params, description, output))
+        {
+            throw std::runtime_error("Triangle mesh cooking failed.");
+        }
+        bytes->assign(output.getData(), output.getData() + output.getSize());
+    });
+    return true;
+}
+
+//提交后台结果，返回等待、成功或失败
+int32 TriangleMeshCollider::ApplyPreparedMesh()
+{
+    if (!cooking || !cooking->IsFinished())
+    {
+        return 0;
+    }
+    Mesh* source = mesh.Get();
+    bool success = cooking->Succeeded() && source && source->GetObjectId() == cookingMeshId
+        && source->GetContentVersion() == cookingVersion;
+    if (success)
+    {
+        success = PhysicsSystem::Current()->InstallTriangleMesh(*source, *cookedBytes);
+    }
+    cooking.reset();
+    cookedBytes.reset();
+    return success ? 1 : -1;
 }

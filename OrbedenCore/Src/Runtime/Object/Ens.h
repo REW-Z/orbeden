@@ -74,6 +74,19 @@ public:
     //获取底层ID
     EnsId GetId() const;
 
+    //捕获子树的运行时快照
+    std::string CaptureSnapshot();
+
+    //从文本恢复或复制独立子树
+    Ens* InstantiateSnapshot(const std::string& text, bool preserveIdentity);
+
+    //迁移当前世界的局部坐标系
+    void RebaseCoordinates(const quaternion& rotation, const vector3& translation);
+
+    //设置球形大气的地心和半径
+    void SetPlanetEnvironment(float64 radius, float64 centerX, float64 centerY, float64 centerZ);
+
+
     //获取所属层索引
     ORBEDEN_BIND_IGNORE
     uint32 GetLayer() const { return layer; }
