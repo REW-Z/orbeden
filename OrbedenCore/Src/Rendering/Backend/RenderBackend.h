@@ -164,6 +164,7 @@ public:
     color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     int32 x = 0;
     int32 y = 0;
+    bool reversedDepth = false;
 };
 
 //渲染后端抽象
@@ -235,7 +236,7 @@ public:
     virtual void DeleteDepthDistribution(GpuDepthDistributionID id) = 0;
     //提交冻结深度统计，在途任务未完成时不覆盖
     virtual bool SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
-        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane) = 0;
+        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane, bool reversedDepth = false) = 0;
     //零超时读取已完成统计
     virtual bool TryReadDepthDistribution(GpuDepthDistributionID id, GpuDepthDistribution& distribution) = 0;
     virtual GpuCubeTextureID CreateCubeTexture(const GpuCubeTextureDesc& desc) = 0;
@@ -281,4 +282,6 @@ public:
     virtual bool BindInstanceBuffer(GpuVertexBufferID id, usize byteOffset) = 0;
     //采集 GPU 阶段时间检查点
     void ProfileGpuStage(const char* name);
+    //查询相机反向浮点深度能力
+    virtual bool SupportsReversedDepth() const { return false; }
 };

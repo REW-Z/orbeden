@@ -153,6 +153,7 @@ internal sealed class EditorSettingsPanel : EditorPanel
         EditorGUI.Label(bitmap
             ? "The built-in pixel font only reads well at 13 px. Pick the vector font or a system font to set a size."
             : "Font size in pixels. The atlas is rebuilt at this size when you apply.");
+        EditorGUI.Label("Missing glyphs use an available system Chinese font. Font collections (.ttc) use their first font.");
     }
 
     //枚举 OS 字体目录里的可缩放字体；失败就当没有系统字体，内置两种仍然可用
@@ -168,8 +169,11 @@ internal sealed class EditorSettingsPanel : EditorPanel
             {
                 string extension = Path.GetExtension(path);
                 if (!extension.Equals(".ttf", StringComparison.OrdinalIgnoreCase)
-                    && !extension.Equals(".otf", StringComparison.OrdinalIgnoreCase))
+                    && !extension.Equals(".otf", StringComparison.OrdinalIgnoreCase)
+                    && !extension.Equals(".ttc", StringComparison.OrdinalIgnoreCase))
+                {
                     continue;
+                }
                 //.fon 之类的点阵字体不在枚举范围内：它们不能按字号缩放
                 systemFonts.Add(path);
             }

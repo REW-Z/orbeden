@@ -99,6 +99,7 @@ private:
         //离屏输出每帧从透明黑开始；屏幕与世界空间画布覆盖在已有内容之上，不清屏。
         bool clearOnFirstPass = false;
         bool depthTest = false;
+        bool reversedDepth = false;
     };
 
     //一个视图最近一次呈现时的深度来源；命中快照按它回读深度。
@@ -106,6 +107,7 @@ private:
     {
         uint64 frameId = 0;
         GpuRenderTargetID renderTarget;
+        bool reversedDepth = false;
     };
 
     //深度来源的键：画布标识加观察者标识；屏幕与离屏视图的观察者为 0。

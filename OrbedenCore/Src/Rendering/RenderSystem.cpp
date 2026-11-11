@@ -507,13 +507,14 @@ void RenderSystem::Render(World& world, float deltaTime)
             RenderPassDesc pass;
             //场景缓冲是视口尺寸且原点为 0，视口原点只在外层目标上才有意义
             pass.renderTarget = camera.renderTarget;
+            pass.reversedDepth = camera.reversedDepth;
             pass.x = 0;
             pass.y = 0;
             pass.width = camera.viewportWidth;
             pass.height = camera.viewportHeight;
             pass.clearMode = ClearMode::None;
             backend->BeginPass(pass);
-            debugLineRenderer.Render(debugLines, camera.viewProjectionMatrix, camera.drawLayerMask);
+            debugLineRenderer.Render(debugLines, camera.gpuViewProjectionMatrix, camera.drawLayerMask);
             backend->EndPass();
         }
 
@@ -720,6 +721,11 @@ void RenderSystem::PrepareCameraRenderData()
         camera.projectionMatrix = RenderMath::Perspective(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane);
         camera.viewProjectionMatrix = RenderMath::Mul(camera.projectionMatrix, camera.viewMatrix);
         camera.viewFrustum = RenderMath::BuildFrustum(camera.viewProjectionMatrix);
+        camera.reversedDepth = backend->SupportsReversedDepth();
+        camera.gpuProjectionMatrix = camera.reversedDepth
+            ? RenderMath::PerspectiveReversed(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane)
+            : camera.projectionMatrix;
+        camera.gpuViewProjectionMatrix = RenderMath::Mul(camera.gpuProjectionMatrix, camera.viewMatrix);
 
         //曝光：项目级默认值，相机可单独覆盖
         camera.exposure = (camera.camera && camera.camera->overrideExposure)

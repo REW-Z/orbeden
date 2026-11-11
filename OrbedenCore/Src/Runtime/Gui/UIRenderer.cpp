@@ -187,7 +187,9 @@ bool UIRenderer::ReadDepth(uint64 viewId, uint64 viewerId, uint64 presentedFrame
     //帧号对不上的查询一律拒绝：问的是已经画出来的那一帧，不是半帧。
     if (found == viewDepths.end() || found->second.frameId != presentedFrame) return false;
 
-    return backend->ReadDepthPixel(found->second.renderTarget, x, y, depth);
+    if (!backend->ReadDepthPixel(found->second.renderTarget, x, y, depth)) return false;
+    if (found->second.reversedDepth) depth = 1.0f - depth;
+    return true;
 }
 
 void UIRenderer::RenderOverlay(const UIOutputTarget& target)
@@ -289,6 +291,7 @@ void UIRenderer::RenderWorldSpace(const RenderCamera& camera)
     canvasTarget.width = camera.viewportWidth;
     canvasTarget.height = camera.viewportHeight;
     canvasTarget.depthTest = true;
+    canvasTarget.reversedDepth = camera.reversedDepth;
 
     //视图快照要带上这台相机的矩阵，托管侧据此反投影命中射线。
     cameraView = camera.viewMatrix;
@@ -308,7 +311,7 @@ void UIRenderer::RenderWorldSpace(const RenderCamera& camera)
         if (!canvas.submission || canvas.submission->renderMode != RenderModeWorldSpace) continue;
         if ((canvas.submission->drawLayer & camera.drawLayerMask) == 0) continue;
         //世界空间：提交里的矩阵是画布本地到世界的变换，这里再乘相机的视图投影。
-        RenderCanvas(canvas, canvasTarget, &camera.viewProjectionMatrix);
+        RenderCanvas(canvas, canvasTarget, &camera.gpuViewProjectionMatrix);
     }
     publishingWorldSpace = false;
     publishingViewer = 0;
@@ -329,13 +332,14 @@ void UIRenderer::RenderEditorPreview(const RenderCamera& camera)
     target.width = camera.viewportWidth;
     target.height = camera.viewportHeight;
     target.depthTest = true;
+    target.reversedDepth = camera.reversedDepth;
     cameraView = camera.viewMatrix;
     cameraProjection = camera.projectionMatrix;
     publishingEditorPreview = true;
     for (const RetainedGuiFrame::CanvasView& canvas : canvases)
     {
         if (!canvas.submission || canvas.submission->renderMode != RenderModeScreen) continue;
-        RenderCanvas(canvas, target, &camera.viewProjectionMatrix);
+        RenderCanvas(canvas, target, &camera.gpuViewProjectionMatrix);
     }
     publishingEditorPreview = false;
 }
@@ -426,6 +430,7 @@ void UIRenderer::RenderCanvas(const RetainedGuiFrame::CanvasView& canvas, const 
         ViewDepth& record = viewDepths[ViewKey { canvas.submission->viewId, publishingViewer }];
         record.frameId = canvas.submission->frameId;
         record.renderTarget = target.renderTarget;
+        record.reversedDepth = target.reversedDepth;
     }
 
     RestoreSurfaceState();
@@ -534,6 +539,7 @@ void UIRenderer::PushCoverage(const UIDrawCommand& command, const matrix4x4* mat
     //取目标清零，再把裁剪形状投影进去：写的是 父覆盖率 * 本层覆盖率。
     RenderPassDesc pass;
     pass.renderTarget = coverage.renderTarget;
+    pass.reversedDepth = currentTarget.reversedDepth;
     pass.x = 0;
     pass.y = 0;
     pass.width = coverage.width;
@@ -615,6 +621,7 @@ void UIRenderer::ClearTarget(const CanvasTarget& target)
 {
     RenderPassDesc pass;
     pass.renderTarget = target.renderTarget;
+    pass.reversedDepth = target.reversedDepth;
     pass.x = target.x;
     pass.y = target.y;
     pass.width = target.width;
@@ -629,6 +636,7 @@ void UIRenderer::RestoreSurfaceState()
 {
     RenderPassDesc pass;
     pass.renderTarget = currentTarget.renderTarget;
+    pass.reversedDepth = currentTarget.reversedDepth;
     pass.x = currentTarget.x;
     pass.y = currentTarget.y;
     pass.width = currentTarget.width;

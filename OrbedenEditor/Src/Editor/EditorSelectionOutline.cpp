@@ -212,6 +212,7 @@ void EditorSelectionOutline::Render(RenderBackend& backend, GpuResourceManager& 
     maskPass.width = viewportWidth;
     maskPass.height = viewportHeight;
     maskPass.renderTarget = outlineMaskTarget;
+    maskPass.reversedDepth = camera.reversedDepth;
     maskPass.clearMode = ClearMode::None;
     backend.BeginPass(maskPass);
     backend.GetPipelineState().depthTest = true;
@@ -236,7 +237,7 @@ void EditorSelectionOutline::Render(RenderBackend& backend, GpuResourceManager& 
 
         backend.BindVertexInput(mesh->vertexInput);
         backend.GetParameters().SetMatrix4("u_Model", item.localToWorld);
-        backend.GetParameters().SetMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        backend.GetParameters().SetMatrix4("u_ViewProjection", camera.gpuViewProjectionMatrix);
         backend.GetParameters().SetColor("u_Tint", tint);
         backend.DrawIndexed(item.indexStart, item.indexCount);
         drewAny = true;

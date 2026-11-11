@@ -25,6 +25,10 @@
 #include <string>
 #include <string_view>
 
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 EditorGUI* EditorGUI::activeInstance = nullptr;
 
 namespace
@@ -263,56 +267,77 @@ namespace
     bool editorFontIsBitmap = true;
     constexpr float32 BitmapFontSize = 13.0f;
 
-    //按当前字体配置重建图集。字号在 AddFont 时就烘进去，图集按字号重新光栅化，
-    //所以换字号要重建而不是缩放。ImGui 1.92 的字体系统支持运行时重建：
-    //ClearFonts 会通知所有用这张图表的上下文改绑新字体（浮动窗的上下文也在内）。
-    void BuildEditorFont(ImFontAtlas& atlas)
+    //读取字体文件并加入图集
+    bool AddEditorFontFromFile(ImFontAtlas& atlas, const std::filesystem::path& path, const ImFontConfig& config)
     {
-        atlas.Clear();
-
-        if (editorFontIsBitmap)
-        {
-            atlas.AddFontDefaultBitmap();
-            return;
-        }
-
-        ImFontConfig config;
-        config.SizePixels = editorFontSize;
-        if (editorFont == EditorGUI::BuiltinVectorFont)
-        {
-            atlas.AddFontDefaultVector(&config);
-            return;
-        }
-
-        //字体文件走内存加载：ImGui 的 AddFontFromFileTTF 内部是 fopen，Windows 上按 ANSI 解释路径，
-        //"C:\Windows\Fonts\微软雅黑.ttf" 这类会直接失败。自己按 UTF-8 路径读进来再交过去。
-        std::ifstream input(InteropText::PathFromUtf8(editorFont), std::ios::binary);
+        //读取字体数据
+        std::ifstream input(path, std::ios::binary);
         std::string bytes((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
         if (bytes.empty())
         {
-            Log::Warning(("Editor font could not be read, using the built-in font: " + editorFont).c_str());
-            editorFontIsBitmap = true;
-            atlas.AddFontDefaultBitmap();
-            return;
+            return false;
         }
 
-        //图集拿走这块内存的所有权（ClearFonts 时按 ImGui 的分配器释放），
-        //因此必须用它的 MemAlloc，不能把 std::string 的缓冲直接交出去。
+        //将字体数据交给图集管理
         void* data = ImGui::MemAlloc(bytes.size());
         if (!data)
         {
-            editorFontIsBitmap = true;
-            atlas.AddFontDefaultBitmap();
-            return;
+            return false;
         }
         std::memcpy(data, bytes.data(), bytes.size());
-        if (!atlas.AddFontFromMemoryTTF(data, static_cast<int32>(bytes.size()), editorFontSize, &config))
+        return atlas.AddFontFromMemoryTTF(data, static_cast<int32>(bytes.size()), config.SizePixels, &config) != nullptr;
+    }
+
+    //重建主字体并合并系统中文字体
+    void BuildEditorFont(ImFontAtlas& atlas)
+    {
+        //加载所选字体
+        atlas.Clear();
+        ImFontConfig config;
+        config.SizePixels = editorFontSize;
+        if (editorFontIsBitmap)
         {
-            ImGui::MemFree(data);
-            editorFontIsBitmap = true;
-            Log::Warning(("Editor font could not be parsed, using the built-in font: " + editorFont).c_str());
             atlas.AddFontDefaultBitmap();
         }
+        else if (editorFont == EditorGUI::BuiltinVectorFont)
+        {
+            atlas.AddFontDefaultVector(&config);
+        }
+        else if (!AddEditorFontFromFile(atlas, InteropText::PathFromUtf8(editorFont), config))
+        {
+            editorFontIsBitmap = true;
+            Log::Warning(("Editor font could not be loaded, using the built-in font: " + editorFont).c_str());
+            atlas.AddFontDefaultBitmap();
+        }
+
+        //读取系统字体目录
+        wchar_t windowsDirectory[MAX_PATH];
+        uint32 length = GetSystemWindowsDirectoryW(windowsDirectory, MAX_PATH);
+        if (length == 0 || length >= MAX_PATH)
+        {
+            Log::Warning("Editor fallback font directory could not be read.");
+            return;
+        }
+        std::filesystem::path directory = InteropText::PathFromWide(windowsDirectory) / "Fonts";
+
+        //按主字体字号合并缺失字形
+        ImFontConfig fallbackConfig;
+        fallbackConfig.MergeMode = true;
+        for (const char* name : { "msyh.ttc", "simhei.ttf" })
+        {
+            std::filesystem::path path = directory / name;
+            std::error_code error;
+            if (!editorFontIsBitmap && editorFont != EditorGUI::BuiltinVectorFont
+                && std::filesystem::equivalent(path, InteropText::PathFromUtf8(editorFont), error))
+            {
+                return;
+            }
+            if (AddEditorFontFromFile(atlas, path, fallbackConfig))
+            {
+                return;
+            }
+        }
+        Log::Warning("Editor fallback fonts could not be loaded: msyh.ttc, simhei.ttf.");
     }
 
     //把属性标签画进左侧固定宽度的标签列，再把光标移到右列起点，返回控件该用的 label。

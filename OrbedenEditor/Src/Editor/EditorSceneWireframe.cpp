@@ -115,6 +115,7 @@ void EditorSceneWireframe::Render(RenderBackend& renderBackend, GpuResourceManag
     PROFILE("Editor/Wireframe");
     RenderPassDesc pass;
     pass.renderTarget = camera.renderTarget;
+    pass.reversedDepth = camera.reversedDepth;
     pass.width = camera.viewportWidth;
     pass.height = camera.viewportHeight;
     pass.clearMode = overlay ? ClearMode::None : camera.clearMode;
@@ -170,11 +171,11 @@ void EditorSceneWireframe::Render(RenderBackend& renderBackend, GpuResourceManag
     renderBackend.GetPipelineState().depthBiasSlope = -1.0f;
     renderBackend.GetPipelineState().depthBiasConstant = -2.0f;
     renderBackend.BindShaderProgram(program);
-    renderBackend.GetParameters().SetMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+    renderBackend.GetParameters().SetMatrix4("u_ViewProjection", camera.gpuViewProjectionMatrix);
     if (instancedProgram.IsValid())
     {
         renderBackend.BindShaderProgram(instancedProgram);
-        renderBackend.GetParameters().SetMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        renderBackend.GetParameters().SetMatrix4("u_ViewProjection", camera.gpuViewProjectionMatrix);
     }
     for (usize start = 0; start < draws.size();)
     {

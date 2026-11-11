@@ -429,6 +429,6 @@ void CascadedShadowMap::CaptureDepth(const RenderCamera& camera)
         [&](const CameraHistory& history) { return history.camera.ens == camera.ens; });
     if (found == histories.end()) return;
     if (backend->SubmitDepthDistribution(found->query, camera.cameraDepthTexture,
-        RenderMath::Inverse(camera.projectionMatrix), camera.nearPlane, std::min(camera.farPlane, settings.distance)))
+        RenderMath::Inverse(camera.gpuProjectionMatrix), camera.nearPlane, std::min(camera.farPlane, settings.distance), camera.reversedDepth))
         found->submittedCamera = camera;
 }

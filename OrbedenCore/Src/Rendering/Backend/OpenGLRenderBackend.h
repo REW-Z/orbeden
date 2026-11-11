@@ -46,6 +46,8 @@ private:
     };
 
     OpenGLContext context;
+    void* clipControlFunction = nullptr;
+    bool reversedDepth = false;
     struct DepthDistributionState
     {
         void* fence = nullptr;
@@ -95,6 +97,7 @@ public:
     //释放后端持有的 GPU 资源
     ~OpenGLRenderBackend() override { Shutdown(); }
     bool Initialize(IWindow* window) override;
+    bool SupportsReversedDepth() const override { return clipControlFunction != nullptr; }
     void Shutdown() override;
     void BeginFrame() override;
     void EndFrame() override;
@@ -127,7 +130,7 @@ public:
     void DeleteDepthDistribution(GpuDepthDistributionID id) override;
     //提交冻结相机深度的对数直方图
     bool SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
-        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane) override;
+        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane, bool reversedDepth) override;
     //读取已完成直方图，不等待 GPU
     bool TryReadDepthDistribution(GpuDepthDistributionID id, GpuDepthDistribution& distribution) override;
     GpuCubeTextureID CreateCubeTexture(const GpuCubeTextureDesc& desc) override;

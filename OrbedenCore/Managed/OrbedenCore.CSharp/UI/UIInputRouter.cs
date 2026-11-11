@@ -244,9 +244,12 @@ public sealed class UIInputRouter
     /// <summary>滚轮：从命中节点向祖先传播，没人处理就交最近的可滚动容器。</summary>
     public void ProcessScroll(in UIPointerEvent input)
     {
-        //滚轮同样是瞬态，命中与否都算处理过。
+        //命中 UI 后消费滚轮
+        if (!raycaster.Raycast(input, out UIHitResult result))
+        {
+            return;
+        }
         Consume(input.sequence);
-        if (!raycaster.Raycast(input, out UIHitResult result)) return;
 
         //从命中节点向祖先找滚轮处理者；同一节点按组件顺序，直到有人消费。
         for (UINode? current = FindHitNode(result); current != null; current = current.Parent)

@@ -240,6 +240,7 @@ namespace
         bindings.useCameraPosition = uses("u_CameraPosition");
         bindings.useCameraNearPlane = uses("u_CameraNearPlane");
         bindings.useCameraFarPlane = uses("u_CameraFarPlane");
+        bindings.useCameraReversedDepth = uses("u_CameraReversedDepth");
         bindings.useTime = uses("u_Time");
         bindings.useCameraTextures = uses("u_UseCameraTextures");
         bindings.useAmbientColor = uses("u_AmbientColor");

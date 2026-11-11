@@ -276,6 +276,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     passDesc.width = camera.viewportWidth;
     passDesc.height = camera.viewportHeight;
     passDesc.renderTarget = camera.renderTarget;
+    passDesc.reversedDepth = camera.reversedDepth;
     passDesc.clearMode = camera.clearMode;
     passDesc.clearColor = camera.clearColor;
     //输出当前采集里每个相机目标的实际配置
@@ -759,11 +760,12 @@ bool ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& s
     //相机、光照与环境反射对本队列的每个 program 只提交一次
     if (configuredPrograms.insert(programId).second)
     {
-        if (bindings.useViewProjection) parameters.SetMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        if (bindings.useViewProjection) parameters.SetMatrix4("u_ViewProjection", camera.gpuViewProjectionMatrix);
         if (bindings.useShadowUniforms) shadows.BindUniforms(camera);
         if (bindings.useCameraPosition) parameters.SetVector3("u_CameraPosition", camera.position);
         if (bindings.useCameraNearPlane) parameters.SetFloat("u_CameraNearPlane", camera.nearPlane);
         if (bindings.useCameraFarPlane) parameters.SetFloat("u_CameraFarPlane", camera.farPlane);
+        if (bindings.useCameraReversedDepth) parameters.SetInt("u_CameraReversedDepth", camera.reversedDepth ? 1 : 0);
         if (bindings.useTime) parameters.SetFloat("u_Time", camera.elapsedTime);
         if (bindings.useCameraTextures)
             parameters.SetInt("u_UseCameraTextures", batch.key.queue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);

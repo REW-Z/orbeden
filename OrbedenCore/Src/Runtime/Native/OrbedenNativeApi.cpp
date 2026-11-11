@@ -1,5 +1,6 @@
 #include "Runtime/Native/OrbedenNativeApi.h"
 
+#include "InputManager/InputManager.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/World.h"
 #include "Runtime/Reflection.h"
@@ -13,6 +14,42 @@
 
 namespace
 {
+    //读取游戏按键状态
+    uint8 ORBEDEN_NATIVE_CALL ReadInputKey(int32 key)
+    {
+        return Input::Key(static_cast<KeyEnum>(key)) ? 1 : 0;
+    }
+
+    //读取游戏按下状态
+    uint8 ORBEDEN_NATIVE_CALL ReadInputKeyDown(int32 key)
+    {
+        return Input::KeyDown(static_cast<KeyEnum>(key)) ? 1 : 0;
+    }
+
+    //读取游戏抬起状态
+    uint8 ORBEDEN_NATIVE_CALL ReadInputKeyUp(int32 key)
+    {
+        return Input::KeyUp(static_cast<KeyEnum>(key)) ? 1 : 0;
+    }
+
+    //读取游戏鼠标位置
+    void ORBEDEN_NATIVE_CALL ReadInputMousePos(vector2* output)
+    {
+        *output = Input::MousePos();
+    }
+
+    //读取游戏鼠标移动量
+    void ORBEDEN_NATIVE_CALL ReadInputMouseMov(vector2* output)
+    {
+        *output = Input::MouseMov();
+    }
+
+    //读取游戏滚轮刻度
+    float32 ORBEDEN_NATIVE_CALL ReadInputMouseWheel()
+    {
+        return Input::MouseWheel();
+    }
+
     std::string ReadUtf8(const uint8* text, int32 length)
     {
         return text && length > 0
@@ -225,6 +262,19 @@ namespace
     }
 }
 
+//创建输入查询函数表
+InputBindApi InputBindApi::Create()
+{
+    InputBindApi api;
+    api.Key = reinterpret_cast<void*>(&ReadInputKey);
+    api.KeyDown = reinterpret_cast<void*>(&ReadInputKeyDown);
+    api.KeyUp = reinterpret_cast<void*>(&ReadInputKeyUp);
+    api.MousePos = reinterpret_cast<void*>(&ReadInputMousePos);
+    api.MouseMov = reinterpret_cast<void*>(&ReadInputMouseMov);
+    api.MouseWheel = reinterpret_cast<void*>(&ReadInputMouseWheel);
+    return api;
+}
+
 OrbedenEngineNativeApi OrbedenEngineNativeApi::Create()
 {
     OrbedenEngineNativeApi api;
@@ -232,6 +282,7 @@ OrbedenEngineNativeApi OrbedenEngineNativeApi::Create()
     api.PathDefines = PathDefinesBind::Create();
     api.FileSystem = FileSystemBind::Create();
     api.AsyncOperations = AsyncOperationBindApi::Create();
+    api.Input = InputBindApi::Create();
     api.Ens = EnsBind::Create();
     api.Object = ObjectBind::Create();
     api.ObjectExtension = ObjectExtensionBind::Create();
@@ -278,6 +329,7 @@ OrbedenNativeApi OrbedenNativeApi::Create(::World* world)
     api.PathDefines = PathDefinesBind::Create();
     api.FileSystem = FileSystemBind::Create();
     api.AsyncOperations = AsyncOperationBindApi::Create();
+    api.Input = InputBindApi::Create();
     api.Ens = EnsBind::Create();
     api.Object = ObjectBind::Create();
     api.GuiExtension = RuntimeGuiBridge::GetExtensionApi();

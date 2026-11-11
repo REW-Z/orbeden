@@ -131,6 +131,9 @@ public:
 
     //读取鼠标本帧移动量
     static vector2 MouseMov();
+
+    //读取本帧未被 UI 消费的纵向滚轮刻度，向上为正
+    static float32 MouseWheel();
 };
 
 class Input
@@ -150,4 +153,7 @@ public:
 
     //读取鼠标本帧移动量
     static vector2 MouseMov();
+
+    //读取本帧未被 UI 消费的纵向滚轮刻度，向上为正
+    static float32 MouseWheel();
 };

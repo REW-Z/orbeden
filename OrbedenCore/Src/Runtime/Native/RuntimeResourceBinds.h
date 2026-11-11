@@ -41,7 +41,22 @@ struct AsyncOperationBindApi
     static AsyncOperationBindApi Create();
 };
 
+//游戏输入查询函数表
+struct InputBindApi
+{
+    void* Key = nullptr;
+    void* KeyDown = nullptr;
+    void* KeyUp = nullptr;
+    void* MousePos = nullptr;
+    void* MouseMov = nullptr;
+    void* MouseWheel = nullptr;
+
+    //创建输入查询函数表
+    static InputBindApi Create();
+};
+
 #pragma pack(pop)
+ORBEDEN_ASSERT_NATIVE_API_TABLE(InputBindApi, 6);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(AsyncOperationBindApi, 1);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectBind, 7);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectExtensionBind, 1);

@@ -87,7 +87,7 @@ struct VulkanRenderBackend::State
         GpuVertexLayout layout = GpuVertexLayout::Mesh;
         uint32 stride = 0;
         VkFormat color = VK_FORMAT_UNDEFINED, depth = VK_FORMAT_UNDEFINED;
-        bool depthTest = true, depthWrite = true, blend = false, depthBias = false, offscreen = false;
+        bool depthTest = true, depthWrite = true, blend = false, depthBias = false, offscreen = false, reversedDepth = false;
         DepthCompare depthCompare = DepthCompare::Less;
         BlendMode blendMode = BlendMode::Alpha;
         CullMode cull = CullMode::None;
@@ -560,8 +560,8 @@ struct VulkanRenderBackend::State
         passColor = color; passDepth = depth;
         passAttachmentsCached = color || depth;
         Image* extent = color ? color : depth;
-        vector3 info = { extent ? static_cast<float32>(extent->height) : 0.0f, pass.renderTarget.IsValid() ? 0.0f : 1.0f, 0.0f };
-        if (info.x != framebufferInfo.x || info.y != framebufferInfo.y)
+        vector3 info = { extent ? static_cast<float32>(extent->height) : 0.0f, pass.renderTarget.IsValid() ? 0.0f : 1.0f, pass.reversedDepth ? 1.0f : 0.0f };
+        if (info.x != framebufferInfo.x || info.y != framebufferInfo.y || info.z != framebufferInfo.z)
         {
             framebufferInfo = info;
             ++framebufferInfoRevision;
@@ -591,7 +591,7 @@ struct VulkanRenderBackend::State
         {
             depthInfo.imageView = depth->view; depthInfo.imageLayout = depth->layout;
             depthInfo.loadOp = depth->initialized ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
-            depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE; depthInfo.clearValue.depthStencil.depth = 1.0f; depth->initialized = true;
+            depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE; depthInfo.clearValue.depthStencil.depth = pass.reversedDepth ? 0.0f : 1.0f; depth->initialized = true;
         }
         Image& extent = color ? *color : *depth;
         VkRenderingInfo info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
@@ -616,7 +616,7 @@ struct VulkanRenderBackend::State
             }
             if (depth && (pass.clearMode == ClearMode::SolidColor || pass.clearMode == ClearMode::DepthOnly))
             {
-                auto& clear = attachments[count++]; clear.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; clear.clearValue.depthStencil.depth = 1.0f;
+                auto& clear = attachments[count++]; clear.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; clear.clearValue.depthStencil.depth = pass.reversedDepth ? 0.0f : 1.0f;
             }
             VkClearRect clear = { rect, 0, 1 };
             if (count) vkCmdClearAttachments(RecordCommands(), count, attachments, 1, &clear);
@@ -1651,6 +1651,7 @@ VkPipeline VulkanRenderBackend::State::GetGraphicsPipeline(Program& program, con
     pipelineKey.blend = state.blend; pipelineKey.blendMode = state.blendMode; pipelineKey.cull = state.cull;
     pipelineKey.polygonMode = state.polygonMode; pipelineKey.topology = state.topology;
     pipelineKey.depthBias = state.depthBias; pipelineKey.offscreen = pass.renderTarget.IsValid();
+    pipelineKey.reversedDepth = pass.reversedDepth;
     if (program.lastPipeline && program.lastPipelineKey == pipelineKey) return program.lastPipeline;
 
     //查找变化后的固定管线状态
@@ -1658,7 +1659,7 @@ VkPipeline VulkanRenderBackend::State::GetGraphicsPipeline(Program& program, con
     key.clear();
     auto append = [&key](auto value) { key.append(reinterpret_cast<const char*>(&value), sizeof(value)); };
     append(input.layout); append(input.stride); append(color ? color->format : VK_FORMAT_UNDEFINED); append(depth ? depth->format : VK_FORMAT_UNDEFINED);
-    append(state.depthTest); append(state.depthWrite); append(state.depthCompare); append(state.blend); append(state.blendMode); append(state.cull); append(state.polygonMode); append(state.topology); append(state.depthBias); append(pass.renderTarget.IsValid());
+    append(state.depthTest); append(state.depthWrite); append(state.depthCompare); append(state.blend); append(state.blendMode); append(state.cull); append(state.polygonMode); append(state.topology); append(state.depthBias); append(pass.renderTarget.IsValid()); append(pass.reversedDepth);
     auto found = program.pipelines.find(key);
     if (found != program.pipelines.end())
     {
@@ -1692,7 +1693,9 @@ VkPipeline VulkanRenderBackend::State::GetGraphicsPipeline(Program& program, con
     VkPipelineMultisampleStateCreateInfo multisample = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO }; multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     VkPipelineDepthStencilStateCreateInfo depthState = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
     depthState.depthTestEnable = depth && state.depthTest; depthState.depthWriteEnable = depth && state.depthWrite;
-    depthState.depthCompareOp = state.depthCompare == DepthCompare::LessEqual ? VK_COMPARE_OP_LESS_OR_EQUAL : VK_COMPARE_OP_LESS;
+    depthState.depthCompareOp = pass.reversedDepth
+        ? (state.depthCompare == DepthCompare::LessEqual ? VK_COMPARE_OP_GREATER_OR_EQUAL : VK_COMPARE_OP_GREATER)
+        : (state.depthCompare == DepthCompare::LessEqual ? VK_COMPARE_OP_LESS_OR_EQUAL : VK_COMPARE_OP_LESS);
     VkPipelineColorBlendAttachmentState blend = {};
     blend.blendEnable = state.blend; blend.colorBlendOp = blend.alphaBlendOp = VK_BLEND_OP_ADD;
     blend.srcColorBlendFactor = state.blendMode == BlendMode::PremultipliedAlpha ? VK_BLEND_FACTOR_ONE : VK_BLEND_FACTOR_SRC_ALPHA;
@@ -1760,11 +1763,13 @@ void VulkanRenderBackend::State::Draw(uint32 indexStart, uint32 indexCount, uint
         drawBindings.parameterCount = parameterCount; drawBindings.parameterOffset = parameterOffset;
     }
     const PipelineState& raster = backend.GetPipelineState();
-    if (!drawBindings.depthBiasSet || drawBindings.depthBiasSlope != raster.depthBiasSlope || drawBindings.depthBiasConstant != raster.depthBiasConstant)
+    float32 biasSign = pass.reversedDepth ? -1.0f : 1.0f;
+    float32 slope = raster.depthBiasSlope * biasSign, constant = raster.depthBiasConstant * biasSign;
+    if (!drawBindings.depthBiasSet || drawBindings.depthBiasSlope != slope || drawBindings.depthBiasConstant != constant)
     {
-        vkCmdSetDepthBias(commands, raster.depthBiasConstant, 0.0f, raster.depthBiasSlope);
+        vkCmdSetDepthBias(commands, constant, 0.0f, slope);
         drawBindings.depthBiasSet = true;
-        drawBindings.depthBiasSlope = raster.depthBiasSlope; drawBindings.depthBiasConstant = raster.depthBiasConstant;
+        drawBindings.depthBiasSlope = slope; drawBindings.depthBiasConstant = constant;
     }
     if (drawBindings.vertexCount != count || drawBindings.vertexBuffers != vertexBuffers || drawBindings.vertexOffsets != offsets)
     {
@@ -1843,7 +1848,7 @@ void VulkanRenderBackend::DeleteDepthDistribution(GpuDepthDistributionID id)
 
 //提交冻结深度的对数直方图
 bool VulkanRenderBackend::SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
-    const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane)
+    const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane, bool reversedDepth)
 {
     auto& s = *state; auto found = s.distributions.find(id.id); auto image = s.images.find(depth.id);
     if (found == s.distributions.end() || found->second.serial || image == s.images.end() || !(nearPlane > 0.0f && farPlane > nearPlane)) return false;
@@ -1862,6 +1867,7 @@ bool VulkanRenderBackend::SubmitDepthDistribution(GpuDepthDistributionID id, Gpu
     BindShaderProgram({ s.distributionProgram }); BindDepthTexture(0, depth);
     GetParameters().SetInt("u_Depth", 0); GetParameters().SetMatrix4("u_InverseProjection", inverseProjection);
     GetParameters().SetFloat("u_Near", nearPlane); GetParameters().SetFloat("u_Far", farPlane);
+    GetParameters().SetInt("u_ReversedDepth", reversedDepth ? 1 : 0);
     auto& program = s.programs.at(s.distributionProgram);
     VkDescriptorSet descriptors = s.PrepareDescriptors(program, &distribution.bins);
     vkCmdBindPipeline(commands, VK_PIPELINE_BIND_POINT_COMPUTE, program.pipelines.at(""));

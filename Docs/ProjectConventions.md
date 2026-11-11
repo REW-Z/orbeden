@@ -26,6 +26,7 @@ Orbeden 是一个游戏引擎项目。核心原生代码在 `OrbedenCore/`，托
 | 相机眼空间朝向 | `-Z` | `EditorScene::GetForward` |
 | 透视投影 `m[11]` | `-1.0f`（即 `w = -z_eye`） | `RenderMath::Perspective` |
 | 近/远平面 → NDC z | `-1 → +1` | 同上 |
+| 相机 GPU 深度 | 支持时为 `1 → 0`、`[0,1]` Reversed-Z；否则沿用普通深度 | `RenderCamera::gpuProjectionMatrix` |
 | 正交投影 `m[10]` | `-2 / depth` | `RenderMath::Orthographic` |
 | 正面绕序 | GL 默认 **CCW** | 全仓不调用 `glFrontFace` |
 
@@ -62,7 +63,10 @@ R = Ry(yaw) · Rx(pitch) · Rz(roll)
 - **`DirectionalLight` 的照射方向**取所属 Ens 的 Transform 前向，即局部 `-Z` 经世界变换。光沿 Forward 传播，与 Unity 语义相同——两边都是「光沿前向走」，只是前向落在不同轴上。
 - **绕 `+Y` 的正向旋转**，从上方俯视为逆时针。Unity 为顺时针，迁移代码时注意 yaw 符号。
 - **不在引擎里迁就外部工具的坐标系**。源格式的差异在导入层解决，见 [资源检视设计](AssetInspectorDesign.md) 的 **Up Axis** 选项（Blender 与 CAD 的 Z-up 转引擎 Y-up）。
-- **Vulkan 后端**：保留右手系、Forward `-Z` 与 CPU 逻辑投影的 NDC z ∈ `[-1, 1]`。编译入口只在最终 `gl_Position` 上把 z 转为 Vulkan 的 `[0, 1]`，相机与阴影的逻辑裁剪坐标不变。呈现目标的 viewport、片元坐标与 Y 导数由后端统一适配；上层不按 API 翻矩阵、UV 或手性。
+- **相机深度**：CPU 的 `projectionMatrix`、`viewProjectionMatrix` 和 `viewFrustum` 保留现有 `[-1,1]` 约定，供剔除、GUI 投影、拾取及阴影切片使用。实际场景几何使用 `gpuProjectionMatrix`、`gpuViewProjectionMatrix`，并在 `RenderPassDesc.reversedDepth` 中传递对应约定。支持时相机继续使用现有 32 位浮点深度纹理，Near 映射为 1、Far 映射为 0，清深度为 0，后端把逻辑 Less/LessEqual 转换为 Greater/GreaterEqual，并转换深度偏移方向。阴影图、屏幕 UI 和未指定反向深度的自定义 Pass 保留普通深度。
+- **OpenGL 后端**：初始化时检测 OpenGL 4.5 或 `GL_ARB_clip_control` 及函数入口；支持时按 Pass 切换 `[0,1]` 裁剪深度，不支持时相机保持原有普通投影和绘制路径，不提高最低设备要求。
+- **Vulkan 后端**：保留右手系、Forward `-Z` 与 CPU 逻辑投影的 NDC z ∈ `[-1,1]`。编译入口仅对普通深度 Pass 将最终 `gl_Position.z` 转为 Vulkan 的 `[0,1]`；反向深度 Pass 已使用 GPU 投影，直接输出 `[0,1]`。呈现目标的 viewport、片元坐标与 Y 导数由后端统一适配；上层不按 API 翻矩阵、UV 或手性。
+- **相机深度读取**：相机颜色/深度快照保留真实 GPU 深度，Shader 使用 `u_CameraReversedDepth` 或 `camera_texture_common.orbinc` 解码；自适应阴影统计使用匹配的 GPU 逆投影。RetainedGUI 的既有窗口深度回读仍返回 0 近、1 远，供原有命中比较使用。扩展相机场景几何绘制时应使用 GPU 矩阵和对应的 Pass 标记；纯 CPU 投影保持原接口。
 
 ---
 

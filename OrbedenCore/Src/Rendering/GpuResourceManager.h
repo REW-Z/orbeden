@@ -87,6 +87,7 @@ struct GpuShaderBindings
     bool useCameraPosition = false;
     bool useCameraNearPlane = false;
     bool useCameraFarPlane = false;
+    bool useCameraReversedDepth = false;
     bool useTime = false;
     bool useCameraTextures = false;
     bool useAmbientColor = false;

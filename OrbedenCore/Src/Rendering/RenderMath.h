@@ -40,6 +40,9 @@ namespace RenderMath
     //创建透视投影矩阵
     matrix4x4 Perspective(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane);
 
+    //创建近端为一远端为零的透视投影矩阵
+    matrix4x4 PerspectiveReversed(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane);
+
     //创建正交投影矩阵
     matrix4x4 Orthographic(float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane);
 

@@ -169,6 +169,16 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     rendererInfo += ToOpenGLString(glGetString(GL_VERSION));
     Log::Info(rendererInfo.c_str());
 
+    //检测裁剪深度扩展并读取入口
+    GLint major = 0, minor = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    if (major > 4 || (major == 4 && minor >= 5) || glfwExtensionSupported("GL_ARB_clip_control"))
+        clipControlFunction = reinterpret_cast<void*>(glfwGetProcAddress("glClipControl"));
+    reversedDepth = false;
+    glClearDepth(1.0);
+    Log::Info(clipControlFunction ? "OpenGL camera depth: reversed float32 available." : "OpenGL camera depth: standard compatibility path.");
+
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glDepthFunc(GL_LESS);
@@ -273,6 +283,8 @@ void OpenGLRenderBackend::Shutdown()
     boundInstanceBuffer = GpuVertexBufferID();
     boundInstanceOffset = 0;
     instancingSupported = false;
+    clipControlFunction = nullptr;
+    reversedDepth = false;
     surfaces.clear(); pendingSurfaces.clear();
     window = nullptr;
 }
@@ -319,6 +331,18 @@ void OpenGLRenderBackend::BeginPass(const RenderPassDesc& desc)
     pendingSurfaces.insert(currentSurface);
     glBindFramebuffer(GL_FRAMEBUFFER, desc.renderTarget.id);
     glViewport(desc.x, desc.y, desc.width, desc.height);
+    bool nextReversedDepth = desc.reversedDepth && clipControlFunction;
+    if (reversedDepth != nextReversedDepth)
+    {
+        reversedDepth = nextReversedDepth;
+        using ClipControlFunction = void (GLAD_API_PTR *)(GLenum, GLenum);
+        reinterpret_cast<ClipControlFunction>(clipControlFunction)(GL_LOWER_LEFT, reversedDepth ? 0x935F : 0x935E);
+        glClearDepth(reversedDepth ? 0.0 : 1.0);
+        glDepthFunc(reversedDepth
+            ? (depthCompare == DepthCompare::LessEqual ? GL_GEQUAL : GL_GREATER)
+            : (depthCompare == DepthCompare::LessEqual ? GL_LEQUAL : GL_LESS));
+        rasterStateValid = false;
+    }
 
     GLbitfield clearMask = 0;
     if (desc.clearMode == ClearMode::SolidColor)
@@ -964,7 +988,9 @@ void OpenGLRenderBackend::SetDepthCompare(DepthCompare compare)
 {
     if (depthCompare == compare) return;
 
-    glDepthFunc(compare == DepthCompare::LessEqual ? GL_LEQUAL : GL_LESS);
+    glDepthFunc(reversedDepth
+        ? (compare == DepthCompare::LessEqual ? GL_GEQUAL : GL_GREATER)
+        : (compare == DepthCompare::LessEqual ? GL_LEQUAL : GL_LESS));
     depthCompare = compare;
 }
 
@@ -1398,7 +1424,7 @@ void OpenGLRenderBackend::DeleteDepthDistribution(GpuDepthDistributionID id)
 
 //提交冻结相机深度分布
 bool OpenGLRenderBackend::SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
-    const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane)
+    const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane, bool reversedDepth)
 {
     auto found = depthDistributions.find(id.id);
     if (found == depthDistributions.end() || found->second.fence || !depth.IsValid() ||
@@ -1427,6 +1453,7 @@ bool OpenGLRenderBackend::SubmitDepthDistribution(GpuDepthDistributionID id, Gpu
     GetParameters().SetMatrix4("u_InverseProjection", inverseProjection);
     GetParameters().SetFloat("u_Near", nearPlane);
     GetParameters().SetFloat("u_Far", farPlane);
+    GetParameters().SetInt("u_ReversedDepth", reversedDepth ? 1 : 0);
     ApplyParameters();
     glDispatchCompute((width + 15) / 16, (height + 15) / 16, 1);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
@@ -1509,12 +1536,15 @@ void OpenGLRenderBackend::ApplyDrawState()
         GLenum offset = state.polygonMode == PolygonMode::Line ? GL_POLYGON_OFFSET_LINE : GL_POLYGON_OFFSET_FILL;
         if (state.depthBias) glEnable(offset); else glDisable(offset);
     }
-    if (!rasterStateValid || depthBiasSlope != state.depthBiasSlope || depthBiasConstant != state.depthBiasConstant)
-        glPolygonOffset(state.depthBiasSlope, state.depthBiasConstant);
+    float32 biasSign = reversedDepth ? -1.0f : 1.0f;
+    float32 slope = state.depthBiasSlope * biasSign;
+    float32 constant = state.depthBiasConstant * biasSign;
+    if (!rasterStateValid || depthBiasSlope != slope || depthBiasConstant != constant)
+        glPolygonOffset(slope, constant);
     polygonMode = state.polygonMode;
     depthBiasEnabled = state.depthBias;
-    depthBiasSlope = state.depthBiasSlope;
-    depthBiasConstant = state.depthBiasConstant;
+    depthBiasSlope = slope;
+    depthBiasConstant = constant;
     rasterStateValid = true;
     ApplyParameters();
 }
@@ -1557,6 +1587,13 @@ void OpenGLRenderBackend::SetSurface(GpuSurfaceID id)
     glEnable(GL_DEPTH_TEST); depthTestEnabled = true;
     glDepthMask(GL_TRUE); depthWriteEnabled = true;
     glDepthFunc(GL_LESS); depthCompare = DepthCompare::Less;
+    reversedDepth = false;
+    glClearDepth(1.0);
+    if (clipControlFunction)
+    {
+        using ClipControlFunction = void (GLAD_API_PTR *)(GLenum, GLenum);
+        reinterpret_cast<ClipControlFunction>(clipControlFunction)(GL_LOWER_LEFT, 0x935E);
+    }
     glDisable(GL_BLEND); blendEnabled = false;
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); blendMode = BlendMode::Alpha;
     glDisable(GL_CULL_FACE); cullMode = CullMode::None;

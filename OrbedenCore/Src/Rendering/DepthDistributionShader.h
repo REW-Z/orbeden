@@ -8,6 +8,7 @@ uniform sampler2D u_Depth;
 uniform mat4 u_InverseProjection;
 uniform float u_Near;
 uniform float u_Far;
+uniform bool u_ReversedDepth;
 shared uint localBins[64];
 void main()
 {
@@ -19,10 +20,10 @@ void main()
     if (all(lessThan(pixel, size)))
     {
         float depth = texelFetch(u_Depth, pixel, 0).r;
-        if (depth >= 0.0 && depth < 1.0)
+        if (u_ReversedDepth ? (depth > 0.0 && depth <= 1.0) : (depth >= 0.0 && depth < 1.0))
         {
             vec2 uv = (vec2(pixel) + 0.5) / vec2(size);
-            vec4 view = u_InverseProjection * vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+            vec4 view = u_InverseProjection * vec4(uv * 2.0 - 1.0, (u_ReversedDepth ? depth : depth * 2.0 - 1.0), 1.0);
             float distance = -view.z / view.w;
             if (!isnan(distance) && !isinf(distance) && distance >= u_Near && distance <= u_Far)
             {

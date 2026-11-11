@@ -23,8 +23,8 @@ namespace
         std::string preamble = "#define ORBEDEN_VULKAN 1\n#define gl_VertexID gl_VertexIndex\n#define gl_InstanceID gl_InstanceIndex\n";
         if (vertex)
         {
-            preamble += "#define main OrbedenVertexMain\n";
-            text += "\n#undef main\nvoid main(){OrbedenVertexMain();gl_Position.z=0.5*(gl_Position.z+gl_Position.w);}\n";
+            preamble += "uniform vec3 u_OrbedenFramebufferInfo;\n#define main OrbedenVertexMain\n";
+            text += "\n#undef main\nvoid main(){OrbedenVertexMain();if(u_OrbedenFramebufferInfo.z<0.5)gl_Position.z=0.5*(gl_Position.z+gl_Position.w);}\n";
         }
         else if (shader.getStage() == EShLangFragment)
         {

@@ -198,6 +198,22 @@ namespace RenderMath
         return result;
     }
 
+    matrix4x4 PerspectiveReversed(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane)
+    {
+        float32 safeAspect = aspect > 0.000001f ? aspect : 1.0f;
+        float32 safeNear = std::max(nearPlane, 0.0001f);
+        float32 safeFar = std::max(farPlane, safeNear + 0.001f);
+        float32 f = 1.0f / std::tan(fieldOfView * 0.5f * Pi / 180.0f);
+        matrix4x4 result{};
+        std::fill(std::begin(result.m), std::end(result.m), 0.0f);
+        result.m[0] = f / safeAspect;
+        result.m[5] = f;
+        result.m[10] = safeNear / (safeFar - safeNear);
+        result.m[11] = -1.0f;
+        result.m[14] = safeNear * (safeFar / (safeFar - safeNear));
+        return result;
+    }
+
     matrix4x4 Orthographic(float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane)
     {
         float32 width = std::max(right - left, 0.0001f);

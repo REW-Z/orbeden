@@ -60,6 +60,10 @@ public:
     int32 viewportWidth = 0;
     int32 viewportHeight = 0;
     float32 elapsedTime = 0.0f;
+    //GPU 投影独立于 CPU 剔除和拾取约定
+    bool reversedDepth = false;
+    matrix4x4 gpuProjectionMatrix;
+    matrix4x4 gpuViewProjectionMatrix;
 };
 
 //相机可见渲染器记录

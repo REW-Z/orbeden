@@ -20,6 +20,7 @@ public:
     //释放后端状态
     ~VulkanRenderBackend() override;
     bool Initialize(IWindow* window) override;
+    bool SupportsReversedDepth() const override { return true; }
     void Shutdown() override;
     void BeginFrame() override;
     void EndFrame() override;
@@ -46,7 +47,7 @@ public:
     GpuDepthDistributionID CreateDepthDistribution() override;
     void DeleteDepthDistribution(GpuDepthDistributionID id) override;
     bool SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
-        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane) override;
+        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane, bool reversedDepth) override;
     bool TryReadDepthDistribution(GpuDepthDistributionID id, GpuDepthDistribution& distribution) override;
     GpuCubeTextureID CreateCubeTexture(const GpuCubeTextureDesc& desc) override;
     void DeleteCubeTexture(GpuCubeTextureID id) override;

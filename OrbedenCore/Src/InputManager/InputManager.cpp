@@ -18,6 +18,7 @@ namespace
     constexpr uint32 EventKindPointerDown = 1;
     constexpr uint32 EventKindPointerUp = 2;
     constexpr uint32 EventKindPointerCancel = 3;
+    constexpr uint32 EventKindWheel = 4;
     constexpr uint32 EventKindKeyDown = 5;
     constexpr uint32 EventKindKeyUp = 6;
     constexpr uint32 EventKindWindowFocusLost = 12;
@@ -291,6 +292,25 @@ vector2 InputManager::MouseMov()
     return inputEnabled ? mouseMov : vector2{};
 }
 
+//读取本帧未被 UI 消费的纵向滚轮刻度
+float32 InputManager::MouseWheel()
+{
+    if (!inputEnabled)
+    {
+        return 0.0f;
+    }
+
+    float32 scroll = 0.0f;
+    for (const InputEvent& event : pendingEvents)
+    {
+        if (event.kind == EventKindWheel && event.device == DeviceMouse)
+        {
+            scroll += event.value;
+        }
+    }
+    return scroll;
+}
+
 //读取持续按下状态
 bool Input::Key(KeyEnum key)
 {
@@ -319,4 +339,10 @@ vector2 Input::MousePos()
 vector2 Input::MouseMov()
 {
     return InputManager::MouseMov();
+}
+
+//读取本帧未被 UI 消费的纵向滚轮刻度
+float32 Input::MouseWheel()
+{
+    return InputManager::MouseWheel();
 }

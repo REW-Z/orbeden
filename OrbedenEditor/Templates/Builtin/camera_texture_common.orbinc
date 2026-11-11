@@ -4,6 +4,7 @@ uniform sampler2D u_CameraDepthTexture;
 uniform bool u_UseCameraTextures;
 uniform float u_CameraNearPlane;
 uniform float u_CameraFarPlane;
+uniform bool u_CameraReversedDepth;
 
 vec2 GetCameraScreenUv(vec4 clipPosition)
 {
@@ -18,6 +19,11 @@ vec2 ClampCameraScreenUv(vec2 uv)
 
 float LinearizeCameraDepth(float depth)
 {
+    if (u_CameraReversedDepth)
+    {
+        float denominator = u_CameraNearPlane + depth * (u_CameraFarPlane - u_CameraNearPlane);
+        return u_CameraNearPlane * (u_CameraFarPlane / max(denominator, 0.00001));
+    }
     float ndcDepth = depth * 2.0 - 1.0;
     float denominator = u_CameraFarPlane + u_CameraNearPlane - ndcDepth * (u_CameraFarPlane - u_CameraNearPlane);
     return (2.0 * u_CameraNearPlane * u_CameraFarPlane) / max(denominator, 0.00001);
