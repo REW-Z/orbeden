@@ -29,6 +29,7 @@ struct CompiledShader
     List<ShaderParameterLayout> parameters;
     List<ShaderSamplerLayout> samplers;
     uint32 parameterSize = 0;
+    uint32 drawParameterSize = 0;
 };
 
 //共享 GLSL 编译与布局反射入口

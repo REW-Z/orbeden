@@ -8818,6 +8818,25 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "drawParameterSize",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []
@@ -12103,6 +12122,44 @@
           "Parameters": []
         },
         {
+          "Name": "drawParameters",
+          "Type": "DrawParameterData",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "hasDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "worldBounds",
           "Type": "bounds3",
           "Access": "public",
@@ -12309,6 +12366,41 @@
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "DrawParameterData",
+      "QualifiedName": "DrawParameterData",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/RenderTypes.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "values",
+          "Type": "std::array\u003Cfloat32,DrawParameterFloatCount\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": true,
           "Parameters": []
         }
       ],
@@ -16203,6 +16295,25 @@
         {
           "Name": "instanceScratch",
           "Type": "List\u003CGpuMeshInstance\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "drawParameterScratch",
+          "Type": "List\u003CDrawParameterData\u003E",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -31406,6 +31517,25 @@
           "Parameters": []
         },
         {
+          "Name": "drawParameterBuffer",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "clipControlFunction",
           "Type": "void*",
           "Access": "private",
@@ -33229,6 +33359,36 @@
           ]
         },
         {
+          "Name": "BindDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "std::span\u003Cconst DrawParameterData\u003E",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "uploadedBytes",
+              "Type": "usize\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "DrawIndexed",
           "Type": "void",
           "Access": "public",
@@ -34373,6 +34533,25 @@
       "IsUnique": false,
       "IsFinal": false,
       "Members": [
+        {
+          "Name": "hasDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
         {
           "Name": "names",
           "Type": "std::unordered_map\u003Cstd::string,UniformState*,UniformNameHash,std::equal_to\u003C\u003E\u003E",
@@ -36840,6 +37019,25 @@
           "Parameters": []
         },
         {
+          "Name": "Profiler",
+          "Type": "ProfilerBindApi",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Create",
           "Type": "OrbedenEngineNativeApi",
           "Access": "public",
@@ -37257,6 +37455,25 @@
         {
           "Name": "Input",
           "Type": "InputBindApi",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Profiler",
+          "Type": "ProfilerBindApi",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -41126,6 +41343,11 @@
               "Name": "instances",
               "Type": "List\u003CGpuMeshInstance\u003E\u0026",
               "DefaultValue": ""
+            },
+            {
+              "Name": "drawParameters",
+              "Type": "List\u003CDrawParameterData\u003E*",
+              "DefaultValue": "nullptr"
             }
           ]
         },
@@ -48443,6 +48665,60 @@
       "EnumValues": []
     },
     {
+      "Name": "ProfileScopeAbi",
+      "QualifiedName": "ProfileScopeAbi",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Runtime/Native/RuntimeResourceBinds.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "sample",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "startedAtNanoseconds",
+          "Type": "int64",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
       "Name": "Profiler",
       "QualifiedName": "Profiler",
       "BaseName": "IEngineSystem",
@@ -49101,6 +49377,79 @@
               "DefaultValue": ""
             }
           ]
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "ProfilerBindApi",
+      "QualifiedName": "ProfilerBindApi",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Runtime/Native/RuntimeResourceBinds.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "BeginSample",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "EndSample",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Create",
+          "Type": "ProfilerBindApi",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []
@@ -52273,6 +52622,36 @@
               "Name": "height",
               "Type": "int32",
               "DefaultValue": "0"
+            }
+          ]
+        },
+        {
+          "Name": "BindDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "std::span\u003Cconst DrawParameterData\u003E",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "uploadedBytes",
+              "Type": "usize\u0026",
+              "DefaultValue": ""
             }
           ]
         },
@@ -70267,6 +70646,44 @@
           "Parameters": []
         },
         {
+          "Name": "drawParameters",
+          "Type": "DrawParameterData",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "hasDrawParameters",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "SyncRenderSceneRegistration",
           "Type": "void",
           "Access": "private",
@@ -70423,6 +70840,36 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "SetDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "data",
+          "Count": "count",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const float32*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
         },
         {
           "Name": "GetEnabled",
@@ -79985,6 +80432,36 @@
             {
               "Name": "id",
               "Type": "GpuCubeTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BindDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "std::span\u003Cconst DrawParameterData\u003E",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "uploadedBytes",
+              "Type": "usize\u0026",
               "DefaultValue": ""
             }
           ]

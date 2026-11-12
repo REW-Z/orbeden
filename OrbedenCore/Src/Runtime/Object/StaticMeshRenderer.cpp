@@ -3,6 +3,8 @@
 #include "Rendering/RenderScene.h"
 #include "Runtime/Object/Ens.h"
 
+#include <cstring>
+
 OBJECT_TYPE_IMPLEMENT(StaticMeshRenderer, Component)
 
 /// <summary>设置临时渲染网格，保留用于场景存盘的源资源引用。</summary>
@@ -16,6 +18,24 @@ Mesh* StaticMeshRenderer::GetRenderMesh() const
 {
     Mesh* overrideMesh = runtimeMesh.Get();
     return overrideMesh ? overrideMesh : mesh.Get();
+}
+
+//写入固定布局的逐绘制参数
+bool StaticMeshRenderer::SetDrawParameters(const float32* data, int32 count)
+{
+    if (count == 0)
+    {
+        hasDrawParameters = false;
+        drawParameters = {};
+        return true;
+    }
+    if (!data || count != static_cast<int32>(DrawParameterFloatCount))
+    {
+        return false;
+    }
+    std::memcpy(drawParameters.values, data, sizeof(drawParameters));
+    hasDrawParameters = true;
+    return true;
 }
 
 //获取启用状态
@@ -69,6 +89,8 @@ void StaticMeshRenderer::OnDetach()
     if (scene) scene->UnregisterRenderer(this);
     mesh.SetInstanceId(StringId());
     runtimeMesh.SetInstanceId(StringId());
+    hasDrawParameters = false;
+    drawParameters = {};
 }
 
 //所属 Ens 的 worldActive 变化时同步渲染场景注册

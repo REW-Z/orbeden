@@ -5,6 +5,7 @@
 #include "Runtime/Object/Transform.h"
 #include "Rendering/RenderMath.h"
 #include "Physics/PhysicsSystem.h"
+#include "Profiler/Profiler.h"
 #include "Scripting/ScriptSystem.h"
 
 #include <algorithm>
@@ -1127,18 +1128,22 @@ void World::RebaseCoordinates(const quaternion& rotation, const vector3& transla
     matrix4x4 matrix = RenderMath::TRS(translation, rotation, { 1, 1, 1 });
     bool previous = runtimeActive;
     runtimeActive = false;
-    ForEachEns([&](Ens& node)
     {
-        ::Transform* transform = node.Transform();
-        if (transform && transform->GetParent().IsNull())
+        PROFILE("Script/Map/Rebase/WorldRoots");
+        ForEachEns([&](Ens& node)
         {
-            transform->SetLocalPosition(RenderMath::TransformPoint(matrix, transform->GetLocalPosition()));
-            transform->SetLocalRotation(RenderMath::Mul(rotation, transform->GetLocalRotation()));
-        }
-    });
+            ::Transform* transform = node.Transform();
+            if (transform && transform->GetParent().IsNull())
+            {
+                transform->SetLocalPosition(RenderMath::TransformPoint(matrix, transform->GetLocalPosition()));
+                transform->SetLocalRotation(RenderMath::Mul(rotation, transform->GetLocalRotation()));
+            }
+        });
+    }
     runtimeActive = previous;
     if (PhysicsSystem* physics = PhysicsSystem::Current())
     {
+        PROFILE("Script/Map/Rebase/PhysicsState");
         physics->RebaseCoordinates(*this, rotation, translation);
     }
 }

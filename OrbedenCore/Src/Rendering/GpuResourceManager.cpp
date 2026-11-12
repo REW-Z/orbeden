@@ -1,3 +1,4 @@
+#include "Profiler/Profiler.h"
 #include "Rendering/GpuResourceManager.h"
 
 
@@ -839,20 +840,34 @@ const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
         return gpuMaterial;
     }
 
+    PROFILE("Render/Material/Refresh");
+
     //处理 Shader 上传失败
     material->MarkDirty();
 
     //清空材质 GPU 缓存
-    if (gpuMaterial) DeleteGpuResource(backend, *gpuMaterial);
+    if (gpuMaterial)
+    {
+        PROFILE("Render/Material/ResetBindings");
+        DeleteGpuResource(backend, *gpuMaterial);
+    }
 
-    Shader* shader = material->shader.Get();
+    Shader* shader;
+    {
+        PROFILE("Render/Material/ResolveShader");
+        shader = material->shader.Get();
+    }
     if (!shader)
     {
         Log::Error("GpuResourceManager material upload failed: shader is missing.");
         return nullptr;
     }
 
-    const GpuShader* gpuShader = GetShader(shader);
+    const GpuShader* gpuShader;
+    {
+        PROFILE("Render/Material/GetShader");
+        gpuShader = GetShader(shader);
+    }
     if (!gpuShader) return nullptr;
 
     //刷新 Shader 依赖材质
@@ -863,61 +878,70 @@ const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
     uploaded.sourceShader = shader;
 
     //解析材质纹理引用
-    for (const ShaderTextureSlot& slot : shader->textureSlots)
     {
-        if (slot.dimension != ShaderTextureDimension::Texture2D) continue;
-
-        GpuMaterialTextureBinding binding;
-        binding.uniformName = slot.name;
-        binding.presenceUniformName = CreateTexturePresenceUniformName(slot.name);
-        Texture2D* texture = material->GetTexture(slot.name);
-        binding.sourceTexture = texture;
-        if (texture)
+        PROFILE("Render/Material/TextureBindings");
+        for (const ShaderTextureSlot& slot : shader->textureSlots)
         {
-            binding.texture = GetTexture(texture);
-            binding.hasTexture = binding.texture.IsValid();
+            if (slot.dimension != ShaderTextureDimension::Texture2D) continue;
+
+            GpuMaterialTextureBinding binding;
+            binding.uniformName = slot.name;
+            binding.presenceUniformName = CreateTexturePresenceUniformName(slot.name);
+            Texture2D* texture = material->GetTexture(slot.name);
+            binding.sourceTexture = texture;
+            if (texture)
+            {
+                binding.texture = GetTexture(texture);
+                binding.hasTexture = binding.texture.IsValid();
+            }
+            else if (material->HasTexture(slot.name))
+            {
+                Log::Error(("GpuResourceManager material texture skipped: texture is missing for " + slot.name).c_str());
+            }
+
+            uploaded.textureBindings.push_back(binding);
         }
-        else if (material->HasTexture(slot.name))
+    }
+    {
+        PROFILE("Render/Material/ColorBindings");
+        for (const ShaderColorSlot& slot : shader->colorSlots)
         {
-            Log::Error(("GpuResourceManager material texture skipped: texture is missing for " + slot.name).c_str());
+            GpuMaterialColorBinding binding;
+            binding.uniformName = slot.name;
+            //材质与 .orbmat 里的颜色是 sRGB 语义（和检视面板一致），送 GPU 前转到线性。
+            //这是材质颜色的唯一转换点，着色器不再做任何颜色空间处理。
+            binding.value = ColorSpace::SrgbToLinear(material->GetColor(slot.name, slot.defaultValue));
+            uploaded.colorBindings.push_back(binding);
+        }
+    }
+    {
+        PROFILE("Render/Material/FloatBindings");
+        for (const ShaderFloatSlot& slot : shader->floatSlots)
+        {
+            GpuMaterialFloatBinding binding;
+            binding.uniformName = slot.name;
+            binding.value = material->GetFloat(slot.name, slot.defaultValue);
+            uploaded.floatBindings.push_back(binding);
+        }
+    }
+    {
+        PROFILE("Render/Material/CommitBindings");
+        if (!gpuMaterial)
+        {
+            std::unique_ptr<GpuMaterial> resource = std::make_unique<GpuMaterial>();
+            resource->source = material;
+            gpuMaterial = AddGpuResource(materials, std::move(resource));
+            material->gpuMaterial = gpuMaterial;
         }
 
-        uploaded.textureBindings.push_back(binding);
+        gpuMaterial->shader = uploaded.shader;
+        gpuMaterial->sourceShader = uploaded.sourceShader;
+        gpuMaterial->textureBindings = std::move(uploaded.textureBindings);
+        gpuMaterial->colorBindings = std::move(uploaded.colorBindings);
+        gpuMaterial->floatBindings = std::move(uploaded.floatBindings);
+        ++gpuMaterial->bindingRevision;
+        material->ClearDirty();
     }
-
-    for (const ShaderColorSlot& slot : shader->colorSlots)
-    {
-        GpuMaterialColorBinding binding;
-        binding.uniformName = slot.name;
-        //材质与 .orbmat 里的颜色是 sRGB 语义（和检视面板一致），送 GPU 前转到线性。
-        //这是材质颜色的唯一转换点，着色器不再做任何颜色空间处理。
-        binding.value = ColorSpace::SrgbToLinear(material->GetColor(slot.name, slot.defaultValue));
-        uploaded.colorBindings.push_back(binding);
-    }
-
-    for (const ShaderFloatSlot& slot : shader->floatSlots)
-    {
-        GpuMaterialFloatBinding binding;
-        binding.uniformName = slot.name;
-        binding.value = material->GetFloat(slot.name, slot.defaultValue);
-        uploaded.floatBindings.push_back(binding);
-    }
-
-    if (!gpuMaterial)
-    {
-        std::unique_ptr<GpuMaterial> resource = std::make_unique<GpuMaterial>();
-        resource->source = material;
-        gpuMaterial = AddGpuResource(materials, std::move(resource));
-        material->gpuMaterial = gpuMaterial;
-    }
-
-    gpuMaterial->shader = uploaded.shader;
-    gpuMaterial->sourceShader = uploaded.sourceShader;
-    gpuMaterial->textureBindings = std::move(uploaded.textureBindings);
-    gpuMaterial->colorBindings = std::move(uploaded.colorBindings);
-    gpuMaterial->floatBindings = std::move(uploaded.floatBindings);
-    ++gpuMaterial->bindingRevision;
-    material->ClearDirty();
     return gpuMaterial;
 }
 

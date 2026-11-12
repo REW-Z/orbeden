@@ -591,10 +591,16 @@ void ParticleRenderer::AppendShadowItems(const ParticleFrameSnapshot& snapshot, 
     }
 }
 
-uint32 ParticleRenderer::BuildMeshInstances(const DrawBatch& batch, const List<DrawItem>& items, List<GpuMeshInstance>& instances)
+uint32 ParticleRenderer::BuildMeshInstances(const DrawBatch& batch, const List<DrawItem>& items, List<GpuMeshInstance>& instances,
+    List<DrawParameterData>* drawParameters)
 {
     instances.clear();
     instances.reserve(batch.items.size());
+    if (drawParameters)
+    {
+        drawParameters->clear();
+        drawParameters->reserve(batch.items.size());
+    }
     uint32 rejected = 0;
     for (uint32 itemIndex : batch.items)
     {
@@ -613,6 +619,10 @@ uint32 ParticleRenderer::BuildMeshInstances(const DrawBatch& batch, const List<D
         }
 
         instances.push_back(instance);
+        if (drawParameters)
+        {
+            drawParameters->push_back(item.drawParameters);
+        }
     }
 
     return rejected;

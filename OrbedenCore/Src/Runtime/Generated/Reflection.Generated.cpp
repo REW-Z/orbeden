@@ -10558,6 +10558,35 @@ public:
         return true;
     }
 
+    //读取 StaticMeshRenderer.hasDrawParameters 字段
+    static std::string Get_StaticMeshRenderer_hasDrawParameters(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->hasDrawParameters);
+    }
+
+    //直接读取 StaticMeshRenderer.hasDrawParameters 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_hasDrawParameters(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->hasDrawParameters) : Reflection::Value();
+    }
+
+    //写入 StaticMeshRenderer.hasDrawParameters 字段
+    static bool Set_StaticMeshRenderer_hasDrawParameters(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->hasDrawParameters, value);
+    }
+
+    //直接写入 StaticMeshRenderer.hasDrawParameters 字段
+    static bool SetValue_StaticMeshRenderer_hasDrawParameters(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->hasDrawParameters, value);
+    }
+
     //读取 StaticMeshRenderer.mesh 字段
     static std::string Get_StaticMeshRenderer_mesh(Object* object)
     {
@@ -10753,6 +10782,46 @@ public:
         {
             auto* instance = static_cast<StaticMeshRenderer*>(object);
             instance->SetEnabled(value != 0);
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型读取 StaticMeshRenderer.hasDrawParameters
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_StaticMeshRenderer_hasDrawParameters(Object* object, void* output)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            ScriptInterop::WriteDirectValue(instance->hasDrawParameters, output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 StaticMeshRenderer.hasDrawParameters，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_StaticMeshRenderer_hasDrawParameters(Object* object, const void* input)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            bool value{};
+            if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->hasDrawParameters = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 StaticMeshRenderer.hasDrawParameters，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetValueDirect_StaticMeshRenderer_hasDrawParameters(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            instance->hasDrawParameters = value != 0;
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -10975,8 +11044,63 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //调用 StaticMeshRenderer.SetDrawParameters 方法
+    static Reflection::Value Invoke_StaticMeshRenderer_SetDrawParameters_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        float32* arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        int32 arg1{};
+        if (!Reflection::SetFromValue(arg1, args[1])) return Reflection::Value();
+        auto result = instance->SetDrawParameters(arg0, arg1);
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 StaticMeshRenderer.SetDrawParameters 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_SetDrawParameters_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        float32* arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        int32 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->SetDrawParameters(arg0, arg1), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按原生 ABI 直接传值调用 StaticMeshRenderer.SetDrawParameters
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_StaticMeshRenderer_SetDrawParameters_2(Object* object, float32* value0, int32 value1, void* output)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            ScriptInterop::WriteDirectValue(instance->SetDrawParameters(value0, value1), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 StaticMeshRenderer.SetDrawParameters
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_SetDrawParameters_2(Object* object, const void* input0, const void* input1, void* output)
+    {
+        try
+        {
+            StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+            float32* arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            int32 arg1{};
+            if (!ScriptInterop::ReadDirectValue(input1, arg1)) return ScriptInterop::InteropStatus::InvalidArgument;
+            ScriptInterop::WriteDirectValue(instance->SetDrawParameters(arg0, arg1), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 StaticMeshRenderer.GetEnabled 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_GetEnabled_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_GetEnabled_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -10988,14 +11112,14 @@ public:
     }
 
     //直接调用 StaticMeshRenderer.GetEnabled 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_GetEnabled_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_GetEnabled_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         return ScriptInterop::WriteResult(instance->GetEnabled(), Reflection::ValueKind::Bool, output, stringStorage);
     }
 
     //封送并调用 StaticMeshRenderer.GetEnabled
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_GetEnabled_2(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_GetEnabled_3(Object* object, void* output)
     {
         try
         {
@@ -11007,7 +11131,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.SetEnabled 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_SetEnabled_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_SetEnabled_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -11021,7 +11145,7 @@ public:
     }
 
     //直接调用 StaticMeshRenderer.SetEnabled 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_SetEnabled_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_SetEnabled_4(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         bool arg0{};
@@ -11032,7 +11156,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 StaticMeshRenderer.SetEnabled
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_StaticMeshRenderer_SetEnabled_3(Object* object, uint8 value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_StaticMeshRenderer_SetEnabled_4(Object* object, uint8 value0)
     {
         try
         {
@@ -11044,7 +11168,7 @@ public:
     }
 
     //封送并调用 StaticMeshRenderer.SetEnabled
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_SetEnabled_3(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_SetEnabled_4(Object* object, const void* input0)
     {
         try
         {
@@ -11058,7 +11182,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.IsRenderSceneEligible 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_IsRenderSceneEligible_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_IsRenderSceneEligible_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -11070,14 +11194,14 @@ public:
     }
 
     //直接调用 StaticMeshRenderer.IsRenderSceneEligible 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_IsRenderSceneEligible_4(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_IsRenderSceneEligible_5(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         return ScriptInterop::WriteResult(instance->IsRenderSceneEligible(), Reflection::ValueKind::Bool, output, stringStorage);
     }
 
     //封送并调用 StaticMeshRenderer.IsRenderSceneEligible
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_IsRenderSceneEligible_4(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_IsRenderSceneEligible_5(Object* object, void* output)
     {
         try
         {
@@ -11089,7 +11213,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.OnAttach 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnAttach_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnAttach_6(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -11101,7 +11225,7 @@ public:
     }
 
     //直接调用 StaticMeshRenderer.OnAttach 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnAttach_5(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnAttach_6(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         instance->OnAttach();
@@ -11110,7 +11234,7 @@ public:
     }
 
     //封送并调用 StaticMeshRenderer.OnAttach
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnAttach_5(Object* object)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnAttach_6(Object* object)
     {
         try
         {
@@ -11122,7 +11246,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.OnDetach 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_6(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_7(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -11134,7 +11258,7 @@ public:
     }
 
     //直接调用 StaticMeshRenderer.OnDetach 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnDetach_6(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnDetach_7(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         instance->OnDetach();
@@ -11143,7 +11267,7 @@ public:
     }
 
     //封送并调用 StaticMeshRenderer.OnDetach
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnDetach_6(Object* object)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnDetach_7(Object* object)
     {
         try
         {
@@ -11155,7 +11279,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.OnWorldActiveChanged 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnWorldActiveChanged_7(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnWorldActiveChanged_8(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -11169,7 +11293,7 @@ public:
     }
 
     //直接调用 StaticMeshRenderer.OnWorldActiveChanged 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnWorldActiveChanged_7(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnWorldActiveChanged_8(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         bool arg0{};
@@ -11180,7 +11304,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 StaticMeshRenderer.OnWorldActiveChanged
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_StaticMeshRenderer_OnWorldActiveChanged_7(Object* object, uint8 value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_StaticMeshRenderer_OnWorldActiveChanged_8(Object* object, uint8 value0)
     {
         try
         {
@@ -11192,7 +11316,7 @@ public:
     }
 
     //封送并调用 StaticMeshRenderer.OnWorldActiveChanged
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnWorldActiveChanged_7(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnWorldActiveChanged_8(Object* object, const void* input0)
     {
         try
         {
@@ -14410,6 +14534,8 @@ namespace Reflection
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_StaticMeshRenderer_enabled)),
                 FieldInfo("runtimeMesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Mesh", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("drawParameters", "DrawParameterData", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("hasDrawParameters", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_hasDrawParameters, ReflectionGeneratedAccess::Set_StaticMeshRenderer_hasDrawParameters, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_hasDrawParameters, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_hasDrawParameters, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_hasDrawParameters), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_hasDrawParameters), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_StaticMeshRenderer_hasDrawParameters)),
                 FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Object, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_mesh), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_mesh), nullptr),
                 FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Set_StaticMeshRenderer_materials, "Material", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Size_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Resize_StaticMeshRenderer_materials, Reflection::FieldKind::ObjectRef, false, static_cast<Reflection::ValueKind>(static_cast<uint32>(Reflection::ValueKind::Array) | (static_cast<uint32>(Reflection::ValueKind::Object) << 16)), reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_materials), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_materials), nullptr),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_StaticMeshRenderer_castShadows)),
@@ -14421,12 +14547,13 @@ namespace Reflection
             {
                 MethodInfo("SetRuntimeMesh", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "Mesh*", Reflection::ValueKind::Pointer) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_SetRuntimeMesh_0, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_SetRuntimeMesh_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_SetRuntimeMesh_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_StaticMeshRenderer_SetRuntimeMesh_0)),
                 MethodInfo("GetRenderMesh", "Mesh*", Reflection::ValueKind::Pointer, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_GetRenderMesh_1, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_GetRenderMesh_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_GetRenderMesh_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_GetRenderMesh_1)),
-                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_GetEnabled_2, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_GetEnabled_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_GetEnabled_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_GetEnabled_2)),
-                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_SetEnabled_3, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_SetEnabled_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_SetEnabled_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_StaticMeshRenderer_SetEnabled_3)),
-                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_IsRenderSceneEligible_4, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_IsRenderSceneEligible_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_IsRenderSceneEligible_4), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_IsRenderSceneEligible_4)),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnAttach_5, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnAttach_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnAttach_5), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnAttach_5)),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_6, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnDetach_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnDetach_6), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnDetach_6)),
-                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnWorldActiveChanged_7, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnWorldActiveChanged_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnWorldActiveChanged_7), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_StaticMeshRenderer_OnWorldActiveChanged_7)),
+                MethodInfo("SetDrawParameters", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("data", "float32*", Reflection::ValueKind::Pointer), ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_SetDrawParameters_2, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_SetDrawParameters_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_SetDrawParameters_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_StaticMeshRenderer_SetDrawParameters_2)),
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_GetEnabled_3, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_GetEnabled_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_GetEnabled_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_GetEnabled_3)),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_SetEnabled_4, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_SetEnabled_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_SetEnabled_4), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_StaticMeshRenderer_SetEnabled_4)),
+                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_IsRenderSceneEligible_5, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_IsRenderSceneEligible_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_IsRenderSceneEligible_5), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_IsRenderSceneEligible_5)),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnAttach_6, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnAttach_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnAttach_6), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnAttach_6)),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_7, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnDetach_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnDetach_7), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnDetach_7)),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnWorldActiveChanged_8, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnWorldActiveChanged_8, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnWorldActiveChanged_8), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_StaticMeshRenderer_OnWorldActiveChanged_8)),
             });
 
         RegisterTypeFields(TextResource::StaticType(),

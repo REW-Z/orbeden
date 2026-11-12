@@ -173,6 +173,8 @@ public:
     GeometryMode mode = GeometryMode::Uniform;
     BlendMode blendMode = BlendMode::Alpha;
     matrix4x4 model;
+    DrawParameterData drawParameters;
+    bool hasDrawParameters = false;
     bounds3 worldBounds;
     //相机到对象位置的平方距离，与剔除使用同一度量
     float32 cameraDistance = 0.0f;

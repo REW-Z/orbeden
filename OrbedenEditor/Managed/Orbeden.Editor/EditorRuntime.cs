@@ -31,8 +31,6 @@ public static class EditorRuntime
         public EditorAssetReimportNativeApi Reimport;
         public EditorInputNativeApi Input;
         public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> ExportProfilerFrameText;
-        public delegate* unmanaged[Cdecl]<byte*, int, EditorProfileScope*, void> BeginProfileSample;
-        public delegate* unmanaged[Cdecl]<EditorProfileScope*, void> EndProfileSample;
         public delegate* unmanaged[Cdecl]<byte> GetMeshDynamicBatching;
         public delegate* unmanaged[Cdecl]<byte, void> SetMeshDynamicBatching;
         public delegate* unmanaged[Cdecl]<long, ProfileGpuEvent*, int, int> CopyProfilerGpuEvents;
@@ -75,8 +73,7 @@ public static class EditorRuntime
             OrbedenCoreRuntime.InitializeEngineBindings(api.EngineApi);
             NativeEditorGUI.Initialize(api.Gui);
             NativeEditorLog.Initialize(api.Log);
-            NativeEditorProfiler.Initialize(api.Profiler, api.ExportProfilerFrameText, api.BeginProfileSample,
-                api.EndProfileSample, api.CopyProfilerGpuEvents);
+            NativeEditorProfiler.Initialize(api.Profiler, api.ExportProfilerFrameText, api.CopyProfilerGpuEvents);
 
             //面板注册期间的警告也要进 Console 面板，所以先装日志通道
             EditorConsole.Install();
@@ -600,16 +597,12 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
         ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
         ValidateFunctionTable<EditorInputNativeApi>(nameof(EditorInputNativeApi), 2);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 197);
-        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetWorldEnsState)).ToInt32() != 195 * IntPtr.Size
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.ReadEnsHeader)).ToInt32() != 196 * IntPtr.Size)
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 195);
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetWorldEnsState)).ToInt32() != 193 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.ReadEnsHeader)).ToInt32() != 194 * IntPtr.Size)
             throw new TypeLoadException("Editor Ens hierarchy ABI layout mismatch.");
-        ValidateSize<EditorProfileScope>(nameof(EditorProfileScope), 16);
-        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.BeginProfileSample)).ToInt32() != 190 * IntPtr.Size
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.EndProfileSample)).ToInt32() != 191 * IntPtr.Size)
-            throw new TypeLoadException("Editor profiler sampling ABI layout mismatch.");
-        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetMeshDynamicBatching)).ToInt32() != 192 * IntPtr.Size
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.SetMeshDynamicBatching)).ToInt32() != 193 * IntPtr.Size)
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetMeshDynamicBatching)).ToInt32() != 190 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.SetMeshDynamicBatching)).ToInt32() != 191 * IntPtr.Size)
             throw new TypeLoadException("Editor mesh batching ABI layout mismatch.");
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
@@ -627,7 +620,7 @@ public static class EditorRuntime
         ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 104);
         if (Marshal.OffsetOf<ProfileFrameSummary>(nameof(ProfileFrameSummary.GpuEventCount)).ToInt32() != 88
             || Marshal.OffsetOf<ProfileGpuEvent>(nameof(ProfileGpuEvent.StartMicroseconds)).ToInt32() != 8
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.CopyProfilerGpuEvents)).ToInt32() != 194 * IntPtr.Size)
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.CopyProfilerGpuEvents)).ToInt32() != 192 * IntPtr.Size)
             throw new TypeLoadException("Editor GPU profiler ABI layout mismatch.");
     }
 

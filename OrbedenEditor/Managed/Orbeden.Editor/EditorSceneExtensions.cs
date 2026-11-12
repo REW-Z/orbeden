@@ -48,7 +48,7 @@ public static class EditorSceneExtensions
         {
             try
             {
-                using EditorProfileScope profile = new(registration.ProfileName);
+                using ProfileScope profile = new(registration.ProfileName);
                 registration.Extension.DrawOverlay();
             }
             catch (Exception exception) { Console.Error.WriteLine($"Scene overlay failed: {exception}"); }

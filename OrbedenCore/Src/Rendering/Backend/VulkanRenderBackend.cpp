@@ -110,6 +110,7 @@ struct VulkanRenderBackend::State
         VkPipelineLayout layout = VK_NULL_HANDLE;
         std::unordered_map<std::string, VkPipeline> pipelines;
         Buffer parameterData;
+        Buffer drawParameterData;
         uint64 parameterSerial = 0, parameterRevision = 0;
         uint64 uploadedParameterRevision = 0, descriptorSerial = 0;
         List<uint8> parameterBytes;
@@ -123,6 +124,7 @@ struct VulkanRenderBackend::State
         VkPipeline lastPipeline = VK_NULL_HANDLE;
         VkDescriptorSet lastDescriptors = VK_NULL_HANDLE;
         VkBuffer lastParameterBuffer = VK_NULL_HANDLE;
+        VkBuffer lastDrawParameterBuffer = VK_NULL_HANDLE;
         VkDescriptorBufferInfo lastStorage = {};
         uint64 textureBindingsRevision = 0, imageAccessRevision = 0;
         const ShaderParameterValue* framebufferParameter = nullptr;
@@ -133,7 +135,7 @@ struct VulkanRenderBackend::State
         VkPipeline pipeline = VK_NULL_HANDLE;
         VkPipelineLayout layout = VK_NULL_HANDLE;
         VkDescriptorSet descriptors = VK_NULL_HANDLE;
-        uint32 parameterCount = 0, parameterOffset = 0;
+        uint32 parameterCount = 0, parameterOffset = 0, drawParameterOffset = 0;
         std::array<VkBuffer, 2> vertexBuffers = {};
         std::array<VkDeviceSize, 2> vertexOffsets = {};
         uint32 vertexCount = 0;
@@ -210,6 +212,7 @@ struct VulkanRenderBackend::State
     uint32 currentSurface = 0;
     uint32 nextId = 1;
     uint32 currentProgram = 0, currentInput = 0, instanceBuffer = 0;
+    std::array<uint8, DrawParameterBlockSize> drawParameterBytes = {};
     Program* programBinding = nullptr;
     const VertexInput* inputBinding = nullptr;
     Buffer* instanceBinding = nullptr;
@@ -697,6 +700,7 @@ struct VulkanRenderBackend::State
         List<VkDescriptorSetLayoutBinding> bindings;
         if (program.compiled.parameterSize) bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, stages, nullptr });
         for (const auto& sampler : program.compiled.samplers) bindings.push_back({ sampler.binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, stages, nullptr });
+        if (program.compiled.drawParameterSize) bindings.push_back({ DrawParameterBinding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, stages, nullptr });
         if (program.compute) bindings.push_back({ 31, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, stages, nullptr });
         VkDescriptorSetLayoutCreateInfo descriptors = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
         descriptors.bindingCount = static_cast<uint32>(bindings.size()); descriptors.pBindings = bindings.data();
@@ -1418,7 +1422,7 @@ GpuShaderProgramID VulkanRenderBackend::CreateShaderProgram(const GpuShaderProgr
 {
     CompiledShader compiled; std::string error;
     if (!ShaderCompiler::CompileGraphics(desc, compiled, error)) { Log::Error(("Vulkan shader compile failed: " + error).c_str()); return {}; }
-    if (compiled.parameterSize > state->properties.limits.maxUniformBufferRange) { Log::Error("Vulkan shader parameter block exceeds device limits."); return {}; }
+    if (compiled.parameterSize > state->properties.limits.maxUniformBufferRange || compiled.drawParameterSize > state->properties.limits.maxUniformBufferRange) { Log::Error("Vulkan shader parameter block exceeds device limits."); return {}; }
     return { state->CreateProgram(std::move(compiled)) };
 }
 
@@ -1548,7 +1552,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     if (changed) ++program.parameterRevision;
 
     //上传当前绘制的不可变参数快照
-    VkDescriptorBufferInfo parameterInfo = {}, storageInfo = {};
+    VkDescriptorBufferInfo parameterInfo = {}, drawParameterInfo = {}, storageInfo = {};
     if (program.compiled.parameterSize)
     {
         if (program.parameterSerial != submittedSerial + 1 || program.uploadedParameterRevision != program.parameterRevision)
@@ -1558,6 +1562,11 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         program.parameterSerial = submittedSerial + 1;
         program.uploadedParameterRevision = program.parameterRevision;
         parameterInfo = { program.parameterData.handle, 0, program.compiled.parameterSize };
+    }
+
+    if (program.compiled.drawParameterSize)
+    {
+        drawParameterInfo = { program.drawParameterData.handle, 0, program.compiled.drawParameterSize };
     }
 
     //生成资源组合键并准备图像依赖
@@ -1571,6 +1580,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     if (program.lastDescriptors && !resourcesChanged
         && program.textureBindingsRevision == textureBindingsRevision && program.imageAccessRevision == imageAccessRevision
         && program.lastParameterBuffer == parameterInfo.buffer
+        && program.lastDrawParameterBuffer == drawParameterInfo.buffer
         && program.lastStorage.buffer == storageInfo.buffer && program.lastStorage.offset == storageInfo.offset && program.lastStorage.range == storageInfo.range)
         return program.lastDescriptors;
 
@@ -1579,6 +1589,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     {
         program.lastDescriptors = set;
         program.lastParameterBuffer = parameterInfo.buffer;
+        program.lastDrawParameterBuffer = drawParameterInfo.buffer;
         program.lastStorage = storageInfo;
         program.textureBindingsRevision = textureBindingsRevision;
         program.imageAccessRevision = imageAccessRevision;
@@ -1588,6 +1599,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     key.clear();
     auto append = [&key](auto value) { key.append(reinterpret_cast<const char*>(&value), sizeof(value)); };
     append(parameterInfo.buffer);
+    append(drawParameterInfo.buffer);
     for (usize index = 0; index < program.compiled.samplers.size(); ++index)
     {
         const auto& sampler = program.compiled.samplers[index];
@@ -1610,7 +1622,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     //写入首次使用的资源组合
     VkDescriptorSet set = AllocateDescriptors(program.descriptors);
     List<VkWriteDescriptorSet> writes;
-    writes.reserve(program.compiled.samplers.size() + 2);
+    writes.reserve(program.compiled.samplers.size() + 3);
     if (program.compiled.parameterSize)
     {
         VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -1623,6 +1635,13 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet = set; write.dstBinding = program.compiled.samplers[index].binding; write.descriptorCount = 1;
         write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; write.pImageInfo = &program.imageInfos[index];
+        writes.push_back(write);
+    }
+    if (program.compiled.drawParameterSize)
+    {
+        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        write.dstSet = set; write.dstBinding = DrawParameterBinding; write.descriptorCount = 1;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; write.pBufferInfo = &drawParameterInfo;
         writes.push_back(write);
     }
     if (storage)
@@ -1754,13 +1773,25 @@ void VulkanRenderBackend::State::Draw(uint32 indexStart, uint32 indexCount, uint
         drawBindings.pipeline = pipeline;
     }
     uint32 parameterOffset = static_cast<uint32>(program.parameterData.offset);
-    uint32 parameterCount = program.compiled.parameterSize ? 1 : 0;
-    if (drawBindings.layout != program.layout || drawBindings.descriptors != descriptors
-        || drawBindings.parameterCount != parameterCount || drawBindings.parameterOffset != parameterOffset)
+    uint32 drawParameterOffset = static_cast<uint32>(program.drawParameterData.offset);
+    std::array<uint32, 2> parameterOffsets = {};
+    uint32 parameterCount = 0;
+    if (program.compiled.parameterSize)
     {
-        vkCmdBindDescriptorSets(commands, VK_PIPELINE_BIND_POINT_GRAPHICS, program.layout, 0, 1, &descriptors, parameterCount, &parameterOffset);
+        parameterOffsets[parameterCount++] = parameterOffset;
+    }
+    if (program.compiled.drawParameterSize)
+    {
+        parameterOffsets[parameterCount++] = drawParameterOffset;
+    }
+    if (drawBindings.layout != program.layout || drawBindings.descriptors != descriptors
+        || drawBindings.parameterCount != parameterCount || drawBindings.parameterOffset != parameterOffset
+        || drawBindings.drawParameterOffset != drawParameterOffset)
+    {
+        vkCmdBindDescriptorSets(commands, VK_PIPELINE_BIND_POINT_GRAPHICS, program.layout, 0, 1, &descriptors, parameterCount, parameterOffsets.data());
         drawBindings.layout = program.layout; drawBindings.descriptors = descriptors;
         drawBindings.parameterCount = parameterCount; drawBindings.parameterOffset = parameterOffset;
+        drawBindings.drawParameterOffset = drawParameterOffset;
     }
     const PipelineState& raster = backend.GetPipelineState();
     float32 biasSign = pass.reversedDepth ? -1.0f : 1.0f;
@@ -1895,4 +1926,30 @@ bool VulkanRenderBackend::TryReadDepthDistribution(GpuDepthDistributionID id, Gp
     std::memcpy(output.bins, distribution.bins.mapped, sizeof(output.bins));
     output.nearPlane = distribution.nearPlane; output.farPlane = distribution.farPlane; distribution.serial = 0;
     return true;
+}
+
+//上传当前绘制的不可变参数块快照
+bool VulkanRenderBackend::BindDrawParameters(std::span<const DrawParameterData> data, usize& uploadedBytes)
+{
+    uploadedBytes = 0;
+    auto& s = *state;
+    if (!s.programBinding)
+    {
+        return false;
+    }
+    auto& program = *s.programBinding;
+    if (!program.compiled.drawParameterSize)
+    {
+        return true;
+    }
+    if (data.empty() || data.size() > MaximumDrawParameterInstances)
+    {
+        Log::Error("Vulkan draw parameter data is missing or exceeds the batch limit.");
+        return false;
+    }
+    std::memcpy(s.drawParameterBytes.data(), data.data(), data.size_bytes());
+    program.drawParameterData = s.Upload(s.drawParameterBytes.data(), DrawParameterBlockSize,
+        s.properties.limits.minUniformBufferOffsetAlignment);
+    uploadedBytes = program.drawParameterData.handle ? DrawParameterBlockSize : 0;
+    return program.drawParameterData.handle != VK_NULL_HANDLE;
 }

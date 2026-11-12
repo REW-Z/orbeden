@@ -74,9 +74,21 @@ vec4 OrbedenGetFragCoord()
             error += program.getInfoDebugLog();
             return false;
         }
+        int32 drawBlockIndex = -1;
         for (int32 index = 0; index < program.getNumUniformBlocks(); ++index)
         {
             const auto& block = program.getUniformBlock(index);
+            if (block.name == "OrbedenDrawParameters" && block.getBinding() == static_cast<int32>(DrawParameterBinding))
+            {
+                if (block.size != static_cast<int32>(DrawParameterBlockSize) || program.getIntermediate(EShLangCompute))
+                {
+                    error = "Draw parameter blocks require the fixed graphics std140 layout.";
+                    return false;
+                }
+                output.drawParameterSize = static_cast<uint32>(block.size);
+                drawBlockIndex = index;
+                continue;
+            }
             if (block.name != "OrbedenParameters" || block.getBinding() != 0)
             {
                 error = "Explicit uniform blocks require an engine parameter layout: " + block.name;
@@ -93,6 +105,10 @@ vec4 OrbedenGetFragCoord()
         for (int32 index = 0; index < program.getNumUniformVariables(); ++index)
         {
             const auto& reflected = program.getUniform(index);
+            if (drawBlockIndex >= 0 && reflected.index == drawBlockIndex)
+            {
+                continue;
+            }
             const glslang::TType& type = *reflected.getType();
             if (type.getBasicType() == glslang::EbtSampler)
             {
@@ -101,6 +117,11 @@ vec4 OrbedenGetFragCoord()
                     || (type.getSampler().dim != glslang::Esd2D && type.getSampler().dim != glslang::EsdCube))
                 {
                     error = "Unsupported shader sampler layout: " + reflected.name;
+                    return false;
+                }
+                if (output.drawParameterSize && reflected.getBinding() == static_cast<int32>(DrawParameterBinding))
+                {
+                    error = "Sampler binding overlaps the draw parameter block.";
                     return false;
                 }
                 output.samplers.push_back({ reflected.name, static_cast<uint32>(reflected.getBinding()), type.getSampler().dim == glslang::EsdCube });

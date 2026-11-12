@@ -260,6 +260,11 @@ void OpenGLRenderBackend::Shutdown()
     for (const auto& [id, capacity] : vertexBufferCapacities) glDeleteBuffers(1, &id);
     for (const auto& [id, capacity] : indexBufferCapacities) glDeleteBuffers(1, &id);
     while (!programUniforms.empty()) DeleteShaderProgram({ programUniforms.begin()->first });
+    if (drawParameterBuffer)
+    {
+        glDeleteBuffers(1, &drawParameterBuffer);
+        drawParameterBuffer = 0;
+    }
     renderTargetFormats.clear();
     renderTargetColorAttachments.clear();
     indexBufferCounts.clear();
@@ -859,7 +864,20 @@ GpuShaderProgramID OpenGLRenderBackend::CreateShaderProgram(const GpuShaderProgr
         return GpuShaderProgramID();
     }
 
-    programUniforms.try_emplace(program);
+    GLuint drawBlock = glGetUniformBlockIndex(program, "OrbedenDrawParameters");
+    if (drawBlock != GL_INVALID_INDEX)
+    {
+        GLint size = 0;
+        glGetActiveUniformBlockiv(program, drawBlock, GL_UNIFORM_BLOCK_DATA_SIZE, &size);
+        if (size != static_cast<GLint>(DrawParameterBlockSize))
+        {
+            Log::Error("OpenGL draw parameter block layout mismatch.");
+            glDeleteProgram(program);
+            return {};
+        }
+        glUniformBlockBinding(program, drawBlock, DrawParameterBinding);
+    }
+    programUniforms.try_emplace(program).first->second.hasDrawParameters = drawBlock != GL_INVALID_INDEX;
     return { program };
 }
 
@@ -1598,4 +1616,33 @@ void OpenGLRenderBackend::SetSurface(GpuSurfaceID id)
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); blendMode = BlendMode::Alpha;
     glDisable(GL_CULL_FACE); cullMode = CullMode::None;
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+}
+
+//按实例顺序提交独立绘制参数块
+bool OpenGLRenderBackend::BindDrawParameters(std::span<const DrawParameterData> data, usize& uploadedBytes)
+{
+    uploadedBytes = 0;
+    if (!currentUniforms)
+    {
+        return false;
+    }
+    if (!currentUniforms->hasDrawParameters)
+    {
+        return true;
+    }
+    if (data.empty() || data.size() > MaximumDrawParameterInstances)
+    {
+        Log::Error("OpenGL draw parameter data is missing or exceeds the batch limit.");
+        return false;
+    }
+    if (!drawParameterBuffer)
+    {
+        glGenBuffers(1, &drawParameterBuffer);
+    }
+    glBindBuffer(GL_UNIFORM_BUFFER, drawParameterBuffer);
+    glBufferData(GL_UNIFORM_BUFFER, DrawParameterBlockSize, nullptr, GL_STREAM_DRAW);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>(data.size_bytes()), data.data());
+    glBindBufferBase(GL_UNIFORM_BUFFER, DrawParameterBinding, drawParameterBuffer);
+    uploadedBytes = data.size_bytes();
+    return true;
 }

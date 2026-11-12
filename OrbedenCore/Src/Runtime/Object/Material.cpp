@@ -96,12 +96,22 @@ void Material::CopyFrom(Material* source)
 
 void Material::SetShader(Shader* value)
 {
+    if (value ? shader.GetInstanceId() == value->GetInstanceId() : !shader.GetInstanceId().IsValid())
+    {
+        return;
+    }
+
     shader.Set(value);
     MarkDirty();
 }
 
 void Material::SetShader(const StringId& shaderId)
 {
+    if (shader.GetInstanceId() == shaderId)
+    {
+        return;
+    }
+
     shader.SetInstanceId(shaderId);
     MarkDirty();
 }
@@ -111,6 +121,11 @@ void Material::SetTexture(const std::string& slotName, Texture2D* texture)
     if (slotName.empty()) return;
 
     MaterialTextureSlot* slot = FindTextureSlot(textureSlots, slotName);
+    if (slot && (texture ? slot->texture.GetInstanceId() == texture->GetInstanceId() : !slot->texture.GetInstanceId().IsValid()))
+    {
+        return;
+    }
+
     if (!slot)
     {
         MaterialTextureSlot created;
@@ -128,6 +143,11 @@ void Material::SetTexture(const std::string& slotName, const StringId& textureId
     if (slotName.empty()) return;
 
     MaterialTextureSlot* slot = FindTextureSlot(textureSlots, slotName);
+    if (slot && (slot->texture.GetInstanceId() == textureId))
+    {
+        return;
+    }
+
     if (!slot)
     {
         MaterialTextureSlot created;
@@ -169,6 +189,12 @@ void Material::SetColor(const std::string& slotName, const color& value)
     if (slotName.empty()) return;
 
     MaterialColorSlot* slot = FindColorSlot(colorSlots, slotName);
+    if (slot && slot->value.r == value.r && slot->value.g == value.g
+        && slot->value.b == value.b && slot->value.a == value.a)
+    {
+        return;
+    }
+
     if (!slot)
     {
         MaterialColorSlot created;
@@ -209,6 +235,11 @@ void Material::SetFloat(const std::string& slotName, float32 value)
     if (slotName.empty()) return;
 
     MaterialFloatSlot* slot = FindFloatSlot(floatSlots, slotName);
+    if (slot && slot->value == value)
+    {
+        return;
+    }
+
     if (!slot)
     {
         MaterialFloatSlot created;

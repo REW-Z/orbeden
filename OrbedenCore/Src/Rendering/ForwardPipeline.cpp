@@ -640,6 +640,18 @@ bool ForwardPipeline::ExecuteUniformBatch(const DrawBatch& batch, const RenderSc
                 ++batchStats.invalidResources;
                 return drew;
             }
+            {
+                PROFILE("Render/DrawParameters/Uniform");
+                std::span<const DrawParameterData> parameters = item.hasDrawParameters
+                    ? std::span<const DrawParameterData>(&item.drawParameters, 1) : std::span<const DrawParameterData>();
+                usize uploadedBytes = 0;
+                if (!backend->BindDrawParameters(parameters, uploadedBytes))
+                {
+                    ++batchStats.invalidResources;
+                    continue;
+                }
+                batchStats.uploadedBytes += uploadedBytes;
+            }
             backend->GetParameters().SetMatrix4("u_Model", item.model);
             backend->BindVertexInput(mesh->vertexInput);
             backend->DrawIndexed(item.indexStart, item.indexCount);
@@ -690,7 +702,8 @@ bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const Render
     }
 
     //实例顺序必须与透明排序序列一致，构建与阴影 Pass 共用同一份实现
-    batchStats.invalidTransforms += particleRenderer.BuildMeshInstances(batch, cameraItems, instanceScratch);
+    batchStats.invalidTransforms += particleRenderer.BuildMeshInstances(batch, cameraItems, instanceScratch,
+        first.hasDrawParameters ? &drawParameterScratch : nullptr);
     if (instanceScratch.empty()) return false;
     {
         PROFILE("Render/UploadInstances");
@@ -718,6 +731,18 @@ bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const Render
         return false;
     }
 
+    {
+        PROFILE("Render/DrawParameters/Instanced");
+        std::span<const DrawParameterData> parameters = first.hasDrawParameters
+            ? std::span<const DrawParameterData>(drawParameterScratch) : std::span<const DrawParameterData>();
+        usize uploadedBytes = 0;
+        if (!backend->BindDrawParameters(parameters, uploadedBytes))
+        {
+            ++batchStats.invalidResources;
+            return false;
+        }
+        batchStats.uploadedBytes += uploadedBytes;
+    }
     backend->DrawIndexedInstanced(batch.key.indexStart, batch.key.indexCount, static_cast<uint32>(instanceScratch.size()));
     ++batchStats.instancedDraws;
     return true;

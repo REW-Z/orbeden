@@ -60,6 +60,7 @@ private:
 
     //实例数据构建的复用容器，稳态只清空不收缩。
     List<GpuMeshInstance> instanceScratch;
+    List<DrawParameterData> drawParameterScratch;
     List<GpuTrailInstance> trailInstanceScratch;
     List<ExpandedGeometryChunk> expandedChunks;
 

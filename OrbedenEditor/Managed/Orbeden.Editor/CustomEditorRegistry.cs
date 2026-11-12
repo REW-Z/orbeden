@@ -147,10 +147,10 @@ internal static class CustomEditorRegistry
                 nameof(ComponentEditor.OnSceneGui) => "Editor/ComponentEditors/OnSceneGui"u8,
                 _ => default,
             };
-            using (new EditorProfileScope(callbackProfile)) draw();
+            using (new ProfileScope(callbackProfile)) draw();
             if (instance.Editor.Properties.HasPendingChanges)
             {
-                using EditorProfileScope applyProfile = new(callbackProfile.IsEmpty ? default : "Editor/ComponentEditors/ApplyChanges"u8);
+                using ProfileScope applyProfile = new(callbackProfile.IsEmpty ? default : "Editor/ComponentEditors/ApplyChanges"u8);
                 if (!instance.Editor.Properties.ApplyChanges($"Edit {instance.Editor.Target.TypeName}"))
                     throw new InvalidOperationException("CustomEditor property write failed.");
             }
@@ -189,18 +189,18 @@ internal static class CustomEditorRegistry
         bool gizmosVisible = Gizmos.Visible;
         HashSet<int> alive = [];
         EnsId[] worldEns;
-        using (new EditorProfileScope("Editor/ComponentEditors/EnumerateEns"u8))
+        using (new ProfileScope("Editor/ComponentEditors/EnumerateEns"u8))
             worldEns = EditorNativeComponents.GetWorldEns();
         foreach (EnsId ens in worldEns)
         {
             bool selected, active;
-            using (new EditorProfileScope("Editor/ComponentEditors/ReadEnsState"u8))
+            using (new ProfileScope("Editor/ComponentEditors/ReadEnsState"u8))
             {
                 selected = Gizmos.IsSelected(ens);
                 active = Ens.FromId(ens).WorldActive;
             }
             List<NativeComponentInfo> components;
-            using (new EditorProfileScope("Editor/ComponentEditors/EnumerateComponents"u8))
+            using (new ProfileScope("Editor/ComponentEditors/EnumerateComponents"u8))
                 components = EditorNativeComponents.GetComponents(ens);
             foreach (NativeComponentInfo info in components)
             {
@@ -211,30 +211,30 @@ internal static class CustomEditorRegistry
                 //筛选本帧实际需要执行的场景回调
                 ComponentEditorTarget target = new(info.ObjectId, ens, info.TypeName, info.IsManaged);
                 Registration? registration;
-                using (new EditorProfileScope("Editor/ComponentEditors/MatchRegistration"u8))
+                using (new ProfileScope("Editor/ComponentEditors/MatchRegistration"u8))
                     registration = FindRegistration(target);
                 if (registration == null) continue;
                 bool drawGizmos = gizmosVisible && registration.HasDrawGizmos;
                 bool drawSceneGui = selected && registration.HasSceneGui;
                 if (!drawGizmos && !drawSceneGui) continue;
 
-                using EditorProfileScope editorProfile = new(registration.ProfileName);
+                using ProfileScope editorProfile = new(registration.ProfileName);
                 Instance? instance;
-                using (new EditorProfileScope("Editor/ComponentEditors/ResolveInstance"u8))
+                using (new ProfileScope("Editor/ComponentEditors/ResolveInstance"u8))
                     instance = Resolve([target]);
                 if (instance == null) continue;
                 drawGizmos &= !instance.FailedCallbacks.Contains(nameof(ComponentEditor.OnDrawGizmos));
                 drawSceneGui &= !instance.FailedCallbacks.Contains(nameof(ComponentEditor.OnSceneGui));
                 if (!drawGizmos && !drawSceneGui) continue;
                 instance.Editor.IsSelected = selected;
-                using (new EditorProfileScope("Editor/ComponentEditors/RefreshProperties"u8))
+                using (new ProfileScope("Editor/ComponentEditors/RefreshProperties"u8))
                     instance.Editor.Properties.Update();
                 if (drawGizmos) Invoke(instance, nameof(ComponentEditor.OnDrawGizmos), instance.Editor.OnDrawGizmos);
                 if (drawSceneGui && EditorPrefabSession.CanModify(Ens.FromId(ens), EditorPrefabEditOperation.Structure))
                     Invoke(instance, nameof(ComponentEditor.OnSceneGui), instance.Editor.OnSceneGui);
             }
         }
-        using (new EditorProfileScope("Editor/ComponentEditors/Cleanup"u8))
+        using (new ProfileScope("Editor/ComponentEditors/Cleanup"u8))
             foreach (string key in instances.Where(pair => pair.Value.Editor.Targets.Any(target => !alive.Contains(target.ObjectId))).Select(pair => pair.Key).ToArray())
                 instances.Remove(key);
     }

@@ -40,6 +40,8 @@ private:
     bool enabled = true;
     Ref<Mesh> runtimeMesh;
     StaticMeshRendererRenderState renderState;
+    DrawParameterData drawParameters;
+    bool hasDrawParameters = false;
 
     //按当前状态同步渲染场景注册
     void SyncRenderSceneRegistration();
@@ -61,6 +63,10 @@ public:
     /// <summary>获取实际渲染网格，运行时覆盖失效时恢复源网格。</summary>
     ORBEDEN_BIND_IGNORE
     Mesh* GetRenderMesh() const;
+
+    /// <summary>写入 32 个浮点绘制参数，空数据清除；不修改材质。</summary>
+    ORBEDEN_BIND_BUFFER(data, count)
+    bool SetDrawParameters(const float32* data, int32 count);
 
     //获取启用状态
     bool GetEnabled() const;

@@ -8,6 +8,17 @@ class Material;
 class Mesh;
 class StaticMeshRenderer;
 
+//逐绘制参数的 std140 布局：8 个 vec4，每批最多 32 个实例
+constexpr uint32 DrawParameterFloatCount = 32;
+constexpr uint32 MaximumDrawParameterInstances = 32;
+constexpr uint32 DrawParameterBinding = 30;
+struct DrawParameterData
+{
+    float32 values[DrawParameterFloatCount] = {};
+};
+constexpr uint32 DrawParameterBlockSize = sizeof(DrawParameterData) * MaximumDrawParameterInstances;
+static_assert(sizeof(DrawParameterData) == 128);
+
 //当前帧的世界空间调试线。
 struct DebugLine
 {

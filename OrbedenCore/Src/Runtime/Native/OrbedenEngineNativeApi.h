@@ -12,7 +12,7 @@
 struct OrbedenEngineNativeApi
 {
 public:
-    uint32 abiVersion = 9;
+    uint32 abiVersion = 10;
     uint32 structSize = sizeof(OrbedenEngineNativeApi);
     WorldBind World;
     PathDefinesBind PathDefines;
@@ -30,6 +30,7 @@ public:
 
     AsyncOperationBindApi AsyncOperations;
     InputBindApi Input;
+    ProfilerBindApi Profiler;
 
     //创建引擎原生 API 函数表。
     static OrbedenEngineNativeApi Create();
@@ -37,6 +38,8 @@ public:
 
 #pragma pack(pop)
 
-static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 86);
+static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 88);
 static_assert(offsetof(OrbedenEngineNativeApi, World) == 8);
 static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 33);
+
+static_assert(offsetof(OrbedenEngineNativeApi, Profiler) == 8 + sizeof(void*) * 86);

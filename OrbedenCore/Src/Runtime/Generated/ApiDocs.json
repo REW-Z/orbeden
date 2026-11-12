@@ -4167,6 +4167,31 @@
           ]
         },
         {
+          "Name": "SetDrawParameters",
+          "Doc": "\u5199\u5165 32 \u4E2A\u6D6E\u70B9\u7ED8\u5236\u53C2\u6570\uFF0C\u7A7A\u6570\u636E\u6E05\u9664\uFF1B\u4E0D\u4FEE\u6539\u6750\u8D28\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const float32*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
           "Name": "SetEnabled",
           "Doc": "\u8BBE\u7F6E\u542F\u7528\u72B6\u6001\u5E76\u540C\u6B65\u6E32\u67D3\u573A\u666F\u6CE8\u518C",
           "IsMethod": true,

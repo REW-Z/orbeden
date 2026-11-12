@@ -1,6 +1,7 @@
 #include "Rendering/StaticBatchCache.h"
 
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include "Rendering/GeometryExpander.h"
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/RenderMath.h"
@@ -103,7 +104,7 @@ void StaticBatchCache::Refresh(World& world, GpuResourceManager& resources)
     world.ForEachComponent<StaticMeshRenderer>([&](StaticMeshRenderer* renderer)
     {
         if (!renderer || !renderer->IsRenderSceneEligible() || renderer->drawStrategy != DrawStrategy::Auto) return;
-        if (!world.GetEnsStatic(renderer->GetEnsId())) return;
+        if (!world.GetEnsStatic(renderer->GetEnsId()) || renderer->hasDrawParameters) return;
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         if (!state.mesh || !state.worldBounds.valid) return;
@@ -330,42 +331,52 @@ void StaticBatchCache::AppendVisibleItems(const frustum& viewFrustum, uint32 dra
         if (!group.vertexInput.IsValid()) continue;
         if ((group.drawLayer & drawLayerMask) == 0) continue;
 
-        Material* material = group.material.Get();
+        Material* material;
+        {
+            PROFILE("Render/StaticBatch/ResolveMaterial");
+            material = group.material.Get();
+        }
         if (!material) continue;
 
         //逐成员按包围盒裁剪，只把连续的可见成员合并成一段索引范围
-        CollectVisibleRanges(group, viewFrustum, drawLayerMask, ranges);
-        for (usize range = 0; range + 1 < ranges.size(); range += 2)
         {
-            DrawItem item;
-            item.source = DrawSource::StaticMesh;
-            item.geometry = DrawGeometry::Mesh;
-            item.owner = group.members.front().owner;
-            item.sourceObjectId = group.members.front().rendererId;
-            item.subMeshIndex = 0;
-            item.indexStart = ranges[range];
-            item.indexCount = ranges[range + 1];
-            item.drawLayer = group.drawLayer;
-            item.material = material;
-            item.queue = static_cast<DrawQueue>(group.queue);
-            item.blendMode = BlendMode::Alpha;
-            item.mode = GeometryMode::Expanded;
-            item.strategy = DrawStrategy::Auto;
-            item.persistentGeometry = true;
-            item.staticGroup = static_cast<uint32>(index);
-            item.receiveShadows = group.receiveShadows;
-            item.castShadows = group.castShadows;
-            item.worldBounds = group.members.front().worldBounds;
-            for (const StaticBatchMember& member : group.members)
+            PROFILE("Render/StaticBatch/VisibleRanges");
+            CollectVisibleRanges(group, viewFrustum, drawLayerMask, ranges);
+        }
+        {
+            PROFILE("Render/StaticBatch/BuildItems");
+            for (usize range = 0; range + 1 < ranges.size(); range += 2)
             {
-                if (member.indexStart < item.indexStart + item.indexCount && member.indexStart + member.indexCount > item.indexStart)
+                DrawItem item;
+                item.source = DrawSource::StaticMesh;
+                item.geometry = DrawGeometry::Mesh;
+                item.owner = group.members.front().owner;
+                item.sourceObjectId = group.members.front().rendererId;
+                item.subMeshIndex = 0;
+                item.indexStart = ranges[range];
+                item.indexCount = ranges[range + 1];
+                item.drawLayer = group.drawLayer;
+                item.material = material;
+                item.queue = static_cast<DrawQueue>(group.queue);
+                item.blendMode = BlendMode::Alpha;
+                item.mode = GeometryMode::Expanded;
+                item.strategy = DrawStrategy::Auto;
+                item.persistentGeometry = true;
+                item.staticGroup = static_cast<uint32>(index);
+                item.receiveShadows = group.receiveShadows;
+                item.castShadows = group.castShadows;
+                item.worldBounds = group.members.front().worldBounds;
+                for (const StaticBatchMember& member : group.members)
                 {
-                    item.worldBounds = member.worldBounds;
-                    break;
+                    if (member.indexStart < item.indexStart + item.indexCount && member.indexStart + member.indexCount > item.indexStart)
+                    {
+                        item.worldBounds = member.worldBounds;
+                        break;
+                    }
                 }
-            }
 
-            items.push_back(item);
+                items.push_back(item);
+            }
         }
     }
 }

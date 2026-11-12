@@ -79,7 +79,7 @@ internal sealed class EnsPanel : EditorPanel
         pendingDrop = null;
         pendingSelection = null;
         pendingSelectable = null;
-        using (new EditorProfileScope("Editor/EnsPanel/BuildHierarchy"u8))
+        using (new ProfileScope("Editor/EnsPanel/BuildHierarchy"u8))
         {
             (ulong content, ulong revision) = EditorNativeComponents.GetWorldEnsState();
             if (content != contentRevision || revision != hierarchyRevision)
@@ -131,7 +131,7 @@ internal sealed class EnsPanel : EditorPanel
         }
         RevealRequestedEns();
         if (visibleRowsDirty) RebuildVisibleRows();
-        using (new EditorProfileScope("Editor/EnsPanel/DrawHierarchy"u8))
+        using (new ProfileScope("Editor/EnsPanel/DrawHierarchy"u8))
         {
             EnsId previousInteraction = interactionEns;
             EnsId previousMenu = menuEns;

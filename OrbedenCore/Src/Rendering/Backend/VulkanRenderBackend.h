@@ -63,6 +63,7 @@ public:
     void BindTexture(uint32 slot, GpuTextureID id) override;
     void BindDepthTexture(uint32 slot, GpuDepthTextureID id) override;
     void BindCubeTexture(uint32 slot, GpuCubeTextureID id) override;
+    bool BindDrawParameters(std::span<const DrawParameterData> data, usize& uploadedBytes) override;
     void DrawIndexed(uint32 indexStart, uint32 indexCount) override;
     void DrawIndexedInstanced(uint32 indexStart, uint32 indexCount, uint32 instanceCount) override;
     bool SupportsInstancing() const override;

@@ -139,7 +139,8 @@ public:
         const frustum& lightFrustum, List<DrawItem>& items);
 
     /// <summary>从有序绘制项构造实例记录，顺序与透明序列一致；返回因变换非法被拒绝的项数。</summary>
-    uint32 BuildMeshInstances(const DrawBatch& batch, const List<DrawItem>& items, List<GpuMeshInstance>& instances);
+    uint32 BuildMeshInstances(const DrawBatch& batch, const List<DrawItem>& items, List<GpuMeshInstance>& instances,
+        List<DrawParameterData>* drawParameters = nullptr);
 
     /// <summary>按该相机的拖尾角点快照写 112 字节实例记录。</summary>
     void BuildTrailInstances(const DrawBatch& batch, const List<DrawItem>& items, List<GpuTrailInstance>& instances);

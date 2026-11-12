@@ -55,7 +55,26 @@ struct InputBindApi
     static InputBindApi Create();
 };
 
+//托管采样作用域的原生状态
+struct ProfileScopeAbi
+{
+    void* sample = nullptr;
+    int64 startedAtNanoseconds = 0;
+};
+
+//Core 性能采样函数表
+struct ProfilerBindApi
+{
+    void* BeginSample = nullptr;
+    void* EndSample = nullptr;
+
+    //创建性能采样函数表
+    static ProfilerBindApi Create();
+};
+
 #pragma pack(pop)
+static_assert(sizeof(ProfileScopeAbi) == 16);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ProfilerBindApi, 2);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(InputBindApi, 6);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(AsyncOperationBindApi, 1);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectBind, 7);

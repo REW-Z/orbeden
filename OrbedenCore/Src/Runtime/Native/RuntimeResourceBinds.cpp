@@ -6,6 +6,9 @@
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Texture2D.h"
 #include "ResourceManager/ResourceManager.h"
+#include "Profiler/Profiler.h"
+
+#include <chrono>
 
 #include <algorithm>
 #include <atomic>
@@ -15,6 +18,30 @@
 namespace
 {
     std::atomic<IWindow*> wakeWindow = nullptr;
+
+    //开始托管代码段的 Core 性能采样
+    void ORBEDEN_NATIVE_CALL NativeProfilerBeginSample(const uint8* name, int32 length, ProfileScopeAbi* scope)
+    {
+        if (!scope) return;
+        *scope = {};
+        if (!name || length <= 0 || !Profiler::IsCapturing()) return;
+
+        std::string text(reinterpret_cast<const char*>(name), static_cast<usize>(length));
+        scope->sample = Profiler::StartSample(text.c_str());
+        scope->startedAtNanoseconds = static_cast<int64>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+    }
+
+    //结束托管代码段的 Core 性能采样
+    void ORBEDEN_NATIVE_CALL NativeProfilerEndSample(ProfileScopeAbi* scope)
+    {
+        if (!scope || !scope->sample) return;
+        int64 endedAtNanoseconds = static_cast<int64>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+        Profiler::StoreSample(nullptr, (endedAtNanoseconds - scope->startedAtNanoseconds) / 1000,
+            static_cast<ProfileSample*>(scope->sample));
+        *scope = {};
+    }
 
     //唤醒主线程事件循环
     void ORBEDEN_NATIVE_CALL NativeWakeMainThread()
@@ -138,5 +165,14 @@ AsyncOperationBindApi AsyncOperationBindApi::Create()
     wakeWindow.store(Application::Current() ? Application::Current()->GetWindow() : nullptr, std::memory_order_release);
     AsyncOperationBindApi api;
     api.WakeMainThread = reinterpret_cast<void*>(&NativeWakeMainThread);
+    return api;
+}
+
+//创建 Core 性能采样函数表
+ProfilerBindApi ProfilerBindApi::Create()
+{
+    ProfilerBindApi api;
+    api.BeginSample = reinterpret_cast<void*>(&NativeProfilerBeginSample);
+    api.EndSample = reinterpret_cast<void*>(&NativeProfilerEndSample);
     return api;
 }

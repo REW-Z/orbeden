@@ -38,7 +38,7 @@ struct ScriptBindApi
 struct OrbedenNativeApi
 {
 public:
-    uint32 abiVersion = 15;
+    uint32 abiVersion = 16;
     uint32 structSize = sizeof(OrbedenNativeApi);
     RuntimeGuiApi Gui;
     WorldBind World;
@@ -62,6 +62,7 @@ public:
 
     AsyncOperationBindApi AsyncOperations;
     InputBindApi Input;
+    ProfilerBindApi Profiler;
 
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create(::World* world);
@@ -70,10 +71,12 @@ public:
 #pragma pack(pop)
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBindApi, 17);
-static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 129);
+static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 131);
 static_assert(offsetof(OrbedenNativeApi, Gui) == 8);
 static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 65);
 
 static_assert(offsetof(OrbedenNativeApi, TypedMethods) == 8 + sizeof(void*) * 120);
 
 static_assert(offsetof(OrbedenNativeApi, TypedFields) == 8 + sizeof(void*) * 121);
+
+static_assert(offsetof(OrbedenNativeApi, Profiler) == 8 + sizeof(void*) * 129);

@@ -88,7 +88,8 @@ namespace
             && a.subMeshIndex == b.subMeshIndex
             && a.indexStart == b.indexStart
             && a.indexCount == b.indexCount
-            && a.receiveShadows == b.receiveShadows;
+            && a.receiveShadows == b.receiveShadows
+            && a.hasDrawParameters == b.hasDrawParameters;
     }
 
     //批次分组用的键内容排序：队列、材质、网格与几何区间，再加绘制状态。
@@ -108,6 +109,7 @@ namespace
         if (a.indexCount != b.indexCount) return a.indexCount < b.indexCount;
         if (a.blendMode != b.blendMode) return static_cast<uint32>(a.blendMode) < static_cast<uint32>(b.blendMode);
         if (a.receiveShadows != b.receiveShadows) return a.receiveShadows < b.receiveShadows;
+        if (a.hasDrawParameters != b.hasDrawParameters) return a.hasDrawParameters < b.hasDrawParameters;
         if (a.geometry != b.geometry) return static_cast<uint32>(a.geometry) < static_cast<uint32>(b.geometry);
         if (a.mode != b.mode) return static_cast<uint32>(a.mode) < static_cast<uint32>(b.mode);
         return false;
@@ -127,7 +129,8 @@ namespace
             && a.geometry == b.geometry
             && a.blendMode == b.blendMode
             && a.material == b.material
-            && a.receiveShadows == b.receiveShadows;
+            && a.receiveShadows == b.receiveShadows
+            && a.hasDrawParameters == b.hasDrawParameters;
     }
 
     //一段连续项是否都允许走实例批
@@ -165,7 +168,7 @@ namespace
         while (end < items.size())
         {
             const DrawItem& item = items[end];
-            if (item.persistentGeometry || item.geometry != DrawGeometry::Mesh || !item.mesh) break;
+            if (item.persistentGeometry || item.hasDrawParameters || item.geometry != DrawGeometry::Mesh || !item.mesh) break;
             if (end > begin && (!SameDynamicContent(items[begin], item) || !AllowsDynamicBatching(item.strategy))) break;
             if (item.indexCount == 0 || item.indexCount > MaximumDynamicBatchItemIndices) break;
 
@@ -264,137 +267,172 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
     if (!gpuResources) return;
 
     const RenderCamera& camera = visibleSet.camera;
-    for (const RenderItem& source : visibleSet.renderItems)
     {
-        StaticMeshRenderer* renderer = source.renderer;
-        if (!renderer || !source.mesh || !source.material) continue;
-        //drawLayer 在剔除前已经按渲染器过滤过一次，这里覆盖子网格声明的层
-        if ((source.drawLayer & camera.drawLayerMask) == 0) continue;
-        if (!source.worldBounds.valid) continue;
-        if (!IsFiniteMatrix(source.localToWorld)) continue;
-
-        const GpuMaterial* material = gpuResources->GetMaterial(source.material);
-        if (!material || !material->shader || material->shader->passes.empty())
+        PROFILE("Render/Batching/Collect/Renderers");
+        for (const RenderItem& source : visibleSet.renderItems)
         {
-            Log::Error("DrawBatchBuilder skipped a draw item: the material GPU resources are invalid.");
-            continue;
-        }
+            StaticMeshRenderer* renderer = source.renderer;
+            {
+                PROFILE("Render/Batching/Collect/FilterRenderer");
+                if (!renderer || !source.mesh || !source.material) continue;
+                //drawLayer 在剔除前已经按渲染器过滤过一次，这里覆盖子网格声明的层
+                if ((source.drawLayer & camera.drawLayerMask) == 0) continue;
+                if (!source.worldBounds.valid) continue;
+                if (!IsFiniteMatrix(source.localToWorld)) continue;
+            }
+            const GpuMaterial* material;
+            {
+                PROFILE("Render/Batching/Collect/GetMaterial");
+                material = gpuResources->GetMaterial(source.material);
+            }
+            if (!material || !material->shader || material->shader->passes.empty())
+            {
+                Log::Error("DrawBatchBuilder skipped a draw item: the material GPU resources are invalid.");
+                continue;
+            }
 
-        if (staticBatches && staticBatches->ContainsRenderer(renderer->GetObjectId())) continue;
-
-        DrawItem item;
-        item.source = DrawSource::StaticMesh;
-        item.geometry = DrawGeometry::Mesh;
-        item.owner = source.ens;
-        item.sourceObjectId = renderer->GetObjectId();
-        item.elementId = 0;
-        item.subMeshIndex = source.subMeshIndex;
-        item.indexStart = source.indexStart;
-        item.indexCount = source.indexCount;
-        item.drawLayer = source.drawLayer;
-        item.mesh = source.mesh;
-        item.material = source.material;
-        item.queue = source.drawQueue;
-        item.mode = GeometryMode::Uniform;
-        item.blendMode = BlendMode::Alpha;
-        item.model = source.localToWorld;
-        item.worldBounds = source.worldBounds;
-        item.cameraDistance = source.cameraDistance;
-        item.castShadows = source.castShadows;
-        item.receiveShadows = source.receiveShadows;
-        //指定只走单绘制的渲染器始终是屏障项，前后不合并
-        item.strategy = renderer->drawStrategy;
-
-        //重排只允许单 Pass Standard、且最终状态为深度测试开、深度写开、混合关的不透明项
-        const GpuShaderPass& pass = material->shader->passes[0];
-        bool alphaBlended = item.queue != DrawQueue::Opaque;
-        bool resolvedDepthTest = pass.state.depthTest != ShaderPassToggle::Off;
-        bool resolvedDepthWrite = pass.state.depthWrite == ShaderPassToggle::On ||
-            (pass.state.depthWrite == ShaderPassToggle::Auto && !alphaBlended);
-        bool resolvedBlend = pass.state.blend == ShaderPassToggle::On ||
-            (pass.state.blend == ShaderPassToggle::Auto && alphaBlended);
-        item.reorderable = item.strategy != DrawStrategy::Individual
-            && item.queue == DrawQueue::Opaque
-            && material->shader->passes.size() == 1
-            && pass.geometryContract == ShaderGeometryContract::Standard
-            && resolvedDepthTest && resolvedDepthWrite && !resolvedBlend;
-
-        items.push_back(item);
-    }
-
-    //显式实例提交：逐实例展开，引用与内容 revision 在消费时重新验证
-    for (const InstanceSubmission& submission : submissions)
-    {
-        //Ref 是软引用，不阻止销毁，使用前必须重新解析
-        Mesh* mesh = submission.mesh.Get();
-        Material* material = submission.material.Get();
-        if (!mesh || !material)
-        {
-            Log::Error("DrawBatchBuilder skipped an instance submission: its mesh or material was destroyed.");
-            continue;
-        }
-        if (submission.world && submission.world->GetContentRevision() != submission.contentRevision) continue;
-        //指定相机的提交只参与该相机；空句柄表示参与全部相机
-        if (!submission.options.camera.IsNull() && submission.options.camera != camera.ens) continue;
-        if ((submission.options.drawLayer & camera.drawLayerMask) == 0) continue;
-        if (submission.subMeshIndex >= mesh->subMeshes.size()) continue;
-
-        const GpuMaterial* gpuMaterial = gpuResources->GetMaterial(material);
-        if (!gpuMaterial || !gpuMaterial->shader || gpuMaterial->shader->passes.size() != 1) continue;
-
-        const SubMesh& subMesh = mesh->subMeshes[submission.subMeshIndex];
-        usize start = static_cast<usize>(subMesh.indexStart);
-        usize count = static_cast<usize>(subMesh.indexCount);
-        if (count == 0 || start > mesh->indices.size() || count > mesh->indices.size() - start) continue;
-
-        const bounds3& localBounds = mesh->GetLocalBounds();
-        DrawQueue queue = material->GetDrawQueue();
-        for (usize index = 0; index < submission.instances.size(); ++index)
-        {
-            const MeshInstanceData& instance = submission.instances[index];
-            matrix4x4 model = RenderMath::TRS(instance.position, instance.rotation, instance.scale);
-            if (!IsFiniteMatrix(model)) continue;
+            if (staticBatches)
+            {
+                PROFILE("Render/Batching/Collect/StaticMembership");
+                if (staticBatches->ContainsRenderer(renderer->GetObjectId())) continue;
+            }
 
             DrawItem item;
-            item.source = DrawSource::ExplicitInstance;
-            item.geometry = DrawGeometry::Mesh;
-            item.sourceObjectId = submission.sourceObjectId;
-            //提交序号在高 32 位、实例序号在低 32 位，跨帧可稳定排序
-            item.elementId = (submission.submissionId << 32) | static_cast<uint64>(index);
-            item.subMeshIndex = submission.subMeshIndex;
-            item.indexStart = subMesh.indexStart;
-            item.indexCount = subMesh.indexCount;
-            item.drawLayer = submission.options.drawLayer;
-            item.mesh = mesh;
-            item.material = material;
-            item.queue = queue;
-            //显式提交即使只有一个实例也走实例绘制，不悄悄改成普通绘制
-            item.mode = GeometryMode::Instanced;
-            item.blendMode = BlendMode::Alpha;
-            item.model = model;
-            item.worldBounds = localBounds.valid ? RenderMath::TransformBounds(model, localBounds) : bounds3();
-            if (item.worldBounds.valid && !RenderMath::Intersects(camera.viewFrustum, item.worldBounds)) continue;
-            //距离度量与剔除保持一致：相机到对象位置的距离平方
-            vector3 center = item.worldBounds.valid ? item.worldBounds.center : instance.position;
-            vector3 toItem = { center.x - camera.position.x, center.y - camera.position.y, center.z - camera.position.z };
-            item.cameraDistance = RenderMath::Dot(toItem, toItem);
-            //输入的 tint 是 sRGB，Alpha 原样；管线内统一用线性值
-            item.linearTint = ColorSpace::SrgbToLinear(instance.tint);
-            item.linearTint.a = instance.tint.a;
-            item.uvRect = instance.uvRect;
-            item.castShadows = submission.options.castShadows;
-            item.receiveShadows = submission.options.receiveShadows;
-            item.strategy = DrawStrategy::Auto;
-            items.push_back(item);
+            {
+                PROFILE("Render/Batching/Collect/BuildItem");
+                item.source = DrawSource::StaticMesh;
+                item.geometry = DrawGeometry::Mesh;
+                item.owner = source.ens;
+                item.sourceObjectId = renderer->GetObjectId();
+                item.elementId = 0;
+                item.subMeshIndex = source.subMeshIndex;
+                item.indexStart = source.indexStart;
+                item.indexCount = source.indexCount;
+                item.drawLayer = source.drawLayer;
+                item.mesh = source.mesh;
+                item.material = source.material;
+                item.queue = source.drawQueue;
+                item.mode = GeometryMode::Uniform;
+                item.blendMode = BlendMode::Alpha;
+                item.model = source.localToWorld;
+                item.drawParameters = renderer->drawParameters;
+                item.hasDrawParameters = renderer->hasDrawParameters;
+                item.worldBounds = source.worldBounds;
+                item.cameraDistance = source.cameraDistance;
+                item.castShadows = source.castShadows;
+                item.receiveShadows = source.receiveShadows;
+                //指定只走单绘制的渲染器始终是屏障项，前后不合并
+                item.strategy = renderer->drawStrategy;
+            }
+            //重排只允许单 Pass Standard、且最终状态为深度测试开、深度写开、混合关的不透明项
+            {
+                PROFILE("Render/Batching/Collect/ResolveState");
+                const GpuShaderPass& pass = material->shader->passes[0];
+                bool alphaBlended = item.queue != DrawQueue::Opaque;
+                bool resolvedDepthTest = pass.state.depthTest != ShaderPassToggle::Off;
+                bool resolvedDepthWrite = pass.state.depthWrite == ShaderPassToggle::On ||
+                    (pass.state.depthWrite == ShaderPassToggle::Auto && !alphaBlended);
+                bool resolvedBlend = pass.state.blend == ShaderPassToggle::On ||
+                    (pass.state.blend == ShaderPassToggle::Auto && alphaBlended);
+                item.reorderable = item.strategy != DrawStrategy::Individual
+                    && item.queue == DrawQueue::Opaque
+                    && material->shader->passes.size() == 1
+                    && pass.geometryContract == ShaderGeometryContract::Standard
+                    && resolvedDepthTest && resolvedDepthWrite && !resolvedBlend;
+            }
+            {
+                PROFILE("Render/Batching/Collect/AppendItem");
+                items.push_back(item);
+            }
         }
     }
+    //显式实例提交：逐实例展开，引用与内容 revision 在消费时重新验证
+    {
+        PROFILE("Render/Batching/Collect/ExplicitInstances");
+        for (const InstanceSubmission& submission : submissions)
+        {
+            //Ref 是软引用，不阻止销毁，使用前必须重新解析
+            Mesh* mesh = submission.mesh.Get();
+            Material* material = submission.material.Get();
+            if (!mesh || !material)
+            {
+                Log::Error("DrawBatchBuilder skipped an instance submission: its mesh or material was destroyed.");
+                continue;
+            }
+            if (submission.world && submission.world->GetContentRevision() != submission.contentRevision) continue;
+            //指定相机的提交只参与该相机；空句柄表示参与全部相机
+            if (!submission.options.camera.IsNull() && submission.options.camera != camera.ens) continue;
+            if ((submission.options.drawLayer & camera.drawLayerMask) == 0) continue;
+            if (submission.subMeshIndex >= mesh->subMeshes.size()) continue;
 
+            const GpuMaterial* gpuMaterial;
+            {
+                PROFILE("Render/Batching/Collect/InstanceMaterial");
+                gpuMaterial = gpuResources->GetMaterial(material);
+            }
+            if (!gpuMaterial || !gpuMaterial->shader || gpuMaterial->shader->passes.size() != 1) continue;
+
+            const SubMesh& subMesh = mesh->subMeshes[submission.subMeshIndex];
+            usize start = static_cast<usize>(subMesh.indexStart);
+            usize count = static_cast<usize>(subMesh.indexCount);
+            if (count == 0 || start > mesh->indices.size() || count > mesh->indices.size() - start) continue;
+
+            const bounds3& localBounds = mesh->GetLocalBounds();
+            DrawQueue queue = material->GetDrawQueue();
+            {
+                PROFILE("Render/Batching/Collect/ExpandInstances");
+                for (usize index = 0; index < submission.instances.size(); ++index)
+                {
+                    const MeshInstanceData& instance = submission.instances[index];
+                    matrix4x4 model = RenderMath::TRS(instance.position, instance.rotation, instance.scale);
+                    if (!IsFiniteMatrix(model)) continue;
+
+                    DrawItem item;
+                    item.source = DrawSource::ExplicitInstance;
+                    item.geometry = DrawGeometry::Mesh;
+                    item.sourceObjectId = submission.sourceObjectId;
+                    //提交序号在高 32 位、实例序号在低 32 位，跨帧可稳定排序
+                    item.elementId = (submission.submissionId << 32) | static_cast<uint64>(index);
+                    item.subMeshIndex = submission.subMeshIndex;
+                    item.indexStart = subMesh.indexStart;
+                    item.indexCount = subMesh.indexCount;
+                    item.drawLayer = submission.options.drawLayer;
+                    item.mesh = mesh;
+                    item.material = material;
+                    item.queue = queue;
+                    //显式提交即使只有一个实例也走实例绘制，不悄悄改成普通绘制
+                    item.mode = GeometryMode::Instanced;
+                    item.blendMode = BlendMode::Alpha;
+                    item.model = model;
+                    item.worldBounds = localBounds.valid ? RenderMath::TransformBounds(model, localBounds) : bounds3();
+                    if (item.worldBounds.valid && !RenderMath::Intersects(camera.viewFrustum, item.worldBounds)) continue;
+                    //距离度量与剔除保持一致：相机到对象位置的距离平方
+                    vector3 center = item.worldBounds.valid ? item.worldBounds.center : instance.position;
+                    vector3 toItem = { center.x - camera.position.x, center.y - camera.position.y, center.z - camera.position.z };
+                    item.cameraDistance = RenderMath::Dot(toItem, toItem);
+                    //输入的 tint 是 sRGB，Alpha 原样；管线内统一用线性值
+                    item.linearTint = ColorSpace::SrgbToLinear(instance.tint);
+                    item.linearTint.a = instance.tint.a;
+                    item.uvRect = instance.uvRect;
+                    item.castShadows = submission.options.castShadows;
+                    item.receiveShadows = submission.options.receiveShadows;
+                    item.strategy = DrawStrategy::Auto;
+                    items.push_back(item);
+                }
+            }
+        }
+    }
     //持久静态批按本相机的视锥裁剪成员，索引区间直接指向缓存组
-    if (staticBatches) staticBatches->AppendVisibleItems(camera.viewFrustum, camera.drawLayerMask, items);
+    if (staticBatches)
+    {
+        PROFILE("Render/Batching/Collect/StaticBatches");
+        staticBatches->AppendVisibleItems(camera.viewFrustum, camera.drawLayerMask, items);
+    }
 
     //粒子与拖尾由渲染器按相机追加，builder 不重复实现 Billboard 与拖尾的几何
     if (particleRenderer && !particles.IsEmpty())
     {
+        PROFILE("Render/Batching/Collect/Particles");
         particleRenderer->AppendCameraItems(particles, camera, items);
     }
 }
@@ -770,9 +808,10 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
         while (cursor < end)
         {
             usize chunkEnd = end;
-            if (mode == GeometryMode::Instanced && chunkEnd - cursor > MaximumBatchInstances)
+            uint32 instanceLimit = first.hasDrawParameters && !depthShader ? MaximumDrawParameterInstances : MaximumBatchInstances;
+            if (mode == GeometryMode::Instanced && chunkEnd - cursor > instanceLimit)
             {
-                chunkEnd = cursor + MaximumBatchInstances;
+                chunkEnd = cursor + instanceLimit;
             }
 
             DrawBatch batch;

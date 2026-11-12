@@ -23,6 +23,7 @@ internal unsafe struct OrbedenEngineNativeApi
     public FileSystemBindApi FileSystem;
     public AsyncOperationBindApi AsyncOperations;
     public InputBindApi Input;
+    public ProfilerBindApi Profiler;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -49,6 +50,7 @@ internal unsafe struct OrbedenNativeApi
     public NativeTypedFieldsApi* TypedFields;
     public AsyncOperationBindApi AsyncOperations;
     public InputBindApi Input;
+    public ProfilerBindApi Profiler;
 }
 #pragma warning restore CS0649
 
@@ -77,7 +79,7 @@ public static unsafe class OrbedenCoreRuntime
             return;
         }
 
-        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi), 15);
+        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi), 16);
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
         RetainedGuiApi = api.GetRetainedGuiApi;
         //原生表已就位，UI 才能接入并登记帧系统；早于世界附着。
@@ -104,6 +106,7 @@ public static unsafe class OrbedenCoreRuntime
             PathDefines.InitializeNativeApi(default);
             FileSystem.InitializeNativeApi(default);
             Input.InitializeNativeApi(default);
+            ProfileScope.InitializeNativeApi(default);
             Ens.InitializeEnsNativeApi(default);
             Object.InitializeNativeApi(default, default);
             NativeBindingRuntime.Initialize(default(NativeBindingsApi));
@@ -128,6 +131,7 @@ public static unsafe class OrbedenCoreRuntime
         PathDefines.InitializeNativeApi(api.PathDefines);
         FileSystem.InitializeNativeApi(api.FileSystem);
         Input.InitializeNativeApi(api.Input);
+        ProfileScope.InitializeNativeApi(api.Profiler);
         Ens.InitializeEnsNativeApi(api.Ens);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
         NativeBindingRuntime.Initialize(api.Bindings);
@@ -143,6 +147,7 @@ public static unsafe class OrbedenCoreRuntime
         PathDefines.InitializeNativeApi(api.PathDefines);
         FileSystem.InitializeNativeApi(api.FileSystem);
         Input.InitializeNativeApi(api.Input);
+        ProfileScope.InitializeNativeApi(api.Profiler);
         Ens.InitializeEnsNativeApi(api.Ens);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
         NativeBindingRuntime.Initialize(api.Bindings);
@@ -150,7 +155,7 @@ public static unsafe class OrbedenCoreRuntime
     }
 
     /// <summary>读取函数表前拒绝旧 ABI 或不同尺寸的引擎模块。</summary>
-    private static void ValidateNativeApiHeader(IntPtr pointer, int expectedSize, uint expectedVersion = 9)
+    private static void ValidateNativeApiHeader(IntPtr pointer, int expectedSize, uint expectedVersion = 10)
     {
         uint* header = (uint*)pointer;
         if (header[0] != expectedVersion || header[1] != expectedSize)
@@ -175,6 +180,11 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<PathDefinesBindApi>(nameof(PathDefinesBindApi), 2);
         ValidateFunctionTable<FileSystemBindApi>(nameof(FileSystemBindApi), 1);
         ValidateFunctionTable<InputBindApi>(nameof(InputBindApi), 6);
+        ValidateFunctionTable<ProfilerBindApi>(nameof(ProfilerBindApi), 2);
+        ValidateSize<ProfileScope>(nameof(ProfileScope), 16);
+        if (Marshal.OffsetOf<ProfileScope>(nameof(ProfileScope.Sample)).ToInt32() != 0
+            || Marshal.OffsetOf<ProfileScope>(nameof(ProfileScope.StartedAtNanoseconds)).ToInt32() != 8)
+            throw new TypeLoadException("Core profiler scope ABI layout mismatch.");
         ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 16);
         ValidateFunctionTable<ObjectBindApi>(nameof(ObjectBindApi), 7);
         ValidateFunctionTable<AsyncOperationBindApi>(nameof(AsyncOperationBindApi), 1);
@@ -190,8 +200,11 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 14);
         ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 17);
-        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 86 * IntPtr.Size);
-        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 129 * IntPtr.Size);
+        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 88 * IntPtr.Size);
+        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 131 * IntPtr.Size);
+        if (Marshal.OffsetOf<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi.Profiler)).ToInt32() != 8 + 86 * IntPtr.Size
+            || Marshal.OffsetOf<OrbedenNativeApi>(nameof(OrbedenNativeApi.Profiler)).ToInt32() != 8 + 129 * IntPtr.Size)
+            throw new TypeLoadException("Core profiler function table ABI layout mismatch.");
 
         nativeAbiValidated = true;
     }
