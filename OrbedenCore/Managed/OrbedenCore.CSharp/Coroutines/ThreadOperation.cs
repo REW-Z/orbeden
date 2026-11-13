@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Orbeden;
 
@@ -13,12 +14,12 @@ internal unsafe struct AsyncOperationBindApi
 }
 #pragma warning restore CS0649
 
-/// <summary>立即启动独立线程执行函数的协程等待项</summary>
+/// <summary>在线程池中执行函数的协程等待项</summary>
 public sealed class ThreadOperation : CoOperation
 {
     private sealed class State
     {
-        internal Thread thread = null!;
+        internal Task task = null!;
         internal Action? function;
         internal int finished;
         internal string error = string.Empty;
@@ -29,25 +30,11 @@ public sealed class ThreadOperation : CoOperation
     private static bool stopping;
     private readonly State state;
 
-    /// <summary>启动一条独立线程执行指定函数</summary>
+    /// <summary>将指定函数提交到线程池</summary>
     public ThreadOperation(Action function)
     {
         ArgumentNullException.ThrowIfNull(function);
         state = new() { function = function };
-        state.thread = new Thread(() =>
-        {
-            try
-            {
-                state.function!();
-            }
-            catch (Exception exception)
-            {
-                state.error = exception.ToString();
-            }
-            state.function = null;
-            Volatile.Write(ref state.finished, 1);
-            NativeBindingRuntime.WakeMainThread();
-        }) { IsBackground = true, Name = "Orbeden function" };
 
         lock (gate)
         {
@@ -58,7 +45,20 @@ public sealed class ThreadOperation : CoOperation
             active.Add(state);
             try
             {
-                state.thread.Start();
+                state.task = Task.Run(() =>
+                {
+                    try
+                    {
+                        state.function!();
+                    }
+                    catch (Exception exception)
+                    {
+                        state.error = exception.ToString();
+                    }
+                    state.function = null;
+                    Volatile.Write(ref state.finished, 1);
+                    NativeBindingRuntime.WakeMainThread();
+                });
             }
             catch
             {
@@ -80,38 +80,16 @@ public sealed class ThreadOperation : CoOperation
     /// <summary>等待后台函数结束</summary>
     public override bool ShouldWait(double elapsedSeconds) => !IsFinished;
 
-    //回收已经结束的线程
+    //释放已经结束的任务状态
     internal static void ProcessFinished()
     {
         lock (gate)
         {
-            if (active.Count == 0)
-            {
-                return;
-            }
-        }
-        List<State> finished = [];
-        lock (gate)
-        {
-            foreach (State state in active)
-            {
-                if (Volatile.Read(ref state.finished) != 0)
-                {
-                    finished.Add(state);
-                }
-            }
-            foreach (State state in finished)
-            {
-                active.Remove(state);
-            }
-        }
-        foreach (State state in finished)
-        {
-            state.thread.Join();
+            active.RemoveAll(static state => state.task.IsCompleted);
         }
     }
 
-    //等待并回收全部线程
+    //等待全部后台任务
     internal static void WaitAll()
     {
         State[] pending;
@@ -123,7 +101,7 @@ public sealed class ThreadOperation : CoOperation
         }
         foreach (State state in pending)
         {
-            state.thread.Join();
+            state.task.GetAwaiter().GetResult();
         }
         lock (gate)
         {

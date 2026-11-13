@@ -97,6 +97,9 @@ public:
     //后台烘焙当前网格快照
     bool PrepareMeshAsync();
 
+    //丢弃当前烘焙结果并取消排队任务
+    void DiscardPreparedMesh();
+
     //提交后台结果，返回等待、成功或失败
     int32 ApplyPreparedMesh();
 

@@ -4831,6 +4831,20 @@
           ]
         },
         {
+          "Name": "DiscardPreparedMesh",
+          "Doc": "\u4E22\u5F03\u5F53\u524D\u70D8\u7119\u7ED3\u679C\u5E76\u53D6\u6D88\u6392\u961F\u4EFB\u52A1",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
           "Name": "GetGeometryType",
           "Doc": "",
           "IsMethod": true,

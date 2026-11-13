@@ -311,6 +311,14 @@ World::World()
 //销毁世界及其运行时对象
 World::~World()
 {
+    List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+    for (IWorldLifecycleListener* listener : listeners)
+    {
+        if (listener)
+        {
+            listener->OnWorldDestroyed();
+        }
+    }
     Object::UnregisterWorld(this);
     Clear();
 
@@ -543,6 +551,7 @@ bool World::DestroyEns(EnsId ens)
         Transform* childTransform = GetTransform(child);
         EnsId nextChild = childTransform ? childTransform->next : EnsId();
         UnlinkEns(child);
+        NotifyEnsReparented(child, EnsId());
         NotifyTransformChanged(child);
         RefreshEnsWorldActive(child);
         RefreshEnsEditorSelectable(child);
@@ -1023,6 +1032,14 @@ Component* World::AddComponentInstance(EnsId ens, Type* type, const std::string&
     SetDirty();
     if (!preparing)
     {
+        List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+        for (IWorldLifecycleListener* listener : listeners)
+        {
+            if (listener)
+            {
+                listener->OnComponentAdded(*component);
+            }
+        }
         component->OnAttach();
     }
     return component;
@@ -1086,6 +1103,17 @@ bool World::RemoveComponent(Component* component)
 
     Ens* storedEns = GetEns(ens);
     if (storedEns) storedEns->RemoveComponentInstance(component);
+    if (!preparing)
+    {
+        List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+        for (IWorldLifecycleListener* listener : listeners)
+        {
+            if (listener)
+            {
+                listener->OnComponentRemoved(*component);
+            }
+        }
+    }
     component->SetEnsId(EnsId());
     component->SetWorld(nullptr);
     component->SetOwnership(Object::Ownership::None);

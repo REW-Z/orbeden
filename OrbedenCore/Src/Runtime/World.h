@@ -300,7 +300,7 @@ public:
     }
 };
 
-//接收 World 中与脚本调度有关的低频 Ens 生命周期事件。
+//接收 World 的节点、组件和销毁事件
 class IWorldLifecycleListener
 {
 public:
@@ -317,4 +317,13 @@ public:
 
     //Ens 即将完成销毁，额外组件已经卸载。
     virtual void OnEnsDestroyed(EnsId ens) { (void)ens; }
+
+    //组件已经进入世界索引，尚未执行挂载回调
+    virtual void OnComponentAdded(Component& component) { (void)component; }
+
+    //组件已经离开世界索引，仍保留所属节点与世界
+    virtual void OnComponentRemoved(Component& component) { (void)component; }
+
+    //世界即将销毁
+    virtual void OnWorldDestroyed() {}
 };

@@ -49,6 +49,7 @@ ColliderGeometryType TriangleMeshCollider::GetGeometryType() const
 //卸载时释放三角网格软引用。
 void TriangleMeshCollider::OnDetach()
 {
+    DiscardPreparedMesh();
     mesh.SetInstanceId(StringId());
 }
 
@@ -85,6 +86,19 @@ bool TriangleMeshCollider::PrepareMeshAsync()
         bytes->assign(output.getData(), output.getData() + output.getSize());
     });
     return true;
+}
+
+//丢弃当前烘焙结果并取消排队任务
+void TriangleMeshCollider::DiscardPreparedMesh()
+{
+    if (cooking)
+    {
+        cooking->Cancel();
+    }
+    cooking.reset();
+    cookedBytes.reset();
+    cookingVersion = 0;
+    cookingMeshId = 0;
 }
 
 //提交后台结果，返回等待、成功或失败

@@ -1,6 +1,7 @@
 #include <functional>
 #include "Physics/PhysicsSystem.h"
 #include "Runtime/LayerSettings.h"
+#include "Runtime/World.h"
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
@@ -30,7 +31,6 @@
 #include <cmath>
 #include <memory>
 #include <thread>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -260,7 +260,7 @@ namespace
     };
 }
 
-class PhysicsSystem::Impl : private IObjectDestroyListener
+class PhysicsSystem::Impl : private IObjectDestroyListener, private IWorldLifecycleListener
 {
 public:
     enum class BindingKind : uint32
@@ -309,6 +309,21 @@ public:
         Ens* ens = nullptr;
         RigidBody* body = nullptr;
         List<std::pair<Collider*, uint64>> colliders;
+    };
+
+    //登记物理节点及其层级依赖
+    struct PhysicsNode
+    {
+        Ens* ens = nullptr;
+        RigidBody* body = nullptr;
+        HeightField* heightField = nullptr;
+        List<Collider*> colliders;
+        uint32 wheelCount = 0;
+        RigidBody* attachedBody = nullptr;
+        List<EnsId> ancestors;
+        uint32 bodyDepth = 0;
+        uint64 transformRevision = 0;
+        uint64 poseHash = 0;
     };
 
     struct HeightFieldRecord
@@ -427,7 +442,10 @@ public:
     std::unordered_map<uint64, std::unique_ptr<BodyRecord>> bodies;
     std::unordered_map<uint64, BodyInput> bodyInputs;
     std::unordered_map<uint64, EnsId> attachedBodies;
-    List<std::tuple<EnsId, RigidBody*, uint64>> bodyTraversal;
+    std::unordered_map<uint64, PhysicsNode> physicsNodes;
+    std::unordered_map<uint64, std::unordered_set<uint64>> physicsDependents;
+    std::unordered_set<uint64> dirtyOwnership;
+    uint64 worldContentRevision = 0;
     //已经报过「static 被物理驱动」的 Ens，按对象去重
     std::unordered_set<uint64> reportedStaticDrives;
     std::unordered_map<uint64, std::unique_ptr<HeightFieldRecord>> heightFields;
@@ -555,13 +573,20 @@ public:
 
     void ResetWorld()
     {
+        if (world)
+        {
+            world->RemoveLifecycleListener(this);
+        }
         for (auto& entry : controllers) DestroyController(*entry.second);
         controllers.clear();
         for (auto& entry : bodies) DestroyBody(*entry.second);
         bodies.clear();
         bodyInputs.clear();
         attachedBodies.clear();
-        bodyTraversal.clear();
+        physicsNodes.clear();
+        physicsDependents.clear();
+        dirtyOwnership.clear();
+        worldContentRevision = 0;
         for (auto& entry : heightFields) DestroyHeightField(*entry.second);
         heightFields.clear();
         for (auto& entry : convexMeshes) entry.second->release();
@@ -666,6 +691,7 @@ public:
         else if (Mesh* mesh = GetColliderMesh(collider))
         {
             hash = MixHash(hash, mesh->GetInstanceId().GetHash());
+            hash = MixHash(hash, mesh->GetContentVersion());
         }
         return hash;
     }
@@ -1321,8 +1347,208 @@ public:
         record.lastPoseValid = true;
     }
 
-    //按最近刚体归属收集形状并同步复合刚体
-    void SyncBodies(World& currentWorld, bool queryOnly = false)
+    //标记受指定层级节点影响的刚体归属
+    void InvalidateBodyOwnership(EnsId ens)
+    {
+        uint64 key = EnsKey(ens);
+        auto found = physicsDependents.find(key);
+        if (found != physicsDependents.end())
+        {
+            dirtyOwnership.insert(found->second.begin(), found->second.end());
+        }
+        if (physicsNodes.contains(key))
+        {
+            dirtyOwnership.insert(key);
+        }
+    }
+
+    //移除节点的旧层级依赖
+    void RemovePhysicsDependencies(uint64 key, PhysicsNode& node)
+    {
+        for (EnsId ancestor : node.ancestors)
+        {
+            auto found = physicsDependents.find(EnsKey(ancestor));
+            found->second.erase(key);
+            if (found->second.empty())
+            {
+                physicsDependents.erase(found);
+            }
+        }
+        node.ancestors.clear();
+    }
+
+    //登记新挂载的物理组件
+    void OnComponentAdded(Component& component) override
+    {
+        RigidBody* body = component.GetType() == RigidBody::StaticType() ? static_cast<RigidBody*>(&component) : nullptr;
+        Collider* collider = component.Cast<Collider>();
+        HeightField* heightField = component.Cast<HeightField>();
+        bool wheel = component.Is(WheelCollider::StaticType());
+        if (!body && !collider && !heightField && !wheel)
+        {
+            return;
+        }
+
+        uint64 key = EnsKey(component.GetEnsId());
+        PhysicsNode& node = physicsNodes[key];
+        node.ens = component.GetEns();
+        if (body)
+        {
+            node.body = body;
+        }
+        if (collider)
+        {
+            node.colliders.push_back(collider);
+        }
+        if (heightField && !node.heightField)
+        {
+            node.heightField = heightField;
+        }
+        if (wheel)
+        {
+            ++node.wheelCount;
+        }
+        dirtyOwnership.insert(key);
+        if (body)
+        {
+            InvalidateBodyOwnership(component.GetEnsId());
+        }
+    }
+
+    //摘除已卸载的物理组件
+    void OnComponentRemoved(Component& component) override
+    {
+        uint64 key = EnsKey(component.GetEnsId());
+        auto found = physicsNodes.find(key);
+        if (found == physicsNodes.end())
+        {
+            return;
+        }
+
+        PhysicsNode& node = found->second;
+        if (node.body == &component)
+        {
+            node.body = nullptr;
+            InvalidateBodyOwnership(component.GetEnsId());
+        }
+        if (node.heightField == &component)
+        {
+            node.heightField = node.ens->GetComponent<HeightField>();
+        }
+        if (component.Is(WheelCollider::StaticType()))
+        {
+            --node.wheelCount;
+        }
+        node.colliders.erase(std::remove(node.colliders.begin(), node.colliders.end(), &component), node.colliders.end());
+        if (!node.body && !node.heightField && node.colliders.empty() && node.wheelCount == 0)
+        {
+            RemovePhysicsDependencies(key, node);
+            dirtyOwnership.erase(key);
+            attachedBodies.erase(key);
+            physicsNodes.erase(found);
+        }
+    }
+
+    //标记移动子树中的物理节点
+    void OnEnsReparented(EnsId ens, EnsId parent) override
+    {
+        (void)parent;
+        InvalidateBodyOwnership(ens);
+    }
+
+    //解除即将销毁的世界绑定
+    void OnWorldDestroyed() override
+    {
+        ResetWorld();
+    }
+
+    //绑定世界并首次登记物理组件
+    void BindWorld(World& currentWorld)
+    {
+        if (world == &currentWorld && worldContentRevision == currentWorld.GetContentRevision())
+        {
+            return;
+        }
+
+        PROFILE("Physics/Bodies/RegisterComponents");
+        if (world)
+        {
+            ResetWorld();
+        }
+        world = &currentWorld;
+        worldContentRevision = currentWorld.GetContentRevision();
+        currentWorld.AddLifecycleListener(this);
+        currentWorld.ForEachEns([&](Ens& ens)
+        {
+            for (Component* component : ens.GetComponents())
+            {
+                OnComponentAdded(*component);
+            }
+        });
+    }
+
+    //仅重建失效节点的归属与层级依赖
+    void RefreshBodyOwnership()
+    {
+        for (uint64 key : dirtyOwnership)
+        {
+            PhysicsNode& node = physicsNodes.at(key);
+            RemovePhysicsDependencies(key, node);
+            node.attachedBody = nullptr;
+            node.bodyDepth = 0;
+            node.transformRevision = 0;
+            for (Ens* ancestor = node.ens; ancestor; ancestor = world->GetParent(ancestor->GetId()))
+            {
+                if (!node.attachedBody)
+                {
+                    node.attachedBody = ancestor->GetComponent<RigidBody>();
+                    node.bodyDepth = static_cast<uint32>(node.ancestors.size());
+                }
+                node.ancestors.push_back(ancestor->GetId());
+                physicsDependents[EnsKey(ancestor->GetId())].insert(key);
+            }
+            attachedBodies[key] = node.attachedBody ? node.attachedBody->GetEnsId() : EnsId();
+        }
+        dirtyOwnership.clear();
+    }
+
+    //缓存碰撞节点到刚体之间的局部变换哈希
+    uint64 GetColliderPoseHash(PhysicsNode& node, Transform& transform)
+    {
+        uint64 revision = transform.GetWorldTransformRevision();
+        if (node.transformRevision == revision)
+        {
+            return node.poseHash;
+        }
+
+        node.transformRevision = revision;
+        node.poseHash = 0;
+        if (!node.attachedBody)
+        {
+            return 0;
+        }
+        Transform& bodyTransform = *node.attachedBody->GetEns()->Transform();
+        if (!bodyTransform.parent.IsNull())
+        {
+            return 0;
+        }
+
+        uint64 hash = MixVector(0xCBF29CE484222325ull, bodyTransform.GetLocalScale());
+        for (uint32 depth = node.bodyDepth; depth > 0; --depth)
+        {
+            Transform& local = *world->GetTransform(node.ancestors[depth - 1]);
+            hash = MixVector(hash, local.GetResolvedLocalPosition());
+            const quaternion& rotation = local.GetLocalRotation();
+            hash = MixVector(hash, { rotation.x, rotation.y, rotation.z });
+            hash = MixFloat(hash, rotation.w);
+            hash = MixVector(hash, local.GetLocalScale());
+        }
+        node.poseHash = hash;
+        return hash;
+    }
+
+    //按登记的物理组件同步复合刚体
+    void SyncBodies(bool queryOnly = false)
     {
         for (auto& entry : bodyInputs)
         {
@@ -1330,75 +1556,52 @@ public:
             entry.second.body = nullptr;
             entry.second.colliders.clear();
         }
-        attachedBodies.clear();
         std::unordered_set<uint64> heightFieldSeen;
         std::unordered_set<Mesh*> dirtyMeshes;
-        bodyTraversal.clear();
         {
-            PROFILE("Physics/Bodies/CollectHierarchy");
-            currentWorld.ForEachEns([&](Ens& ens)
+            PROFILE("Physics/Bodies/RefreshOwnership");
+            RefreshBodyOwnership();
+        }
+        {
+            PROFILE("Physics/Bodies/CollectComponents");
+            for (auto& entry : physicsNodes)
             {
-                if (!ens.Transform()->parent.IsNull()) return;
-                bodyTraversal.emplace_back(ens.GetId(), nullptr, 0);
-            });
-            std::reverse(bodyTraversal.begin(), bodyTraversal.end());
-            while (!bodyTraversal.empty())
-            {
-                auto [id, inheritedBody, inheritedPoseHash] = bodyTraversal.back();
-                bodyTraversal.pop_back();
-                Ens& ens = *currentWorld.GetEns(id);
+                PhysicsNode& node = entry.second;
+                Ens& ens = *node.ens;
+                if (!ens.GetWorldActive())
+                {
+                    continue;
+                }
                 Transform& transform = *ens.Transform();
-                RigidBody* ownBody = ens.GetComponent<RigidBody>();
-                RigidBody* attachedBody = ownBody ? ownBody : inheritedBody;
-                uint64 poseHash = inheritedPoseHash;
-                if (ownBody)
-                {
-                    poseHash = transform.parent.IsNull() ? MixVector(0xCBF29CE484222325ull, transform.GetLocalScale()) : 0;
-                }
-                else if (attachedBody && poseHash != 0)
-                {
-                    poseHash = MixVector(poseHash, transform.GetResolvedLocalPosition());
-                    const quaternion& rotation = transform.GetLocalRotation();
-                    poseHash = MixVector(poseHash, { rotation.x, rotation.y, rotation.z });
-                    poseHash = MixFloat(poseHash, rotation.w);
-                    poseHash = MixVector(poseHash, transform.GetLocalScale());
-                }
-                if (ownBody)
-                {
-                    attachedBodies[EnsKey(id)] = id;
-                }
-                for (EnsId child = transform.lastChild; !child.IsNull(); child = currentWorld.GetTransform(child)->prev)
-                {
-                    bodyTraversal.emplace_back(child, attachedBody, poseHash);
-                }
-                if (!ens.GetWorldActive()) continue;
+                RigidBody* ownBody = node.body;
+                RigidBody* attachedBody = node.attachedBody;
 
-                //保留独立高度场的静态体同步
-                HeightField* heightField = ens.GetComponent<HeightField>();
+                //同步独立高度场
+                HeightField* heightField = node.heightField;
                 if (heightField && heightField->enabled && (!ownBody || (ownBody->enabled && ownBody->bodyType == PhysicsBodyType::Static)))
                 {
-                    uint64 key = EnsKey(id);
-                    heightFieldSeen.insert(key);
-                    SyncHeightField(*heightField, transform, key, ens.GetLayerMask(), LayerSettings::GetCollisionMask(ens.GetLayer()));
+                    heightFieldSeen.insert(entry.first);
+                    SyncHeightField(*heightField, transform, entry.first, ens.GetLayerMask(), LayerSettings::GetCollisionMask(ens.GetLayer()));
                 }
-                if (attachedBody && (!attachedBody->enabled || !attachedBody->GetEns()->GetWorldActive())) continue;
+                if (attachedBody && (!attachedBody->enabled || !attachedBody->GetEns()->GetWorldActive()))
+                {
+                    continue;
+                }
 
-                //刚体节点即使没有普通 Collider 也持有 Actor
+                //收集刚体与独立静态形状
                 if (ownBody)
                 {
-                    BodyInput& input = bodyInputs[EnsKey(id)];
+                    BodyInput& input = bodyInputs[entry.first];
                     input.ens = &ens;
                     input.body = ownBody;
                 }
-                for (Component* component : ens.GetComponents())
+                uint64 poseHash = node.colliders.empty() ? 0 : GetColliderPoseHash(node, transform);
+                for (Collider* collider : node.colliders)
                 {
-                    if (component && component->Is(WheelCollider::StaticType()))
+                    if (!collider->enabled)
                     {
-                        attachedBodies[EnsKey(id)] = attachedBody ? attachedBody->GetEnsId() : EnsId();
+                        continue;
                     }
-                    Collider* collider = component ? component->Cast<Collider>() : nullptr;
-                    if (!collider || !collider->enabled) continue;
-                    attachedBodies[EnsKey(id)] = attachedBody ? attachedBody->GetEnsId() : EnsId();
                     Ens* owner = attachedBody ? attachedBody->GetEns() : &ens;
                     BodyInput& input = bodyInputs[EnsKey(owner->GetId())];
                     input.ens = owner;
@@ -1691,9 +1894,9 @@ public:
     void SynchronizeQueries(World& currentWorld)
     {
         if (!Initialize()) return;
-        world = &currentWorld;
+        BindWorld(currentWorld);
         LayerSettings::Refresh();
-        SyncBodies(currentWorld, true);
+        SyncBodies(true);
         SyncControllers(currentWorld);
         scene->flushQueryUpdates();
     }
@@ -1701,14 +1904,14 @@ public:
     void FixedUpdate(World& currentWorld, float32 deltaTime)
     {
         if (!Initialize()) return;
-        world = &currentWorld;
+        BindWorld(currentWorld);
         events.clear();
 
         {
             PROFILE("Physics/Sync");
             {
                 PROFILE("Physics/Sync/Bodies");
-                SyncBodies(currentWorld);
+                SyncBodies();
             }
             {
                 PROFILE("Physics/Sync/Controllers");

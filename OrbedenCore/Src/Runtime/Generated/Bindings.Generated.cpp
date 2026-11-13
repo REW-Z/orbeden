@@ -7330,7 +7330,18 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_0(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_1(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_1(int32 objectId)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<TriangleMeshCollider>(objectId);
+        instance->DiscardPreparedMesh();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_2(int32 objectId, uint32* result)
 {
     try
     {
@@ -7342,7 +7353,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_1(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_2(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_3(int32 objectId, uint8* result)
 {
     try
     {
@@ -7354,7 +7365,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_2(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_3(int32 objectId, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_4(int32 objectId, int32* result)
 {
     try
     {
@@ -7366,7 +7377,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_3(int32 object
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_4(int32 objectId, int32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_TriangleMeshCollider_5(int32 objectId, int32 value)
 {
     try
     {
@@ -7507,8 +7518,8 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(ConvexMeshCollider::StaticType(), 4227940251415473256ULL, { functions_ConvexMeshCollider, 3 });
     static void* functions_SphereCollider[] = { reinterpret_cast<void*>(&Call_SphereCollider_0), reinterpret_cast<void*>(&Call_SphereCollider_1), reinterpret_cast<void*>(&Call_SphereCollider_2) };
     NativeBindings::Register(SphereCollider::StaticType(), 13173887832813750021ULL, { functions_SphereCollider, 3 });
-    static void* functions_TriangleMeshCollider[] = { reinterpret_cast<void*>(&Call_TriangleMeshCollider_0), reinterpret_cast<void*>(&Call_TriangleMeshCollider_1), reinterpret_cast<void*>(&Call_TriangleMeshCollider_2), reinterpret_cast<void*>(&Call_TriangleMeshCollider_3), reinterpret_cast<void*>(&Call_TriangleMeshCollider_4) };
-    NativeBindings::Register(TriangleMeshCollider::StaticType(), 13497566024380503589ULL, { functions_TriangleMeshCollider, 5 });
+    static void* functions_TriangleMeshCollider[] = { reinterpret_cast<void*>(&Call_TriangleMeshCollider_0), reinterpret_cast<void*>(&Call_TriangleMeshCollider_1), reinterpret_cast<void*>(&Call_TriangleMeshCollider_2), reinterpret_cast<void*>(&Call_TriangleMeshCollider_3), reinterpret_cast<void*>(&Call_TriangleMeshCollider_4), reinterpret_cast<void*>(&Call_TriangleMeshCollider_5) };
+    NativeBindings::Register(TriangleMeshCollider::StaticType(), 18386403692128320197ULL, { functions_TriangleMeshCollider, 6 });
     static void* functions_ResourceLoadOperation[] = { reinterpret_cast<void*>(&Call_ResourceLoadOperation_0), reinterpret_cast<void*>(&Call_ResourceLoadOperation_1), reinterpret_cast<void*>(&Call_ResourceLoadOperation_2), reinterpret_cast<void*>(&Call_ResourceLoadOperation_3), reinterpret_cast<void*>(&Call_ResourceLoadOperation_4), reinterpret_cast<void*>(&Call_ResourceLoadOperation_5), reinterpret_cast<void*>(&ReleaseHandle_ResourceLoadOperation) };
     NativeBindings::Register("ResourceLoadOperation", 14895700534675878464ULL, { functions_ResourceLoadOperation, 7 });
 }

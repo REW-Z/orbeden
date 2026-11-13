@@ -2612,8 +2612,41 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //调用 TriangleMeshCollider.DiscardPreparedMesh 方法
+    static Reflection::Value Invoke_TriangleMeshCollider_DiscardPreparedMesh_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->DiscardPreparedMesh();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 TriangleMeshCollider.DiscardPreparedMesh 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_DiscardPreparedMesh_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        instance->DiscardPreparedMesh();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //封送并调用 TriangleMeshCollider.DiscardPreparedMesh
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_1(Object* object)
+    {
+        try
+        {
+            TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+            instance->DiscardPreparedMesh();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 TriangleMeshCollider.ApplyPreparedMesh 方法
-    static Reflection::Value Invoke_TriangleMeshCollider_ApplyPreparedMesh_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_TriangleMeshCollider_ApplyPreparedMesh_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
@@ -2625,14 +2658,14 @@ public:
     }
 
     //直接调用 TriangleMeshCollider.ApplyPreparedMesh 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
         return ScriptInterop::WriteResult(instance->ApplyPreparedMesh(), Reflection::ValueKind::Int32, output, stringStorage);
     }
 
     //封送并调用 TriangleMeshCollider.ApplyPreparedMesh
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_1(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_2(Object* object, void* output)
     {
         try
         {
@@ -2644,7 +2677,7 @@ public:
     }
 
     //调用 TriangleMeshCollider.OnDetach 方法
-    static Reflection::Value Invoke_TriangleMeshCollider_OnDetach_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_TriangleMeshCollider_OnDetach_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
@@ -2656,7 +2689,7 @@ public:
     }
 
     //直接调用 TriangleMeshCollider.OnDetach 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_OnDetach_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_OnDetach_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
         instance->OnDetach();
@@ -2665,7 +2698,7 @@ public:
     }
 
     //封送并调用 TriangleMeshCollider.OnDetach
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_OnDetach_2(Object* object)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_OnDetach_3(Object* object)
     {
         try
         {
@@ -14306,8 +14339,9 @@ namespace Reflection
         RegisterTypeMethods(TriangleMeshCollider::StaticType(),
             {
                 MethodInfo("PrepareMeshAsync", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_PrepareMeshAsync_0, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_PrepareMeshAsync_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_0)),
-                MethodInfo("ApplyPreparedMesh", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_ApplyPreparedMesh_1, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_1)),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_2, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_OnDetach_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_2)),
+                MethodInfo("DiscardPreparedMesh", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_DiscardPreparedMesh_1, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_DiscardPreparedMesh_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_1)),
+                MethodInfo("ApplyPreparedMesh", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_ApplyPreparedMesh_2, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_2)),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_3, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_OnDetach_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_3)),
             });
 
         RegisterTypeFields(Component::StaticType(),
