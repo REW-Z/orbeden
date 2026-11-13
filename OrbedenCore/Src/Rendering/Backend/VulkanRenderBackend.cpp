@@ -25,6 +25,10 @@ namespace
     constexpr uint32 FrameCount = 3;
     constexpr VkDeviceSize UploadPageSize = 8 * 1024 * 1024;
     constexpr uint32 TimestampCapacity = 256;
+    constexpr VkDeviceSize BufferCacheLimit = 32 * 1024 * 1024;
+    constexpr VkDeviceSize ImageCacheLimit = 32 * 1024 * 1024;
+    constexpr usize BufferCacheCapacity = 512;
+    constexpr usize ImageCacheCapacity = 64;
 
     //检查 Vulkan 调用结果
     void Check(VkResult result, const char* operation)
@@ -53,10 +57,13 @@ struct VulkanRenderBackend::State
         VkDeviceSize offset = 0;
         VkDeviceSize capacity = 0;
         VkDeviceSize used = 0;
+        VkDeviceSize memoryBytes = 0;
+        VkBufferUsageFlags usage = 0;
         bool owned = true;
         bool stream = false;
         List<uint8> contents;
         uint64 uploadSerial = 0;
+        uint64 cacheSerial = 0;
     };
     struct VertexInput
     {
@@ -78,6 +85,10 @@ struct VulkanRenderBackend::State
         VkAccessFlags2 access = VK_ACCESS_2_NONE;
         uint32 width = 0, height = 0, levels = 1, layers = 1;
         uint32 uploadChannels = 0;
+        VkDeviceSize memoryBytes = 0;
+        uint64 cacheSerial = 0;
+        bool linear = false;
+        bool repeat = false;
         bool initialized = false;
         bool owned = true;
     };
@@ -154,6 +165,8 @@ struct VulkanRenderBackend::State
         uint32 descriptorPoolIndex = 0;
         List<Buffer> uploads;
         List<std::function<void()>> retired;
+        List<Buffer> retiredBuffers;
+        List<Image> retiredImages;
         uint64 serial = 0;
         VkQueryPool timestamps = VK_NULL_HANDLE;
         std::array<int32, TimestampCapacity> timestampNames = {};
@@ -221,6 +234,10 @@ struct VulkanRenderBackend::State
     VkRect2D scissor = {};
     std::unordered_map<uint32, Surface> surfaces;
     std::unordered_map<uint32, Buffer> buffers;
+    List<Buffer> bufferCache;
+    List<Image> imageCache;
+    VkDeviceSize cachedBufferBytes = 0;
+    VkDeviceSize cachedImageBytes = 0;
     std::unordered_map<uint32, Image> images;
     std::unordered_map<uint32, Target> targets;
     std::unordered_map<uint32, VertexInput> inputs;
@@ -295,14 +312,39 @@ struct VulkanRenderBackend::State
     //分配缓冲与内存
     Buffer AllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, bool host)
     {
+        //复用已完成帧的同规格设备缓冲
+        if (!host)
+        {
+            for (usize index = bufferCache.size(); index > 0; --index)
+            {
+                const Buffer& cached = bufferCache[index - 1];
+                if (cached.capacity != size || cached.usage != usage)
+                {
+                    continue;
+                }
+                PROFILE("Render/Backend/ResourceCache/ReuseBuffer");
+                Buffer result = std::move(bufferCache[index - 1]);
+                if (index != bufferCache.size())
+                {
+                    bufferCache[index - 1] = std::move(bufferCache.back());
+                }
+                bufferCache.pop_back();
+                cachedBufferBytes -= result.memoryBytes;
+                return result;
+            }
+        }
+
+        PROFILE("Render/Backend/ResourceCache/CreateBuffer");
         Buffer result;
         result.capacity = size;
+        result.usage = usage;
         VkBufferCreateInfo info = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         info.size = size;
         info.usage = usage;
         Check(vkCreateBuffer(device, &info, nullptr, &result.handle), "vkCreateBuffer");
         VkMemoryRequirements requirements;
         vkGetBufferMemoryRequirements(device, result.handle, &requirements);
+        result.memoryBytes = requirements.size;
         VkMemoryAllocateInfo allocation = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
         allocation.allocationSize = requirements.size;
         allocation.memoryTypeIndex = FindMemory(requirements.memoryTypeBits, host ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -316,9 +358,42 @@ struct VulkanRenderBackend::State
     void DestroyBuffer(Buffer buffer)
     {
         if (!buffer.owned) return;
+        PROFILE("Render/Backend/ResourceCache/FreeBuffer");
         if (buffer.mapped) vkUnmapMemory(device, buffer.memory);
         if (buffer.handle) vkDestroyBuffer(device, buffer.handle, nullptr);
         if (buffer.memory) vkFreeMemory(device, buffer.memory, nullptr);
+    }
+
+    //缓存已完成使用的设备缓冲
+    void RecycleBuffer(Buffer buffer)
+    {
+        if (buffer.owned && buffer.handle && !buffer.mapped && buffer.memoryBytes && buffer.memoryBytes <= BufferCacheLimit)
+        {
+            PROFILE("Render/Backend/ResourceCache/CacheBuffer");
+            //淘汰最早归还的空闲缓冲
+            while (bufferCache.size() >= BufferCacheCapacity || buffer.memoryBytes > BufferCacheLimit - cachedBufferBytes)
+            {
+                auto oldest = std::min_element(bufferCache.begin(), bufferCache.end(),
+                    [](const Buffer& a, const Buffer& b) { return a.cacheSerial < b.cacheSerial; });
+                cachedBufferBytes -= oldest->memoryBytes;
+                DestroyBuffer(std::move(*oldest));
+                if (oldest != bufferCache.end() - 1)
+                {
+                    *oldest = std::move(bufferCache.back());
+                }
+                bufferCache.pop_back();
+            }
+            buffer.offset = 0;
+            buffer.used = 0;
+            buffer.stream = false;
+            buffer.contents.clear();
+            buffer.uploadSerial = 0;
+            buffer.cacheSerial = submittedSerial;
+            cachedBufferBytes += buffer.memoryBytes;
+            bufferCache.push_back(std::move(buffer));
+            return;
+        }
+        DestroyBuffer(std::move(buffer));
     }
 
     //分配帧内上传区间
@@ -356,6 +431,34 @@ struct VulkanRenderBackend::State
         }
     }
 
+    //登记缓冲的帧完成回收
+    void RetireBuffer(Buffer buffer)
+    {
+        if (recording)
+        {
+            frames[frameIndex].retiredBuffers.push_back(std::move(buffer));
+        }
+        else
+        {
+            Check(vkDeviceWaitIdle(device), "vkDeviceWaitIdle(retire buffer)");
+            RecycleBuffer(std::move(buffer));
+        }
+    }
+
+    //登记图像的帧完成回收
+    void RetireImage(Image image)
+    {
+        if (recording)
+        {
+            frames[frameIndex].retiredImages.push_back(std::move(image));
+        }
+        else
+        {
+            Check(vkDeviceWaitIdle(device), "vkDeviceWaitIdle(retire image)");
+            RecycleImage(std::move(image));
+        }
+    }
+
     //刷新跨帧复用的流式缓冲快照
     void RefreshBuffer(Buffer& buffer)
     {
@@ -366,7 +469,7 @@ struct VulkanRenderBackend::State
         if (buffer.owned && buffer.handle)
         {
             Buffer previous = buffer;
-            Retire([this, previous] { DestroyBuffer(previous); });
+            RetireBuffer(std::move(previous));
         }
         buffer = std::move(snapshot);
     }
@@ -409,7 +512,31 @@ struct VulkanRenderBackend::State
     //创建采样图像与视图
     Image AllocateImage(uint32 width, uint32 height, VkFormat format, bool depth, uint32 layers = 1, uint32 levels = 1, bool linear = false, bool repeat = false)
     {
+        //复用已完成帧的同规格图像及采样对象
+        for (usize index = imageCache.size(); index > 0; --index)
+        {
+            const Image& cached = imageCache[index - 1];
+            if (cached.width != width || cached.height != height || cached.format != format
+                || cached.layers != layers || cached.levels != levels || cached.linear != linear || cached.repeat != repeat
+                || cached.aspect != (depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT))
+            {
+                continue;
+            }
+            PROFILE("Render/Backend/ResourceCache/ReuseImage");
+            Image result = imageCache[index - 1];
+            if (index != imageCache.size())
+            {
+                imageCache[index - 1] = imageCache.back();
+            }
+            imageCache.pop_back();
+            cachedImageBytes -= result.memoryBytes;
+            return result;
+        }
+
+        PROFILE("Render/Backend/ResourceCache/CreateImage");
         Image result;
+        result.linear = linear;
+        result.repeat = repeat;
         result.width = width; result.height = height; result.layers = layers; result.levels = levels; result.format = format;
         result.aspect = depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -424,6 +551,7 @@ struct VulkanRenderBackend::State
         Check(vkCreateImage(device, &info, nullptr, &result.handle), "vkCreateImage");
         VkMemoryRequirements requirements;
         vkGetImageMemoryRequirements(device, result.handle, &requirements);
+        result.memoryBytes = requirements.size;
         VkMemoryAllocateInfo allocation = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
         allocation.allocationSize = requirements.size;
         allocation.memoryTypeIndex = FindMemory(requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -445,10 +573,44 @@ struct VulkanRenderBackend::State
     //释放图像附属对象
     void DestroyImage(Image image)
     {
+        PROFILE("Render/Backend/ResourceCache/FreeImage");
         if (image.sampler) vkDestroySampler(device, image.sampler, nullptr);
         if (image.view) vkDestroyImageView(device, image.view, nullptr);
         if (image.owned && image.handle) vkDestroyImage(device, image.handle, nullptr);
         if (image.memory) vkFreeMemory(device, image.memory, nullptr);
+    }
+
+    //缓存已完成使用的单层颜色图像
+    void RecycleImage(Image image)
+    {
+        if (image.owned && image.memory && image.layers == 1 && image.aspect == VK_IMAGE_ASPECT_COLOR_BIT
+            && image.memoryBytes <= ImageCacheLimit)
+        {
+            PROFILE("Render/Backend/ResourceCache/CacheImage");
+            //淘汰最早归还的空闲图像
+            while (imageCache.size() >= ImageCacheCapacity || image.memoryBytes > ImageCacheLimit - cachedImageBytes)
+            {
+                auto oldest = std::min_element(imageCache.begin(), imageCache.end(),
+                    [](const Image& a, const Image& b) { return a.cacheSerial < b.cacheSerial; });
+                cachedImageBytes -= oldest->memoryBytes;
+                DestroyImage(*oldest);
+                if (oldest != imageCache.end() - 1)
+                {
+                    *oldest = imageCache.back();
+                }
+                imageCache.pop_back();
+            }
+            image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+            image.stage = VK_PIPELINE_STAGE_2_NONE;
+            image.access = VK_ACCESS_2_NONE;
+            image.initialized = false;
+            image.uploadChannels = 0;
+            image.cacheSerial = submittedSerial;
+            cachedImageBytes += image.memoryBytes;
+            imageCache.push_back(image);
+            return;
+        }
+        DestroyImage(image);
     }
 
     //创建或更新窗口交换链
@@ -846,12 +1008,16 @@ void VulkanRenderBackend::Shutdown()
             if (frame.profileFrameIndex >= 0 && !frame.timestampsSubmitted && s.recording && &frame == &s.frames[s.frameIndex])
                 Profiler::StoreGpuEvents(frame.profileGeneration, frame.profileFrameIndex, nullptr, 0, 0);
             for (auto& release : frame.retired) release();
+            for (auto& buffer : frame.retiredBuffers) s.DestroyBuffer(std::move(buffer));
+            for (auto& image : frame.retiredImages) s.DestroyImage(image);
             for (auto& upload : frame.uploads) s.DestroyBuffer(upload);
             for (auto pool : frame.descriptorPools) vkDestroyDescriptorPool(s.device, pool, nullptr);
             if (frame.pool) vkDestroyCommandPool(s.device, frame.pool, nullptr);
             if (frame.fence) vkDestroyFence(s.device, frame.fence, nullptr);
             if (frame.timestamps) vkDestroyQueryPool(s.device, frame.timestamps, nullptr);
         }
+        for (auto& buffer : s.bufferCache) s.DestroyBuffer(std::move(buffer));
+        for (auto& image : s.imageCache) s.DestroyImage(image);
         for (auto& [id, distribution] : s.distributions) s.DestroyBuffer(distribution.bins);
         for (auto& [id, program] : s.programs) { s.DestroyProgram(std::move(program)); ReleaseShaderParameters({ id }); }
         for (auto& [id, buffer] : s.buffers) s.DestroyBuffer(buffer);
@@ -920,11 +1086,30 @@ void VulkanRenderBackend::BeginFrame()
     //执行旧帧的延迟释放
     {
         PROFILE("Render/Backend/BeginFrame/ReleaseRetired");
-        for (auto& release : frame.retired)
         {
-            release();
+            PROFILE("Render/Backend/BeginFrame/ReleaseRetired/Buffers");
+            for (auto& buffer : frame.retiredBuffers)
+            {
+                s.RecycleBuffer(std::move(buffer));
+            }
+            frame.retiredBuffers.clear();
         }
-        frame.retired.clear();
+        {
+            PROFILE("Render/Backend/BeginFrame/ReleaseRetired/Images");
+            for (auto& image : frame.retiredImages)
+            {
+                s.RecycleImage(image);
+            }
+            frame.retiredImages.clear();
+        }
+        {
+            PROFILE("Render/Backend/BeginFrame/ReleaseRetired/Objects");
+            for (auto& release : frame.retired)
+            {
+                release();
+            }
+            frame.retired.clear();
+        }
     }
 
     //重置上传页和描述符池
@@ -1203,7 +1388,7 @@ void VulkanRenderBackend::DeleteVertexBuffer(GpuVertexBufferID id)
     }
     if (s.instanceBinding == &found->second) s.instanceBinding = nullptr;
     auto buffer = found->second; s.buffers.erase(found);
-    if (buffer.owned && buffer.handle) s.Retire([&s, buffer] { s.DestroyBuffer(buffer); });
+    if (buffer.owned && buffer.handle) s.RetireBuffer(std::move(buffer));
 }
 
 //创建索引缓冲
@@ -1250,7 +1435,7 @@ bool VulkanRenderBackend::UploadVertexBuffer(GpuVertexBufferID id, const void* d
     buffer.contents.assign(static_cast<const uint8*>(data), static_cast<const uint8*>(data) + size);
     buffer.uploadSerial = s.submittedSerial + 1;
     found->second = std::move(buffer);
-    if (previous.owned && previous.handle) s.Retire([&s, previous] { s.DestroyBuffer(previous); });
+    if (previous.owned && previous.handle) s.RetireBuffer(std::move(previous));
     return true;
 }
 
@@ -1364,7 +1549,7 @@ void VulkanRenderBackend::DeleteTexture(GpuTextureID id)
     if (s.passColor == &found->second || s.passDepth == &found->second) s.ClearPassAttachments();
     auto image = found->second; s.images.erase(found);
     ++s.imageAccessRevision;
-    s.Retire([&s, image] { s.DestroyImage(image); });
+    s.RetireImage(std::move(image));
 }
 
 //创建深度附件与采样视图
@@ -1941,7 +2126,7 @@ GpuDepthDistributionID VulkanRenderBackend::CreateDepthDistribution()
 void VulkanRenderBackend::DeleteDepthDistribution(GpuDepthDistributionID id)
 {
     auto& s = *state; auto found = s.distributions.find(id.id); if (found == s.distributions.end()) return;
-    auto buffer = found->second.bins; s.distributions.erase(found); s.Retire([&s, buffer] { s.DestroyBuffer(buffer); });
+    auto buffer = found->second.bins; s.distributions.erase(found); s.RetireBuffer(std::move(buffer));
 }
 
 //提交冻结深度的对数直方图

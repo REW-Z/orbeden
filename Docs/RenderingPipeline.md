@@ -295,7 +295,7 @@ Vulkan 在主线程录制命令，使用三组循环帧资源。每组持有命�
 
 | 入口 | 当前行为 |
 | --- | --- |
-| `BeginFrame` | 已在录制时直接返回；开始新帧时回收已完成 GPU 计时，等待即将复用的帧 fence，释放该帧退休对象，重置上传区间、Descriptor Pool 和命令池，再开始录制 |
+| `BeginFrame` | 已在录制时直接返回；开始新帧时回收已完成 GPU 计时，等待即将复用的帧 fence，回收该帧退休对象，重置上传区间、Descriptor Pool 和命令池，再开始录制 |
 | `BeginPass` / `EndPass` | 建立／结束 Dynamic Rendering 范围；同一帧可包含多个相机、离屏目标和窗口，Pass 结束不等于队列提交 |
 | `EndFrame` | 结束场景阶段的 Pass；Editor 随后继续在同一后端帧录制面板与浮动窗口 |
 | `Present` | 将已获取窗口的图像转为呈现布局，提交当前命令缓冲并关联帧 fence，再呈现这些交换链；信号量按交换链图像保存 |
@@ -303,14 +303,18 @@ Vulkan 在主线程录制命令，使用三组循环帧资源。每组持有命�
 
 静态顶点／索引缓冲分配在设备本地内存，通过上传区间和拷贝命令初始化。帧内上传页从 8 MiB 起分配，使用可映射、Host Coherent 内存并按用途对齐；Uniform 快照通过动态偏移选择本次 Draw 的数据。
 
-流式缓冲保留最新 CPU 内容，跨帧首次使用时按需复制到当前帧上传区间；同帧后续上传分配新范围，不覆盖旧 Draw 已引用的数据。缓冲对象原地更新，Draw 每次从对象读取最新句柄、偏移和已用范围。仍可能被 GPU 使用的原生资源进入帧退休队列，完成后释放。
+流式缓冲保留最新 CPU 内容，跨帧首次使用时按需复制到当前帧上传区间；同帧后续上传分配新范围，不覆盖旧 Draw 已引用的数据。缓冲对象原地更新，Draw 每次从对象读取最新句柄、偏移和已用范围。仍可能被 GPU 使用的原生资源进入帧退休队列，完成后归还复用池或实际销毁。缓冲、图像使用专用退休数组，程序等其他对象保留回调队列。
 
 图像依赖使用 Synchronization2 跟踪布局、阶段与访问标记；转为附件、采样、传输或计算用途时建立相应依赖，需要时暂停并恢复渲染范围。复制相机快照、UI 中间目标和深度统计都走后端接口，不依赖 OpenGL 的隐式状态转换。
 
 ### 缓存与失效
 
+资源复用池只接收已确认 GPU 完成使用的对象；不因缓存复用跳过帧 fence。缓冲和图像的空闲显存预算分别为 32 MiB，合计最多 64 MiB，不含活动、在途及现有上传页内存。图像归还时清除初始化和访问状态，下一次创建重新上传或清屏，不继承旧 Tile 内容。
+
 | 缓存 | 复用范围与失效条件 |
 | --- | --- |
+| 空闲设备缓冲 | 帧完成后缓存，按字节容量与用途完全匹配复用；至多 512 个、32 MiB，满额时淘汰最早归还项，后端关闭时清空；不缓存 host-mapped 上传页或读回缓冲 |
+| 空闲颜色图像 | 仅缓存自有的单数组层颜色图像；尺寸、格式、数组层数、mip 数、过滤与寻址方式完全匹配，复用图像、显存、视图和采样器；至多 64 个、32 MiB，满额淘汰最早归还项，后端关闭时清空 |
 | 程序与活动绑定 | 绑定切换时查找程序，连续 Draw 使用活动引用；删除当前程序时清空绑定 |
 | 顶点输入 | 创建时保存顶点／索引缓冲引用和实例步长；删除缓冲时扫描输入并清除关联引用，删除当前输入时清空活动绑定；重复绑定同一输入仍重置实例绑定 |
 | Pass 附件 | 缓存颜色／深度附件供参数准备、渲染恢复与管线查找复用；结束 Pass、改挂深度、删除附件／表面或重建交换链时清空 |
@@ -354,12 +358,14 @@ Profiler 保留普通 CPU 作用域、层级、时间线和异步 GPU 视图。`
 
 CPU 数据是作用域墙钟时间，包括函数内部实际发生的 CPU 阻塞。节点的 Total 包含子节点，Self 扣除已记录的直接子节点；不要把父子 Total 重复相加。
 
-首个 GPU 检查点可能隐式调用后端开帧，因此真实的 `Render/Backend/BeginFrame` 可能嵌套于 `Render/FramePreparation/FirstGpuCheckpoint`，也可能出现在更早的后端调用下。开帧重复调用的提前返回不记录子阶段。`WaitFence` 只测量原有帧复用等待，不新增同步；`ReleaseRetired` 包含旧帧延迟释放回调及队列清理，区别于资源管理器处理新销毁对象的缓存清理。
+首个 GPU 检查点可能隐式调用后端开帧，因此真实的 `Render/Backend/BeginFrame` 可能嵌套于 `Render/FramePreparation/FirstGpuCheckpoint`，也可能出现在更早的后端调用下。开帧重复调用的提前返回不记录子阶段。`WaitFence` 只测量原有帧复用等待，不新增同步；`ReleaseRetired` 包含旧帧缓冲、图像的缓存归还或实际销毁，其他对象的延迟释放回调及队列清理，区别于资源管理器处理新销毁对象的缓存清理。
 
 | 作用域 | 含义 |
 | --- | --- |
 | `Render/FramePreparation/*` | SceneSync 前的实例提交、首个 GPU 检查点及隐式开帧、帧状态初始化、显式开帧和销毁资源清理 |
 | `Render/Backend/BeginFrame/*` | Vulkan 已完成帧计时回收、WaitFence、当前帧计时读取、ReleaseRetired、上传页和 descriptor 池重置、命令池准备、GPU 计时初始化 |
+| `Render/Backend/BeginFrame/ReleaseRetired/Buffers`、`Images`、`Objects` | 按资源种类拆分帧完成后的回收成本 |
+| `Render/Backend/ResourceCache/*` | CreateBuffer/Image、ReuseBuffer/Image、CacheBuffer/Image、FreeBuffer/Image 的 CPU 时间和调用次数 |
 | `Render/Resources/ReleaseDestroyed/*` | 按材质、网格、纹理、附件目标、天空盒和 Shader 细分销毁对象的 GPU 缓存释放 |
 | `Render/CameraPreparation` | 相机渲染数据准备 |
 | `Render/SceneSync` / `Render/Cull` | 场景增量更新、可见性筛选和初始队列排序 |
