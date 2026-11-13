@@ -1376,7 +1376,7 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.RigidBody), "RigidBody", 6139362683202787086UL, (ens, pointer) => new global::Orbeden.RigidBody(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 4622765495942406386UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.StaticMeshRenderer), "StaticMeshRenderer", 1321786612676477645UL, (ens, pointer) => new global::Orbeden.StaticMeshRenderer(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Transform), "Transform", 2832195382186525765UL, (ens, pointer) => new global::Orbeden.Transform(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Transform), "Transform", 14389271534582683692UL, (ens, pointer) => new global::Orbeden.Transform(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.WheelCollider), "WheelCollider", 4616407760106585717UL, (ens, pointer) => new global::Orbeden.WheelCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.BoxCollider), "BoxCollider", 3698543718541020963UL, (ens, pointer) => new global::Orbeden.BoxCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.CapsuleCollider), "CapsuleCollider", 17385821896117399994UL, (ens, pointer) => new global::Orbeden.CapsuleCollider(ens!, pointer));
@@ -5738,6 +5738,11 @@ public unsafe partial class Transform : global::Orbeden.Component
     {
         var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 13, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
+    }
+    public void @WriteLocalPose(global::Orbeden.vector3 @position, global::Orbeden.quaternion @rotation)
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, global::Orbeden.quaternion, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 14, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @position, @rotation));
     }
 }
 }

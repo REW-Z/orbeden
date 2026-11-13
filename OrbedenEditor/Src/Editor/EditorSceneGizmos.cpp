@@ -149,15 +149,15 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
         if (!active && !selected) return;
         //本 Ens 之后写的所有线段都归属它，拾取据此回推选中对象
         sink.owner = ens.GetId();
-        matrix4x4 rotation = RenderMath::Rotation(transform->worldRotation);
-        const float32* m = transform->worldMatrix.m;
+        matrix4x4 rotation = RenderMath::Rotation(transform->GetWorldRotation());
+        const float32* m = transform->GetWorldMatrix().m;
         vector3 scale{std::sqrt(m[0]*m[0]+m[1]*m[1]+m[2]*m[2]), std::sqrt(m[4]*m[4]+m[5]*m[5]+m[6]*m[6]), std::sqrt(m[8]*m[8]+m[9]*m[9]+m[10]*m[10])};
         for (Component* component : ens.GetComponents())
         {
             if (DirectionalLight* light = component->Cast<DirectionalLight>(); lights && light)
             {
                 //光照方向由 direction 决定，Transform 只提供标记位置。
-                vector3 center = transform->worldPosition;
+                vector3 center = transform->GetWorldPosition();
                 vector2 screen, unit;
                 if (!EditorGizmoHandles::ProjectPoint(view.viewProjection, view.renderPosition, view.renderSize, center, screen)
                     || !EditorGizmoHandles::ProjectPoint(view.viewProjection, view.renderPosition, view.renderSize, Offset(center, view.cameraRight, 1.0f), unit)) continue;
@@ -176,7 +176,7 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                 }
                 //方向取自同一个 Ens 的 Transform 前向，与渲染侧生成光照快照的取法一致
                 vector3 direction = RenderMath::Normalize(
-                    RenderMath::TransformDirection(transform->worldMatrix, { 0.0f, 0.0f, -1.0f }));
+                    RenderMath::TransformDirection(transform->GetWorldMatrix(), { 0.0f, 0.0f, -1.0f }));
                 if (RenderMath::Dot(direction, direction) < 0.5f) continue;
                 vector3 side = RenderMath::Normalize(RenderMath::Cross(direction, std::abs(direction.y) < 0.9f ? vector3{0,1,0} : vector3{1,0,0}));
                 for (int32 ray = selected ? -1 : 0; ray <= (selected ? 1 : 0); ++ray)
@@ -191,9 +191,9 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
             if (Camera* camera = component->Cast<Camera>(); cameras && camera)
             {
                 vector2 screen, unit;
-                if (!EditorGizmoHandles::ProjectPoint(view.viewProjection, view.renderPosition, view.renderSize, transform->worldPosition, screen)
+                if (!EditorGizmoHandles::ProjectPoint(view.viewProjection, view.renderPosition, view.renderSize, transform->GetWorldPosition(), screen)
                     || !EditorGizmoHandles::ProjectPoint(view.viewProjection, view.renderPosition, view.renderSize,
-                        Offset(transform->worldPosition, view.cameraRight, 1.0f), unit)) continue;
+                        Offset(transform->GetWorldPosition(), view.cameraRight, 1.0f), unit)) continue;
                 float32 pixels = std::hypot(unit.x - screen.x, unit.y - screen.y);
                 if (!std::isfinite(pixels) || pixels < 0.0001f) continue;
 
@@ -228,9 +228,9 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                 vector3 farCorners[4];
                 for (int32 index = 0; index < 4; ++index)
                 {
-                    nearCorners[index] = RenderMath::TransformPoint(transform->worldMatrix,
+                    nearCorners[index] = RenderMath::TransformPoint(transform->GetWorldMatrix(),
                         {(index & 1) ? nearHalfWidth : -nearHalfWidth, (index & 2) ? nearHalfHeight : -nearHalfHeight, -nearDisplay});
-                    farCorners[index] = RenderMath::TransformPoint(transform->worldMatrix,
+                    farCorners[index] = RenderMath::TransformPoint(transform->GetWorldMatrix(),
                         {(index & 1) ? farHalfWidth : -farHalfWidth, (index & 2) ? farHalfHeight : -farHalfHeight, -depth});
                 }
                 //角点按位编号：index 与 index|bit 只差一位，连起来正好是矩形的四条边；
@@ -246,15 +246,15 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                 for (int32 index = 0; index < 4; ++index)
                 {
                     sink.Line(nearCorners[index], farCorners[index]);
-                    sink.Line(transform->worldPosition, nearCorners[index]);
+                    sink.Line(transform->GetWorldPosition(), nearCorners[index]);
                 }
             }
             if (!colliders || (!allColliders && !selected)) continue;
             if (WheelCollider* wheel = component->Cast<WheelCollider>())
             {
                 bool wheelActive = active && wheel->enabled;
-                matrix4x4 wheelRotation = RenderMath::Rotation(transform->worldRotation);
-                const float32* matrix = transform->worldMatrix.m;
+                matrix4x4 wheelRotation = RenderMath::Rotation(transform->GetWorldRotation());
+                const float32* matrix = transform->GetWorldMatrix().m;
                 float32 suspensionScale = std::sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]);
                 float32 radius = std::max(std::abs(wheel->wheelRadius) * suspensionScale, 0.001f);
                 float32 restLength = std::max(wheel->suspensionRestLength, 0.0f) * suspensionScale;
@@ -263,7 +263,7 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                     ? std::clamp(wheel->GetCompression(), 0.0f, travel) : 0.0f;
 
                 //按车轮节点世界变换绘制悬挂
-                vector3 mount = RenderMath::TransformPoint(transform->worldMatrix, wheel->wheelOffset);
+                vector3 mount = RenderMath::TransformPoint(transform->GetWorldMatrix(), wheel->wheelOffset);
                 vector3 down = RenderMath::TransformDirection(wheelRotation, {0, -1, 0});
                 vector3 restCenter = Offset(mount, down, restLength);
                 vector3 compressedCenter = Offset(restCenter, down, -travel);
@@ -271,7 +271,7 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                 float32 halfAngle = wheel->steeringWheel ? wheel->steerAngle * Pi / 360.0f : 0.0f;
                 quaternion steering{0, std::sin(halfAngle), 0, std::cos(halfAngle)};
                 matrix4x4 pose = RenderMath::TRS(center,
-                    RenderMath::Mul(transform->worldRotation, steering), {1, 1, 1});
+                    RenderMath::Mul(transform->GetWorldRotation(), steering), {1, 1, 1});
 
                 //绘制车轮圆环、直径与轮轴标记
                 sink.ink = wheelActive ? IM_COL32(90, 230, 135, selected ? 245 : 130) : IM_COL32(105, 155, 120, 140);
@@ -297,8 +297,8 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
             sink.ink = active && collider->enabled ? IM_COL32(90, 230, 135, selected ? 245 : 130) : IM_COL32(105, 155, 120, 140);
             sink.thickness = selected ? 1.5f : 1.0f;
             vector3 center = RenderMath::TransformPoint(rotation, {collider->center.x * scale.x, collider->center.y * scale.y, collider->center.z * scale.z});
-            center = Offset(transform->worldPosition, center, 1);
-            matrix4x4 pose = RenderMath::TRS(center, transform->worldRotation, {1,1,1});
+            center = Offset(transform->GetWorldPosition(), center, 1);
+            matrix4x4 pose = RenderMath::TRS(center, transform->GetWorldRotation(), {1,1,1});
             if (BoxCollider* box = collider->Cast<BoxCollider>())
             {
                 vector3 extent{std::max(std::abs(box->halfExtents.x * scale.x), 0.001f), std::max(std::abs(box->halfExtents.y * scale.y), 0.001f), std::max(std::abs(box->halfExtents.z * scale.z), 0.001f)};
@@ -363,7 +363,7 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                             }
                     }
                 }
-                matrix4x4 meshPose = RenderMath::TRS(center, transform->worldRotation, scale);
+                matrix4x4 meshPose = RenderMath::TRS(center, transform->GetWorldRotation(), scale);
                 for (usize index = 0; index + 1 < cached.lines.size() && sink.remaining > 0; index += 2)
                     sink.Line(RenderMath::TransformPoint(meshPose,cached.lines[index]), RenderMath::TransformPoint(meshPose,cached.lines[index+1]));
             }

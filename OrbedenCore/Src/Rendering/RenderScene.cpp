@@ -2,7 +2,6 @@
 
 #include "Rendering/ColorSpace.h"
 #include "Rendering/RenderMath.h"
-#include "Rendering/TransformCache.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Transform.h"
@@ -74,7 +73,7 @@ void RenderScene::UnbindWorld()
 }
 
 //增量刷新变换状态和组件快照
-void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
+void RenderScene::Update(World& currentWorld)
 {
     if (world != &currentWorld || boundRevision != currentWorld.GetContentRevision()) BindWorld(currentWorld);
     FlushPendingChanges();
@@ -86,7 +85,6 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     renderSettings.ambientColor.r *= ambientIntensity;
     renderSettings.ambientColor.g *= ambientIntensity;
     renderSettings.ambientColor.b *= ambientIntensity;
-    transformCache.Update(currentWorld);
 
     //编辑模式也完成资源解析后待生成的地形，无需启动物理模拟。
     currentWorld.ForEachComponent<HeightField>([](HeightField* terrain)
@@ -94,15 +92,17 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
         if (terrain->enabled) terrain->SyncPendingGeneration();
     });
 
-    //刷新脏 Mesh 渲染器
+    //按网格和变换版本刷新渲染器
     for (StaticMeshRenderer* renderer : renderers)
     {
         if (!renderer || !renderer->IsRenderSceneEligible()) continue;
 
+        Transform* transform = currentWorld.GetTransform(renderer->GetEnsId());
+        bool transformChanged = transform && renderer->renderState.transformRevision != transform->GetWorldTransformRevision();
         Mesh* mesh = renderer->GetRenderMesh();
-        if (mesh != renderer->renderState.mesh || (mesh && mesh->IsDirty(MeshDirtyFlags::Render)))
+        if (transformChanged || mesh != renderer->renderState.mesh || (mesh && mesh->IsDirty(MeshDirtyFlags::Render)))
         {
-            UpdateRenderer(renderer, false);
+            UpdateRenderer(renderer, transformChanged);
         }
     }
     for (StaticMeshRenderer* renderer : renderers)
@@ -111,14 +111,6 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
 
         Mesh* mesh = renderer->renderState.mesh;
         if (mesh) mesh->ClearDirty(MeshDirtyFlags::Render);
-    }
-
-    //只刷新收到变换通知的渲染器
-    for (EnsId ens : transformCache.GetChangedNodes())
-    {
-        Ens* entity = currentWorld.GetEns(ens);
-        StaticMeshRenderer* renderer = entity ? entity->GetComponent<StaticMeshRenderer>() : nullptr;
-        if (renderer && renderer->IsRenderSceneEligible()) UpdateRenderer(renderer, true);
     }
 
     //相机
@@ -130,7 +122,8 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
         RenderCamera renderCamera;
         renderCamera.ens = camera->GetEnsId();
         renderCamera.camera = camera;
-        renderCamera.worldMatrix = transformCache.GetWorldMatrix(renderCamera.ens);
+        Transform* transform = currentWorld.GetTransform(renderCamera.ens);
+        renderCamera.worldMatrix = transform ? transform->GetWorldMatrix() : matrix4x4();
         renderCamera.viewMatrix = RenderMath::Inverse(renderCamera.worldMatrix);
         renderCamera.fieldOfView = camera->fieldOfView;
         renderCamera.nearPlane = camera->nearPlane;
@@ -168,8 +161,9 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
         //方向就是太阳的朝向：取所属 Ens 的 Transform 前向，也就是局部 -Z 经世界变换后的结果
         //（LookAt 把 -forward 写进世界矩阵第三列，两者是同一套约定）。
         //归一化顺带抹掉缩放；退化到零向量时退回一个朝下的默认方向。
+        Transform* transform = currentWorld.GetTransform(renderLight.ens);
         renderLight.direction = RenderMath::Normalize(
-            RenderMath::TransformDirection(transformCache.GetWorldMatrix(renderLight.ens), { 0.0f, 0.0f, -1.0f }));
+            RenderMath::TransformDirection(transform ? transform->GetWorldMatrix() : matrix4x4(), { 0.0f, 0.0f, -1.0f }));
         if (RenderMath::Dot(renderLight.direction, renderLight.direction) <= 0.000001f)
         {
             renderLight.direction = { -0.35f, -1.0f, -0.45f };
@@ -441,7 +435,8 @@ void RenderScene::UpdateRenderer(StaticMeshRenderer* renderer, bool updateTransf
     if (updateTransform)
     {
         Transform* transform = world->GetTransform(renderer->GetEnsId());
-        state.localToWorld = transform ? transform->worldMatrix : matrix4x4();
+        state.localToWorld = transform ? transform->GetWorldMatrix() : matrix4x4();
+        state.transformRevision = transform ? transform->GetWorldTransformRevision() : 0;
     }
 
     if (meshChanged || updateTransform)

@@ -12298,8 +12298,39 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //调用 Transform.GetWorldTransformRevision 方法
+    static Reflection::Value Invoke_Transform_GetWorldTransformRevision_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetWorldTransformRevision();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 Transform.GetWorldTransformRevision 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetWorldTransformRevision_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetWorldTransformRevision(), Reflection::ValueKind::UInt64, output, stringStorage);
+    }
+
+    //封送并调用 Transform.GetWorldTransformRevision
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetWorldTransformRevision_0(Object* object, void* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetWorldTransformRevision(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetParent 方法
-    static Reflection::Value Invoke_Transform_GetParent_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetParent_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12311,14 +12342,14 @@ public:
     }
 
     //直接调用 Transform.GetParent 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetParent_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetParent_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetParent(), Reflection::ValueKind::EnsId, output, stringStorage);
     }
 
     //封送并调用 Transform.GetParent
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetParent_0(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetParent_1(Object* object, void* output)
     {
         try
         {
@@ -12330,7 +12361,7 @@ public:
     }
 
     //调用 Transform.SetParent 方法
-    static Reflection::Value Invoke_Transform_SetParent_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetParent_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12344,7 +12375,7 @@ public:
     }
 
     //直接调用 Transform.SetParent 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetParent_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetParent_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         EnsId arg0{};
@@ -12355,7 +12386,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 Transform.SetParent
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetParent_1(Object* object, EnsId value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetParent_2(Object* object, EnsId value0)
     {
         try
         {
@@ -12367,7 +12398,7 @@ public:
     }
 
     //封送并调用 Transform.SetParent
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetParent_1(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetParent_2(Object* object, const void* input0)
     {
         try
         {
@@ -12381,7 +12412,7 @@ public:
     }
 
     //调用 Transform.GetWorldPosition 方法
-    static Reflection::Value Invoke_Transform_GetWorldPosition_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetWorldPosition_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12393,14 +12424,14 @@ public:
     }
 
     //直接调用 Transform.GetWorldPosition 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetWorldPosition_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetWorldPosition_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetWorldPosition(), Reflection::ValueKind::Vector3, output, stringStorage);
     }
 
     //封送并调用 Transform.GetWorldPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetWorldPosition_2(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetWorldPosition_3(Object* object, void* output)
     {
         try
         {
@@ -12412,7 +12443,7 @@ public:
     }
 
     //调用 Transform.GetWorldRotation 方法
-    static Reflection::Value Invoke_Transform_GetWorldRotation_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetWorldRotation_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12424,14 +12455,14 @@ public:
     }
 
     //直接调用 Transform.GetWorldRotation 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetWorldRotation_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetWorldRotation_4(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetWorldRotation(), Reflection::ValueKind::Quaternion, output, stringStorage);
     }
 
     //封送并调用 Transform.GetWorldRotation
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetWorldRotation_3(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetWorldRotation_4(Object* object, void* output)
     {
         try
         {
@@ -12443,7 +12474,7 @@ public:
     }
 
     //调用 Transform.GetLocalPosition 方法
-    static Reflection::Value Invoke_Transform_GetLocalPosition_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetLocalPosition_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12455,14 +12486,14 @@ public:
     }
 
     //直接调用 Transform.GetLocalPosition 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalPosition_4(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalPosition_5(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetLocalPosition(), Reflection::ValueKind::Vector3, output, stringStorage);
     }
 
     //封送并调用 Transform.GetLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalPosition_4(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalPosition_5(Object* object, void* output)
     {
         try
         {
@@ -12474,7 +12505,7 @@ public:
     }
 
     //调用 Transform.SetDerivedLocalPosition 方法
-    static Reflection::Value Invoke_Transform_SetDerivedLocalPosition_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetDerivedLocalPosition_6(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12490,7 +12521,7 @@ public:
     }
 
     //直接调用 Transform.SetDerivedLocalPosition 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetDerivedLocalPosition_5(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetDerivedLocalPosition_6(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         uint64 arg0{};
@@ -12501,7 +12532,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 Transform.SetDerivedLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetDerivedLocalPosition_5(Object* object, uint64 value0, vector3 value1, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetDerivedLocalPosition_6(Object* object, uint64 value0, vector3 value1, void* output)
     {
         try
         {
@@ -12513,7 +12544,7 @@ public:
     }
 
     //封送并调用 Transform.SetDerivedLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetDerivedLocalPosition_5(Object* object, const void* input0, const void* input1, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetDerivedLocalPosition_6(Object* object, const void* input0, const void* input1, void* output)
     {
         try
         {
@@ -12529,7 +12560,7 @@ public:
     }
 
     //调用 Transform.ClearDerivedLocalPosition 方法
-    static Reflection::Value Invoke_Transform_ClearDerivedLocalPosition_6(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_ClearDerivedLocalPosition_7(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12543,7 +12574,7 @@ public:
     }
 
     //直接调用 Transform.ClearDerivedLocalPosition 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_ClearDerivedLocalPosition_6(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_ClearDerivedLocalPosition_7(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         uint64 arg0{};
@@ -12554,7 +12585,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 Transform.ClearDerivedLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_ClearDerivedLocalPosition_6(Object* object, uint64 value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_ClearDerivedLocalPosition_7(Object* object, uint64 value0)
     {
         try
         {
@@ -12566,7 +12597,7 @@ public:
     }
 
     //封送并调用 Transform.ClearDerivedLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_ClearDerivedLocalPosition_6(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_ClearDerivedLocalPosition_7(Object* object, const void* input0)
     {
         try
         {
@@ -12580,7 +12611,7 @@ public:
     }
 
     //调用 Transform.HasDerivedLocalPosition 方法
-    static Reflection::Value Invoke_Transform_HasDerivedLocalPosition_7(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_HasDerivedLocalPosition_8(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12592,14 +12623,14 @@ public:
     }
 
     //直接调用 Transform.HasDerivedLocalPosition 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_HasDerivedLocalPosition_7(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_HasDerivedLocalPosition_8(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->HasDerivedLocalPosition(), Reflection::ValueKind::Bool, output, stringStorage);
     }
 
     //封送并调用 Transform.HasDerivedLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_HasDerivedLocalPosition_7(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_HasDerivedLocalPosition_8(Object* object, void* output)
     {
         try
         {
@@ -12611,7 +12642,7 @@ public:
     }
 
     //调用 Transform.GetResolvedLocalPosition 方法
-    static Reflection::Value Invoke_Transform_GetResolvedLocalPosition_8(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetResolvedLocalPosition_9(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12623,14 +12654,14 @@ public:
     }
 
     //直接调用 Transform.GetResolvedLocalPosition 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetResolvedLocalPosition_8(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetResolvedLocalPosition_9(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetResolvedLocalPosition(), Reflection::ValueKind::Vector3, output, stringStorage);
     }
 
     //封送并调用 Transform.GetResolvedLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetResolvedLocalPosition_8(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetResolvedLocalPosition_9(Object* object, void* output)
     {
         try
         {
@@ -12642,7 +12673,7 @@ public:
     }
 
     //调用 Transform.SetLocalPosition 方法
-    static Reflection::Value Invoke_Transform_SetLocalPosition_9(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetLocalPosition_10(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12656,7 +12687,7 @@ public:
     }
 
     //直接调用 Transform.SetLocalPosition 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalPosition_9(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalPosition_10(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         vector3 arg0{};
@@ -12667,7 +12698,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 Transform.SetLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetLocalPosition_9(Object* object, vector3 value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetLocalPosition_10(Object* object, vector3 value0)
     {
         try
         {
@@ -12679,7 +12710,7 @@ public:
     }
 
     //封送并调用 Transform.SetLocalPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalPosition_9(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalPosition_10(Object* object, const void* input0)
     {
         try
         {
@@ -12693,7 +12724,7 @@ public:
     }
 
     //调用 Transform.GetLocalRotation 方法
-    static Reflection::Value Invoke_Transform_GetLocalRotation_10(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetLocalRotation_11(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12705,14 +12736,14 @@ public:
     }
 
     //直接调用 Transform.GetLocalRotation 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalRotation_10(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalRotation_11(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetLocalRotation(), Reflection::ValueKind::Quaternion, output, stringStorage);
     }
 
     //封送并调用 Transform.GetLocalRotation
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalRotation_10(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalRotation_11(Object* object, void* output)
     {
         try
         {
@@ -12724,7 +12755,7 @@ public:
     }
 
     //调用 Transform.SetLocalRotation 方法
-    static Reflection::Value Invoke_Transform_SetLocalRotation_11(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetLocalRotation_12(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12738,7 +12769,7 @@ public:
     }
 
     //直接调用 Transform.SetLocalRotation 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalRotation_11(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalRotation_12(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         quaternion arg0{};
@@ -12749,7 +12780,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 Transform.SetLocalRotation
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetLocalRotation_11(Object* object, quaternion value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetLocalRotation_12(Object* object, quaternion value0)
     {
         try
         {
@@ -12761,7 +12792,7 @@ public:
     }
 
     //封送并调用 Transform.SetLocalRotation
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalRotation_11(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalRotation_12(Object* object, const void* input0)
     {
         try
         {
@@ -12775,7 +12806,7 @@ public:
     }
 
     //调用 Transform.GetLocalScale 方法
-    static Reflection::Value Invoke_Transform_GetLocalScale_12(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetLocalScale_13(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12787,14 +12818,14 @@ public:
     }
 
     //直接调用 Transform.GetLocalScale 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalScale_12(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalScale_13(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetLocalScale(), Reflection::ValueKind::Vector3, output, stringStorage);
     }
 
     //封送并调用 Transform.GetLocalScale
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalScale_12(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalScale_13(Object* object, void* output)
     {
         try
         {
@@ -12806,7 +12837,7 @@ public:
     }
 
     //调用 Transform.SetLocalScale 方法
-    static Reflection::Value Invoke_Transform_SetLocalScale_13(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetLocalScale_14(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12820,7 +12851,7 @@ public:
     }
 
     //直接调用 Transform.SetLocalScale 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalScale_13(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalScale_14(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         vector3 arg0{};
@@ -12831,7 +12862,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 Transform.SetLocalScale
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetLocalScale_13(Object* object, vector3 value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetLocalScale_14(Object* object, vector3 value0)
     {
         try
         {
@@ -12843,7 +12874,7 @@ public:
     }
 
     //封送并调用 Transform.SetLocalScale
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalScale_13(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalScale_14(Object* object, const void* input0)
     {
         try
         {
@@ -12857,7 +12888,7 @@ public:
     }
 
     //调用 Transform.GetLocalEulerAngles 方法
-    static Reflection::Value Invoke_Transform_GetLocalEulerAngles_14(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetLocalEulerAngles_15(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12869,14 +12900,14 @@ public:
     }
 
     //直接调用 Transform.GetLocalEulerAngles 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalEulerAngles_14(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalEulerAngles_15(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetLocalEulerAngles(), Reflection::ValueKind::Vector3, output, stringStorage);
     }
 
     //封送并调用 Transform.GetLocalEulerAngles
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalEulerAngles_14(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalEulerAngles_15(Object* object, void* output)
     {
         try
         {
@@ -12888,7 +12919,7 @@ public:
     }
 
     //调用 Transform.SetLocalEulerAngles 方法
-    static Reflection::Value Invoke_Transform_SetLocalEulerAngles_15(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetLocalEulerAngles_16(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12902,7 +12933,7 @@ public:
     }
 
     //直接调用 Transform.SetLocalEulerAngles 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalEulerAngles_15(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalEulerAngles_16(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         vector3 arg0{};
@@ -12913,7 +12944,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 Transform.SetLocalEulerAngles
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetLocalEulerAngles_15(Object* object, vector3 value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_SetLocalEulerAngles_16(Object* object, vector3 value0)
     {
         try
         {
@@ -12925,7 +12956,7 @@ public:
     }
 
     //封送并调用 Transform.SetLocalEulerAngles
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalEulerAngles_15(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalEulerAngles_16(Object* object, const void* input0)
     {
         try
         {
@@ -12939,7 +12970,7 @@ public:
     }
 
     //调用 Transform.GetFirstChild 方法
-    static Reflection::Value Invoke_Transform_GetFirstChild_16(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetFirstChild_17(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12951,14 +12982,14 @@ public:
     }
 
     //直接调用 Transform.GetFirstChild 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetFirstChild_16(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetFirstChild_17(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetFirstChild(), Reflection::ValueKind::EnsId, output, stringStorage);
     }
 
     //封送并调用 Transform.GetFirstChild
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetFirstChild_16(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetFirstChild_17(Object* object, void* output)
     {
         try
         {
@@ -12970,7 +13001,7 @@ public:
     }
 
     //调用 Transform.GetNextSibling 方法
-    static Reflection::Value Invoke_Transform_GetNextSibling_17(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetNextSibling_18(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -12982,19 +13013,76 @@ public:
     }
 
     //直接调用 Transform.GetNextSibling 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetNextSibling_17(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetNextSibling_18(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         Transform* instance = static_cast<Transform*>(object);
         return ScriptInterop::WriteResult(instance->GetNextSibling(), Reflection::ValueKind::EnsId, output, stringStorage);
     }
 
     //封送并调用 Transform.GetNextSibling
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetNextSibling_17(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetNextSibling_18(Object* object, void* output)
     {
         try
         {
             Transform* instance = static_cast<Transform*>(object);
             ScriptInterop::WriteDirectValue(instance->GetNextSibling(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Transform.WriteLocalPose 方法
+    static Reflection::Value Invoke_Transform_WriteLocalPose_19(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        quaternion arg1{};
+        if (!Reflection::SetFromValue(arg1, args[1])) return Reflection::Value();
+        instance->WriteLocalPose(arg0, arg1);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 Transform.WriteLocalPose 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_WriteLocalPose_19(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        quaternion arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->WriteLocalPose(arg0, arg1);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 Transform.WriteLocalPose
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Transform_WriteLocalPose_19(Object* object, vector3 value0, quaternion value1)
+    {
+        try
+        {
+            auto* instance = static_cast<Transform*>(object);
+            instance->WriteLocalPose(value0, value1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 Transform.WriteLocalPose
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_WriteLocalPose_19(Object* object, const void* input0, const void* input1)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            vector3 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            quaternion arg1{};
+            if (!ScriptInterop::ReadDirectValue(input1, arg1)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->WriteLocalPose(arg0, arg1);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -14607,39 +14695,40 @@ namespace Reflection
                 FieldInfo("derivedOwnerToken", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("derivedPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("hasDerivedPosition", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("worldTransformValid", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("worldTransformRevision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
-                FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
-                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
-                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
-                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
-                FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
-                FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Transform::StaticType(),
             {
-                MethodInfo("GetParent", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetParent_0, ReflectionGeneratedAccess::InvokeAbi_Transform_GetParent_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetParent_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetParent_0)),
-                MethodInfo("SetParent", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_Transform_SetParent_1, ReflectionGeneratedAccess::InvokeAbi_Transform_SetParent_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetParent_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetParent_1)),
-                MethodInfo("GetWorldPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldPosition_2, ReflectionGeneratedAccess::InvokeAbi_Transform_GetWorldPosition_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldPosition_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldPosition_2)),
-                MethodInfo("GetWorldRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldRotation_3, ReflectionGeneratedAccess::InvokeAbi_Transform_GetWorldRotation_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldRotation_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldRotation_3)),
-                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalPosition_4, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalPosition_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalPosition_4), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalPosition_4)),
-                MethodInfo("SetDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64), ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetDerivedLocalPosition_5, ReflectionGeneratedAccess::InvokeAbi_Transform_SetDerivedLocalPosition_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetDerivedLocalPosition_5), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetDerivedLocalPosition_5)),
-                MethodInfo("ClearDerivedLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64) }, ReflectionGeneratedAccess::Invoke_Transform_ClearDerivedLocalPosition_6, ReflectionGeneratedAccess::InvokeAbi_Transform_ClearDerivedLocalPosition_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_ClearDerivedLocalPosition_6), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_ClearDerivedLocalPosition_6)),
-                MethodInfo("HasDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_HasDerivedLocalPosition_7, ReflectionGeneratedAccess::InvokeAbi_Transform_HasDerivedLocalPosition_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_HasDerivedLocalPosition_7), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_HasDerivedLocalPosition_7)),
-                MethodInfo("GetResolvedLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetResolvedLocalPosition_8, ReflectionGeneratedAccess::InvokeAbi_Transform_GetResolvedLocalPosition_8, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetResolvedLocalPosition_8), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetResolvedLocalPosition_8)),
-                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalPosition_9, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalPosition_9, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalPosition_9), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetLocalPosition_9)),
-                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalRotation_10, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalRotation_10, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalRotation_10), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalRotation_10)),
-                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalRotation_11, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalRotation_11, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalRotation_11), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetLocalRotation_11)),
-                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalScale_12, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalScale_12, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalScale_12), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalScale_12)),
-                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalScale_13, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalScale_13, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalScale_13), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetLocalScale_13)),
-                MethodInfo("GetLocalEulerAngles", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalEulerAngles_14, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalEulerAngles_14, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalEulerAngles_14), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalEulerAngles_14)),
-                MethodInfo("SetLocalEulerAngles", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalEulerAngles_15, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalEulerAngles_15, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalEulerAngles_15), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetLocalEulerAngles_15)),
-                MethodInfo("GetFirstChild", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetFirstChild_16, ReflectionGeneratedAccess::InvokeAbi_Transform_GetFirstChild_16, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetFirstChild_16), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetFirstChild_16)),
-                MethodInfo("GetNextSibling", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetNextSibling_17, ReflectionGeneratedAccess::InvokeAbi_Transform_GetNextSibling_17, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetNextSibling_17), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetNextSibling_17)),
+                MethodInfo("GetWorldTransformRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldTransformRevision_0, ReflectionGeneratedAccess::InvokeAbi_Transform_GetWorldTransformRevision_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldTransformRevision_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldTransformRevision_0)),
+                MethodInfo("GetParent", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetParent_1, ReflectionGeneratedAccess::InvokeAbi_Transform_GetParent_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetParent_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetParent_1)),
+                MethodInfo("SetParent", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_Transform_SetParent_2, ReflectionGeneratedAccess::InvokeAbi_Transform_SetParent_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetParent_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetParent_2)),
+                MethodInfo("GetWorldPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldPosition_3, ReflectionGeneratedAccess::InvokeAbi_Transform_GetWorldPosition_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldPosition_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldPosition_3)),
+                MethodInfo("GetWorldRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldRotation_4, ReflectionGeneratedAccess::InvokeAbi_Transform_GetWorldRotation_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldRotation_4), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldRotation_4)),
+                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalPosition_5, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalPosition_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalPosition_5), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalPosition_5)),
+                MethodInfo("SetDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64), ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetDerivedLocalPosition_6, ReflectionGeneratedAccess::InvokeAbi_Transform_SetDerivedLocalPosition_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetDerivedLocalPosition_6), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetDerivedLocalPosition_6)),
+                MethodInfo("ClearDerivedLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64) }, ReflectionGeneratedAccess::Invoke_Transform_ClearDerivedLocalPosition_7, ReflectionGeneratedAccess::InvokeAbi_Transform_ClearDerivedLocalPosition_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_ClearDerivedLocalPosition_7), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_ClearDerivedLocalPosition_7)),
+                MethodInfo("HasDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_HasDerivedLocalPosition_8, ReflectionGeneratedAccess::InvokeAbi_Transform_HasDerivedLocalPosition_8, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_HasDerivedLocalPosition_8), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_HasDerivedLocalPosition_8)),
+                MethodInfo("GetResolvedLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetResolvedLocalPosition_9, ReflectionGeneratedAccess::InvokeAbi_Transform_GetResolvedLocalPosition_9, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetResolvedLocalPosition_9), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetResolvedLocalPosition_9)),
+                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalPosition_10, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalPosition_10, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalPosition_10), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetLocalPosition_10)),
+                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalRotation_11, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalRotation_11, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalRotation_11), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalRotation_11)),
+                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalRotation_12, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalRotation_12, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalRotation_12), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetLocalRotation_12)),
+                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalScale_13, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalScale_13, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalScale_13), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalScale_13)),
+                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalScale_14, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalScale_14, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalScale_14), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetLocalScale_14)),
+                MethodInfo("GetLocalEulerAngles", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalEulerAngles_15, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalEulerAngles_15, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalEulerAngles_15), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalEulerAngles_15)),
+                MethodInfo("SetLocalEulerAngles", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalEulerAngles_16, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalEulerAngles_16, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalEulerAngles_16), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_SetLocalEulerAngles_16)),
+                MethodInfo("GetFirstChild", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetFirstChild_17, ReflectionGeneratedAccess::InvokeAbi_Transform_GetFirstChild_17, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetFirstChild_17), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetFirstChild_17)),
+                MethodInfo("GetNextSibling", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetNextSibling_18, ReflectionGeneratedAccess::InvokeAbi_Transform_GetNextSibling_18, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetNextSibling_18), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetNextSibling_18)),
+                MethodInfo("WriteLocalPose", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("position", "vector3", Reflection::ValueKind::Vector3), ParameterInfo("rotation", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_WriteLocalPose_19, ReflectionGeneratedAccess::InvokeAbi_Transform_WriteLocalPose_19, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_WriteLocalPose_19), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Transform_WriteLocalPose_19)),
             });
 
         RegisterTypeFields(WheelCollider::StaticType(),

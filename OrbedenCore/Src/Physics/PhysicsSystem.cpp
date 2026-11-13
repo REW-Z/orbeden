@@ -9,7 +9,6 @@
 #include "Runtime/Object/HeightField.h"
 #include "Runtime/Object/RigidBody.h"
 #include "Runtime/Object/WheelCollider.h"
-#include "Rendering/TransformCache.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Mesh.h"
@@ -141,7 +140,7 @@ namespace
             const vector3& scale = transform.GetLocalScale();
             return { std::abs(scale.x), std::abs(scale.y), std::abs(scale.z) };
         }
-        const float32* m = transform.worldMatrix.m;
+        const float32* m = transform.GetWorldMatrix().m;
         return
         {
             std::sqrt(m[0] * m[0] + m[1] * m[1] + m[2] * m[2]),
@@ -436,7 +435,7 @@ public:
     std::unordered_map<Mesh*, PxConvexMesh*> convexMeshes;
     std::unordered_map<Mesh*, PxTriangleMesh*> triangleMeshes;
     List<PhysicsEvent> events;
-    TransformCache transformCache;
+
     World* world = nullptr;
     bool extensionsInitialized = false;
 
@@ -870,7 +869,7 @@ public:
         record->binding.owner = this;
         record->configurationHash = configurationHash;
         record->bodyType = bodyType;
-        PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
+        PxTransform pose(ToPx(transform.GetWorldPosition()), ToPx(transform.GetWorldRotation()));
         PxRigidActor* actor = bodyType == PhysicsBodyType::Static
             ? static_cast<PxRigidActor*>(physics->createRigidStatic(pose))
             : static_cast<PxRigidActor*>(physics->createRigidDynamic(pose));
@@ -898,8 +897,8 @@ public:
             }
         }
         scene->addActor(*actor);
-        record->lastPosition = transform.worldPosition;
-        record->lastRotation = transform.worldRotation;
+        record->lastPosition = transform.GetWorldPosition();
+        record->lastRotation = transform.GetWorldRotation();
         record->lastPoseValid = true;
         return record;
     }
@@ -922,7 +921,7 @@ public:
             entry.second->seen = false;
         }
         Transform& bodyTransform = *input.ens->Transform();
-        PxTransform inverseBody = PxTransform(ToPx(bodyTransform.worldPosition), ToPx(bodyTransform.worldRotation)).getInverse();
+        PxTransform inverseBody = PxTransform(ToPx(bodyTransform.GetWorldPosition()), ToPx(bodyTransform.GetWorldRotation())).getInverse();
         bool massChanged = false;
         bool filtersChanged = false;
         for (auto [collider, poseHash] : input.colliders)
@@ -985,8 +984,8 @@ public:
             uint64 localPoseHash = poseHash ? MixVector(poseHash, collider->center) : 0;
             if (created || localPoseHash == 0 || entry.poseHash != localPoseHash)
             {
-                vector3 center = RenderMath::TransformPoint(transform.worldMatrix, collider->center);
-                PxQuat rotation = ToPx(transform.worldRotation);
+                vector3 center = RenderMath::TransformPoint(transform.GetWorldMatrix(), collider->center);
+                PxQuat rotation = ToPx(transform.GetWorldRotation());
                 if (collider->GetGeometryType() == ColliderGeometryType::Capsule)
                 {
                     rotation = rotation * PxQuat(PxHalfPi, PxVec3(0.0f, 0.0f, 1.0f));
@@ -1201,7 +1200,7 @@ public:
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
 
-        PxRigidStatic* actor = physics->createRigidStatic(PxTransform(ToPx(transform.worldPosition), ToPx(transform.worldRotation)));
+        PxRigidStatic* actor = physics->createRigidStatic(PxTransform(ToPx(transform.GetWorldPosition()), ToPx(transform.GetWorldRotation())));
         if (!actor)
         {
             shape->release();
@@ -1263,20 +1262,20 @@ public:
             record.collisionMask = collisionMask;
         }
 
-        PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
+        PxTransform pose(ToPx(transform.GetWorldPosition()), ToPx(transform.GetWorldRotation()));
         if (record.actor) record.actor->setGlobalPose(pose);
     }
 
     //同步所属刚体位姿、速度与脚本累积力
     void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform, bool queryOnly = false)
     {
-        PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
+        PxTransform pose(ToPx(transform.GetWorldPosition()), ToPx(transform.GetWorldRotation()));
         //查询模式只把位姿写进场景，不设 kinematicTarget、不写速度、不施力也不清累积力
         if (queryOnly)
         {
             record.actor->setGlobalPose(pose);
-            record.lastPosition = transform.worldPosition;
-            record.lastRotation = transform.worldRotation;
+            record.lastPosition = transform.GetWorldPosition();
+            record.lastRotation = transform.GetWorldRotation();
             record.lastPoseValid = true;
             return;
         }
@@ -1294,7 +1293,7 @@ public:
             }
             else
             {
-                if (!record.lastPoseValid || !NearlyEqual(transform.worldPosition, record.lastPosition) || !NearlyEqual(transform.worldRotation, record.lastRotation))
+                if (!record.lastPoseValid || !NearlyEqual(transform.GetWorldPosition(), record.lastPosition) || !NearlyEqual(transform.GetWorldRotation(), record.lastRotation))
                 {
                     dynamic->setGlobalPose(pose, true);
                 }
@@ -1317,8 +1316,8 @@ public:
                 }
             }
         }
-        record.lastPosition = transform.worldPosition;
-        record.lastRotation = transform.worldRotation;
+        record.lastPosition = transform.GetWorldPosition();
+        record.lastRotation = transform.GetWorldRotation();
         record.lastPoseValid = true;
     }
 
@@ -1530,7 +1529,7 @@ public:
             PxCapsuleControllerDesc desc;
             desc.radius = Positive(component.radius);
             desc.height = Positive(component.height);
-            desc.position = PxExtendedVec3(transform.worldPosition.x, transform.worldPosition.y + desc.radius + desc.height * 0.5f, transform.worldPosition.z);
+            desc.position = PxExtendedVec3(transform.GetWorldPosition().x, transform.GetWorldPosition().y + desc.radius + desc.height * 0.5f, transform.GetWorldPosition().z);
             desc.stepOffset = std::max(0.0f, component.stepOffset);
             desc.contactOffset = Positive(component.contactOffset);
             desc.slopeLimit = std::max(0.0f, component.slopeLimit);
@@ -1545,7 +1544,7 @@ public:
             desc.halfSideExtent = Positive(component.halfExtents.x);
             desc.halfHeight = Positive(component.halfExtents.y);
             desc.halfForwardExtent = Positive(component.halfExtents.z);
-            desc.position = PxExtendedVec3(transform.worldPosition.x, transform.worldPosition.y + desc.halfHeight, transform.worldPosition.z);
+            desc.position = PxExtendedVec3(transform.GetWorldPosition().x, transform.GetWorldPosition().y + desc.halfHeight, transform.GetWorldPosition().z);
             desc.stepOffset = std::max(0.0f, component.stepOffset);
             desc.contactOffset = Positive(component.contactOffset);
             desc.slopeLimit = std::max(0.0f, component.slopeLimit);
@@ -1558,7 +1557,7 @@ public:
         if (!controller) return nullptr;
 
         record->controller = controller;
-        controller->setFootPosition(PxExtendedVec3(transform.worldPosition.x, transform.worldPosition.y, transform.worldPosition.z));
+        controller->setFootPosition(PxExtendedVec3(transform.GetWorldPosition().x, transform.GetWorldPosition().y, transform.GetWorldPosition().z));
         PxRigidDynamic* actor = controller->getActor();
         actor->userData = &record->binding;
         PxShape* controllerShape = nullptr;
@@ -1567,7 +1566,7 @@ public:
             controllerShape->setSimulationFilterData(filter);
             controllerShape->setQueryFilterData(filter);
         }
-        record->lastFootPosition = transform.worldPosition;
+        record->lastFootPosition = transform.GetWorldPosition();
         record->lastPoseValid = true;
         return record;
     }
@@ -1625,10 +1624,10 @@ public:
                 record.controller->invalidateCache();
                 record.filter = filter;
             }
-            if (!record.lastPoseValid || !NearlyEqual(record.lastFootPosition, transform->worldPosition))
+            if (!record.lastPoseValid || !NearlyEqual(record.lastFootPosition, transform->GetWorldPosition()))
             {
-                record.controller->setFootPosition(PxExtendedVec3(transform->worldPosition.x, transform->worldPosition.y, transform->worldPosition.z));
-                record.lastFootPosition = transform->worldPosition;
+                record.controller->setFootPosition(PxExtendedVec3(transform->GetWorldPosition().x, transform->GetWorldPosition().y, transform->GetWorldPosition().z));
+                record.lastFootPosition = transform->GetWorldPosition();
                 record.lastPoseValid = true;
             }
         });
@@ -1694,7 +1693,6 @@ public:
         if (!Initialize()) return;
         world = &currentWorld;
         LayerSettings::Refresh();
-        transformCache.Update(currentWorld);
         SyncBodies(currentWorld, true);
         SyncControllers(currentWorld);
         scene->flushQueryUpdates();
@@ -1708,10 +1706,6 @@ public:
 
         {
             PROFILE("Physics/Sync");
-            {
-                PROFILE("Physics/Sync/Transforms");
-                transformCache.Update(currentWorld);
-            }
             {
                 PROFILE("Physics/Sync/Bodies");
                 SyncBodies(currentWorld);
@@ -1782,12 +1776,12 @@ public:
             BodyRecord* record = FindBody(ens.GetId());
             if (!record || record->bodyType != PhysicsBodyType::Dynamic) return;
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record->actor);
-            quaternion rotation = transform->worldRotation;
+            quaternion rotation = transform->GetWorldRotation();
 
             //按车轮节点世界变换计算安装点与悬挂轴
-            vector3 mountWorld = RenderMath::TransformPoint(transform->worldMatrix, wheel->wheelOffset);
+            vector3 mountWorld = RenderMath::TransformPoint(transform->GetWorldMatrix(), wheel->wheelOffset);
             vector3 direction = Rotate(rotation, { 0.0f, -1.0f, 0.0f });
-            const float32* matrix = transform->worldMatrix.m;
+            const float32* matrix = transform->GetWorldMatrix().m;
             float32 suspensionScale = std::sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]);
             PhysicsQueryHit hit;
             if (!WheelRaycast(mountWorld, direction, wheel->raycastDistance * suspensionScale,

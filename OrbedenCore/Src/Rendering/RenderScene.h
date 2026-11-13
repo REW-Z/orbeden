@@ -9,7 +9,6 @@
 
 class Camera;
 class Component;
-class TransformCache;
 class StaticMeshRenderer;
 class World;
 
@@ -200,7 +199,7 @@ public:
     void UnbindWorld();
 
     //增量刷新变换状态和组件快照
-    void Update(World& currentWorld, TransformCache& transformCache);
+    void Update(World& currentWorld);
 
     //读取阶段 不允许修改组件指针列表
     void BeginRead();

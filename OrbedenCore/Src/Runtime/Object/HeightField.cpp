@@ -153,7 +153,7 @@ float32 HeightField::GetHeightAtWorldXZ(float32 x, float32 z) const
     int32 rows = std::max(rowCount, 2);
     int32 columns = std::max(columnCount, 2);
     Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
-    vector3 origin = transform ? (transform->transformCacheInitialized ? transform->worldPosition : transform->GetLocalPosition()) : vector3();
+    vector3 origin = transform ? transform->GetWorldPosition() : vector3();
     x -= origin.x;
     z -= origin.z;
     float32 halfX = sizeX * 0.5f;

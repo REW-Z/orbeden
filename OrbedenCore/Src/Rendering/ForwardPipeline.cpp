@@ -473,7 +473,7 @@ void ForwardPipeline::CaptureParticleFrame(World& world)
     //Play 期间例外：预览那一路在 Play 时不推进，照画就是停在空中的一堆粒子，所以这段必须看 runtime
     bool usePreview = simulation->HasPreviewContent() && !world.IsRuntimeActive();
     const ParticleSimulationContext& context = simulation->GetRenderContext(usePreview);
-    particleRenderer.CaptureFrame(world, context, simulation->GetTransformCache(), particleSnapshot);
+    particleRenderer.CaptureFrame(world, context, particleSnapshot);
 }
 
 //以展开几何执行批次

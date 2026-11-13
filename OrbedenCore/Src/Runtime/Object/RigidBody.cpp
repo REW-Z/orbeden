@@ -43,7 +43,7 @@ void RigidBody::AddForceAtPosition(const vector3& force, const vector3& worldPos
     AddForce(force);
 
     Ens* ens = GetEns();
-    vector3 center = ens && ens->Transform() ? ens->Transform()->worldPosition : vector3();
+    vector3 center = ens && ens->Transform() ? ens->Transform()->GetWorldPosition() : vector3();
     if (PhysicsSystem* physics = PhysicsSystem::Current())
     {
         physx::PxRigidActor* actor = physics->GetRigidActor(GetEnsId());

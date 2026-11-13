@@ -2,7 +2,6 @@
 
 #include "Runtime/Object/Script.h"
 #include "Runtime/EngineTypes.h"
-#include "Rendering/TransformCache.h"
 
 //飞机发动机：处理油门输入、计算推力并施加到刚体。
 class Engine final : public Script
@@ -31,8 +30,6 @@ protected:
     void OnFixedUpdate(float32 deltaTime);
 
 private:
-    ORBEDEN_BIND_IGNORE
-    TransformCache transformCache;
     float32 throttle = 0.0f;
     vector3 thrustForce;
     vector3 windmillDragForce;

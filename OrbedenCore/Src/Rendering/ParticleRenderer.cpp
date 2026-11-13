@@ -7,6 +7,7 @@
 #include "Rendering/RenderMath.h"
 #include "Runtime/Particles/ParticleSimulationSystem.h"
 #include "Runtime/Object/Ens.h"
+#include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
@@ -200,7 +201,7 @@ GpuVertexInputID ParticleRenderer::GetQuadVertexInput(GeometryMode mode) const
 }
 
 void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContext& context,
-    const TransformCache& transformCache, ParticleFrameSnapshot& snapshot)
+    ParticleFrameSnapshot& snapshot)
 {
     snapshot.world = &world;
     snapshot.revision = world.GetContentRevision();
@@ -221,7 +222,8 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
 
         uint32 drawLayer = ens->GetLayerMask();
         bool local = settings.main.simulationSpace == ParticleSimulationSpace::Local;
-        matrix4x4 emitterWorld = transformCache.GetWorldMatrix(source->GetEnsId());
+        Transform* transform = world.GetTransform(source->GetEnsId());
+        matrix4x4 emitterWorld = transform ? transform->GetWorldMatrix() : matrix4x4();
         quaternion emitterRotation = GetRotation(emitterWorld);
         //局部空间的尺寸与拖尾宽度都是发射器局部单位，提交渲染前乘发射器世界尺度
         float32 emitterBasis = local ? RenderMath::GetMaximumBasisLength(emitterWorld) : 1.0f;

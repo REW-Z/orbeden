@@ -2,7 +2,6 @@
 
 #include "Runtime/Object/Script.h"
 #include "Runtime/EngineTypes.h"
-#include "Rendering/TransformCache.h"
 
 class RigidBody;
 class Transform;
@@ -94,8 +93,6 @@ private:
 
     ORBEDEN_BIND_IGNORE
     SurfaceForces surfaces[9];
-    ORBEDEN_BIND_IGNORE
-    TransformCache transformCache;
     vector3 spawnPosition;
     quaternion spawnRotation;
     float32 sideslipDegrees = 0.0f;

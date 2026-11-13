@@ -334,8 +334,8 @@ bool EditorGizmoHandles::CaptureTarget(World& world, EnsId ens, Target& target)
     if (!transform) return false;
 
     target.ens = ens;
-    target.worldPosition = transform->worldPosition;
-    target.worldRotation = transform->worldRotation;
+    target.worldPosition = transform->GetWorldPosition();
+    target.worldRotation = transform->GetWorldRotation();
     const vector3& localPosition = transform->GetLocalPosition();
     const quaternion& localRotation = transform->GetLocalRotation();
     const vector3& localScale = transform->GetLocalScale();
@@ -348,8 +348,8 @@ bool EditorGizmoHandles::CaptureTarget(World& world, EnsId ens, Target& target)
     Transform* parentTransform = parent.IsNull() ? nullptr : world.GetTransform(parent);
     if (parentTransform)
     {
-        target.parentWorldInverseMatrix = RenderMath::Inverse(parentTransform->worldMatrix);
-        target.parentWorldRotation = parentTransform->worldRotation;
+        target.parentWorldInverseMatrix = RenderMath::Inverse(parentTransform->GetWorldMatrix());
+        target.parentWorldRotation = parentTransform->GetWorldRotation();
     }
     else
     {
@@ -388,7 +388,7 @@ bool EditorGizmoHandles::BuildContext(World& world, const EditorGizmoView& view,
         if (!transform) continue;
 
         ++aliveCount;
-        positionSum = AddVector(positionSum, transform->worldPosition);
+        positionSum = AddVector(positionSum, transform->GetWorldPosition());
 
         StaticMeshRenderer* renderer = world.GetEns(ens) ? world.GetEns(ens)->GetComponent<StaticMeshRenderer>() : nullptr;
         Mesh* mesh = renderer ? renderer->GetRenderMesh() : nullptr;
@@ -397,7 +397,7 @@ bool EditorGizmoHandles::BuildContext(World& world, const EditorGizmoView& view,
         const bounds3& localBounds = mesh->GetLocalBounds();
         if (!localBounds.valid) continue;
 
-        bounds3 worldBounds = RenderMath::TransformBounds(transform->worldMatrix, localBounds);
+        bounds3 worldBounds = RenderMath::TransformBounds(transform->GetWorldMatrix(), localBounds);
         if (!worldBounds.valid) continue;
 
         if (!hasBounds)
@@ -426,7 +426,7 @@ bool EditorGizmoHandles::BuildContext(World& world, const EditorGizmoView& view,
     EnsId activeEns = scene.GetSelectedEns();
     Transform* activeTransform = activeEns.IsNull() ? nullptr : world.GetTransform(activeEns);
     context.pivotRotation = (orientation == EditorGizmoOrientation::Local && activeTransform)
-        ? activeTransform->worldRotation
+        ? activeTransform->GetWorldRotation()
         : quaternion();
 
     matrix4x4 rotationMatrix = RenderMath::Rotation(context.pivotRotation);

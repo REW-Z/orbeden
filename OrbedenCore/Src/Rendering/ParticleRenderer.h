@@ -128,7 +128,7 @@ public:
     bool PrepareQuad();
 
     /// <summary>把模拟状态翻译成只读渲染快照，不写入任何模拟状态。</summary>
-    void CaptureFrame(World& world, const ParticleSimulationContext& context, const TransformCache& transformCache,
+    void CaptureFrame(World& world, const ParticleSimulationContext& context,
         ParticleFrameSnapshot& snapshot);
 
     /// <summary>按当前相机追加 Billboard、Mesh 与拖尾的绘制项。</summary>

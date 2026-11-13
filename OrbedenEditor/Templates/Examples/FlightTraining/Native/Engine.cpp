@@ -88,7 +88,6 @@ void Engine::EvaluateForces()
     }
 
     //同步作用点与局部速度
-    transformCache.Update(*world);
     propellerPosition = propellerEns->Transform()->GetWorldPosition();
     vector3 offset = Add(propellerPosition, Scale(transform->GetWorldPosition(), -1.0f));
     vector3 velocity = Add(body->linearVelocity, Cross(body->angularVelocity, offset));

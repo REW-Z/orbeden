@@ -295,7 +295,7 @@ void World::NotifyTransformChanged(EnsId ens, TransformChangeSource source)
     //作者写入算场景内容改动，手柄、脚本与 Inspector 都汇到这里；
     //派生写入来自布局驱动，每次重建都会发生，标脏会让场景永远处于未保存状态。
     if (source != TransformChangeSource::Derived) SetDirty();
-    transform->transformDirty = true;
+    transform->InvalidateWorldTransform();
     for (ITransformListener* listener : transformListeners)
     {
         if (listener) listener->OnTransformChanged(*this, ens, source);

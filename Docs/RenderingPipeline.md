@@ -9,7 +9,7 @@ Orbeden 使用单线程 Forward Renderer，通过公共 `RenderBackend` 接口�
 | 模块 | 职责 |
 | --- | --- |
 | `RenderSystem` | 初始化、帧调度、多相机、Viewport、RenderTarget、Overlay |
-| `TransformCache` | 根据 Transform 通知更新脏子树 |
+| `Transform` | 修改时使子树世界变换缓存失效，读取时按需计算并缓存 |
 | `RenderScene` | 持久维护 Camera、DirectionalLight、StaticMeshRenderer 指针注册 |
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
 | `RenderItemSorter` | 相机可见项的队列与距离排序 |
@@ -38,7 +38,7 @@ Orbeden 使用单线程 Forward Renderer，通过公共 `RenderBackend` 接口�
 ```mermaid
 flowchart TD
     A["BeginFrame / World / ECS"] --> B["ReleaseDestroyedResources\n释放已销毁对象的 GPU 缓存"]
-    B --> C["Update RenderScene\n处理注册与变换通知"]
+    B --> C["Update RenderScene\n处理注册与变换版本"]
     C --> D["Prepare Camera Render Data\nRenderTarget + Viewport"]
     D --> E{"Camera 列表为空?"}
     E -- 是 --> F["默认窗口清黑\n离屏 UI → 屏幕 Overlay"]
@@ -63,14 +63,17 @@ flowchart TD
 
 `RenderScene` 在绑定 World 时完整收集一次已有组件，后续由 Camera、DirectionalLight 和 StaticMeshRenderer 的 Attach、Detach 与 enabled 变化维护注册：
 
-- `Transform` setter 和父级变化通过 `ITransformListener` 通知各 `TransformCache`，不再每帧扫描所有 Ens。
-- `TransformCache` 只递归更新收到通知的子树，并把本次受影响的 Ens 提供给 `RenderScene`。
+- `Transform` setter、布局派生位置和父级变化使当前节点及后代的世界变换缓存失效，并递增各节点版本；原始修改通知继续通过 `ITransformListener` 提供给 UI。
+- `GetWorldMatrix`、`GetWorldPosition` 和 `GetWorldRotation` 在读取时按需刷新祖先与自身缓存，不主动计算无关子树；旧 `TransformCache` 及集中更新入口已删除。
+- `RenderScene` 在已有渲染器遍历中比较变换版本，只刷新版本变化的世界矩阵与包围盒；物理、粒子、UI 和编辑器直接使用按需读取接口。
 - Camera 生成 View、Projection、ViewProjection 和视锥快照，并按 `depth` 升序排列。
 - DirectionalLight 复制光照与阴影参数。
 - `RenderScene` 直接保存 StaticMeshRenderer 指针，变换、Mesh revision 和世界 AABB 缓存在组件自身的运行时状态中。
 - 全局场景不保存扁平 SubMesh 列表；只有相机剔除后的 Renderer 才临时展开 `RenderItem`。
 
 渲染读取期间发生的组件增删会以组件指针排队到安全阶段执行，避免遍历过程中修改指针列表。
+
+`RenderMath` 在支持 SSE2 的平台使用并行矩阵乘法、点变换和方向变换；矩阵采用非对齐加载，`vector3` 仍保持 12 字节布局。TRS 直接缩放旋转矩阵的基向量并写入平移，省去两次完整矩阵乘法，保留旋转归一化与点变换的齐次除法规则；其他平台使用对应的标量实现。Transform 原生布局变更后游戏模块 ABI 为 11，旧原生模块需要重新编译。
 
 ### 2. Viewport 与 RenderTarget
 
@@ -351,8 +354,14 @@ Profiler 保留普通 CPU 作用域、层级、时间线和异步 GPU 视图。`
 
 CPU 数据是作用域墙钟时间，包括函数内部实际发生的 CPU 阻塞。节点的 Total 包含子节点，Self 扣除已记录的直接子节点；不要把父子 Total 重复相加。
 
+首个 GPU 检查点可能隐式调用后端开帧，因此真实的 `Render/Backend/BeginFrame` 可能嵌套于 `Render/FramePreparation/FirstGpuCheckpoint`，也可能出现在更早的后端调用下。开帧重复调用的提前返回不记录子阶段。`WaitFence` 只测量原有帧复用等待，不新增同步；`ReleaseRetired` 包含旧帧延迟释放回调及队列清理，区别于资源管理器处理新销毁对象的缓存清理。
+
 | 作用域 | 含义 |
 | --- | --- |
+| `Render/FramePreparation/*` | SceneSync 前的实例提交、首个 GPU 检查点及隐式开帧、帧状态初始化、显式开帧和销毁资源清理 |
+| `Render/Backend/BeginFrame/*` | Vulkan 已完成帧计时回收、WaitFence、当前帧计时读取、ReleaseRetired、上传页和 descriptor 池重置、命令池准备、GPU 计时初始化 |
+| `Render/Resources/ReleaseDestroyed/*` | 按材质、网格、纹理、附件目标、天空盒和 Shader 细分销毁对象的 GPU 缓存释放 |
+| `Render/CameraPreparation` | 相机渲染数据准备 |
 | `Render/SceneSync` / `Render/Cull` | 场景增量更新、可见性筛选和初始队列排序 |
 | `Render/Shadows/*` | 阴影候选收集、级联构建、合批与绘制提交；DrawBatches 包含 Pass 建立、状态、提交和结束 |
 | `Render/BuildBatches` | 绘制项收集、细分排序与批次生成 |

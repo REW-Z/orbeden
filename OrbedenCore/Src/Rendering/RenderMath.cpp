@@ -4,6 +4,13 @@
 #include <cmath>
 #include <limits>
 
+#if defined(_M_X64) || defined(__SSE2__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
+#include <emmintrin.h>
+#define ORBEDEN_RENDER_MATH_SSE2 1
+#else
+#define ORBEDEN_RENDER_MATH_SSE2 0
+#endif
+
 namespace
 {
     constexpr float32 Pi = 3.14159265358979323846f;
@@ -105,6 +112,22 @@ namespace RenderMath
     matrix4x4 Mul(const matrix4x4& a, const matrix4x4& b)
     {
         matrix4x4 result;
+#if ORBEDEN_RENDER_MATH_SSE2
+        //并行计算每列的四个分量
+        const __m128 a0 = _mm_loadu_ps(a.m);
+        const __m128 a1 = _mm_loadu_ps(a.m + 4);
+        const __m128 a2 = _mm_loadu_ps(a.m + 8);
+        const __m128 a3 = _mm_loadu_ps(a.m + 12);
+        for (int column = 0; column < 4; ++column)
+        {
+            const float32* values = b.m + column * 4;
+            __m128 product = _mm_mul_ps(a0, _mm_set1_ps(values[0]));
+            product = _mm_add_ps(product, _mm_mul_ps(a1, _mm_set1_ps(values[1])));
+            product = _mm_add_ps(product, _mm_mul_ps(a2, _mm_set1_ps(values[2])));
+            product = _mm_add_ps(product, _mm_mul_ps(a3, _mm_set1_ps(values[3])));
+            _mm_storeu_ps(result.m + column * 4, product);
+        }
+#else
         for (int column = 0; column < 4; ++column)
         {
             for (int row = 0; row < 4; ++row)
@@ -117,6 +140,7 @@ namespace RenderMath
             }
         }
 
+#endif
         return result;
     }
 
@@ -178,7 +202,26 @@ namespace RenderMath
 
     matrix4x4 TRS(const vector3& position, const quaternion& rotation, const vector3& scale)
     {
-        return Mul(Mul(Translation(position), Rotation(rotation)), Scale(scale));
+        //缩放旋转矩阵的三个基向量
+        matrix4x4 result = Rotation(rotation);
+#if ORBEDEN_RENDER_MATH_SSE2
+        _mm_storeu_ps(result.m, _mm_mul_ps(_mm_loadu_ps(result.m), _mm_set1_ps(scale.x)));
+        _mm_storeu_ps(result.m + 4, _mm_mul_ps(_mm_loadu_ps(result.m + 4), _mm_set1_ps(scale.y)));
+        _mm_storeu_ps(result.m + 8, _mm_mul_ps(_mm_loadu_ps(result.m + 8), _mm_set1_ps(scale.z)));
+#else
+        for (int row = 0; row < 4; ++row)
+        {
+            result.m[row] *= scale.x;
+            result.m[4 + row] *= scale.y;
+            result.m[8 + row] *= scale.z;
+        }
+#endif
+
+        //直接填入平移分量
+        result.m[12] = position.x;
+        result.m[13] = position.y;
+        result.m[14] = position.z;
+        return result;
     }
 
     matrix4x4 Perspective(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane)
@@ -296,10 +339,24 @@ namespace RenderMath
 
     vector3 TransformPoint(const matrix4x4& matrix, const vector3& point)
     {
+#if ORBEDEN_RENDER_MATH_SSE2
+        //并行计算齐次坐标
+        __m128 position = _mm_mul_ps(_mm_loadu_ps(matrix.m), _mm_set1_ps(point.x));
+        position = _mm_add_ps(position, _mm_mul_ps(_mm_loadu_ps(matrix.m + 4), _mm_set1_ps(point.y)));
+        position = _mm_add_ps(position, _mm_mul_ps(_mm_loadu_ps(matrix.m + 8), _mm_set1_ps(point.z)));
+        position = _mm_add_ps(position, _mm_loadu_ps(matrix.m + 12));
+        alignas(16) float32 values[4];
+        _mm_store_ps(values, position);
+        float32 x = values[0];
+        float32 y = values[1];
+        float32 z = values[2];
+        float32 w = values[3];
+#else
         float32 x = matrix.m[0] * point.x + matrix.m[4] * point.y + matrix.m[8] * point.z + matrix.m[12];
         float32 y = matrix.m[1] * point.x + matrix.m[5] * point.y + matrix.m[9] * point.z + matrix.m[13];
         float32 z = matrix.m[2] * point.x + matrix.m[6] * point.y + matrix.m[10] * point.z + matrix.m[14];
         float32 w = matrix.m[3] * point.x + matrix.m[7] * point.y + matrix.m[11] * point.z + matrix.m[15];
+#endif
         if (std::abs(w) > 0.000001f && std::abs(w - 1.0f) > 0.000001f)
         {
             float32 invW = 1.0f / w;
@@ -313,12 +370,22 @@ namespace RenderMath
 
     vector3 TransformDirection(const matrix4x4& matrix, const vector3& direction)
     {
+#if ORBEDEN_RENDER_MATH_SSE2
+        //并行计算方向分量
+        __m128 result = _mm_mul_ps(_mm_loadu_ps(matrix.m), _mm_set1_ps(direction.x));
+        result = _mm_add_ps(result, _mm_mul_ps(_mm_loadu_ps(matrix.m + 4), _mm_set1_ps(direction.y)));
+        result = _mm_add_ps(result, _mm_mul_ps(_mm_loadu_ps(matrix.m + 8), _mm_set1_ps(direction.z)));
+        alignas(16) float32 values[4];
+        _mm_store_ps(values, result);
+        return { values[0], values[1], values[2] };
+#else
         return
         {
             matrix.m[0] * direction.x + matrix.m[4] * direction.y + matrix.m[8] * direction.z,
             matrix.m[1] * direction.x + matrix.m[5] * direction.y + matrix.m[9] * direction.z,
             matrix.m[2] * direction.x + matrix.m[6] * direction.y + matrix.m[10] * direction.z,
         };
+#endif
     }
 
     vector3 GetTranslation(const matrix4x4& matrix)

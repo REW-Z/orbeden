@@ -335,7 +335,7 @@ namespace
             const bounds3* localBounds = mesh ? &mesh->GetLocalBounds() : nullptr;
             if (localBounds && localBounds->valid)
             {
-                bounds3 worldBounds = RenderMath::TransformBounds(transform->worldMatrix, *localBounds);
+                bounds3 worldBounds = RenderMath::TransformBounds(transform->GetWorldMatrix(), *localBounds);
                 if (worldBounds.valid)
                 {
                     merged = hasBounds ? UnionBounds(merged, worldBounds) : worldBounds;
@@ -1014,12 +1014,12 @@ bool EditorScene::MoveEns(World& world, EnsId child, EnsId parent, EnsId before,
     Transform* transform = world.GetTransform(child);
     if (!transform) return false;
     EnsId oldParent = transform->parent;
-    matrix4x4 worldMatrix = transform->worldMatrix;
+    matrix4x4 worldMatrix = transform->GetWorldMatrix();
     if (!world.MoveEns(child, parent, before)) return false;
     if (!preserveWorld || oldParent == parent) return true;
     Transform* parentTransform = world.GetTransform(parent);
     matrix4x4 localMatrix = parentTransform
-        ? RenderMath::Mul(RenderMath::Inverse(parentTransform->worldMatrix), worldMatrix) : worldMatrix;
+        ? RenderMath::Mul(RenderMath::Inverse(parentTransform->GetWorldMatrix()), worldMatrix) : worldMatrix;
     vector3 position, scale;
     quaternion rotation;
     DecomposeTransform(localMatrix, position, rotation, scale);
@@ -1404,7 +1404,7 @@ bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPo
         Transform* transform = app.GetWorld().GetTransform(rendererEns);
         if (currentRenderer != renderer || !transform) continue;
 
-        bounds3 worldBounds = RenderMath::TransformBounds(transform->worldMatrix, mesh->GetLocalBounds());
+        bounds3 worldBounds = RenderMath::TransformBounds(transform->GetWorldMatrix(), mesh->GetLocalBounds());
         if (!worldBounds.valid) continue;
 
         //先用世界包围盒排除不可能命中的绘制项。
@@ -1467,9 +1467,9 @@ bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPo
                 uint32 indexC = indices[index + 2];
                 if (indexA >= vertices.size() || indexB >= vertices.size() || indexC >= vertices.size()) continue;
 
-                vector3 a = RenderMath::TransformPoint(transform->worldMatrix, vertices[indexA]);
-                vector3 b = RenderMath::TransformPoint(transform->worldMatrix, vertices[indexB]);
-                vector3 c = RenderMath::TransformPoint(transform->worldMatrix, vertices[indexC]);
+                vector3 a = RenderMath::TransformPoint(transform->GetWorldMatrix(), vertices[indexA]);
+                vector3 b = RenderMath::TransformPoint(transform->GetWorldMatrix(), vertices[indexB]);
+                vector3 c = RenderMath::TransformPoint(transform->GetWorldMatrix(), vertices[indexC]);
                 vector3 edgeAB = { b.x - a.x, b.y - a.y, b.z - a.z };
                 vector3 edgeAC = { c.x - a.x, c.y - a.y, c.z - a.z };
                 vector3 crossDirection = RenderMath::Cross(rayDirection, edgeAC);

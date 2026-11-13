@@ -21,6 +21,26 @@ private:
     vector3 derivedPosition;
     bool hasDerivedPosition = false;
 
+    ORBEDEN_BIND_IGNORE
+    mutable matrix4x4 worldMatrix;
+    ORBEDEN_BIND_IGNORE
+    mutable vector3 worldPosition;
+    ORBEDEN_BIND_IGNORE
+    mutable quaternion worldRotation;
+    ORBEDEN_BIND_IGNORE
+    mutable bool worldTransformValid = false;
+    ORBEDEN_BIND_IGNORE
+    uint64 worldTransformRevision = 1;
+
+    friend class World;
+
+    //使当前节点及其后代的世界变换缓存失效
+    void InvalidateWorldTransform();
+
+    //按需计算当前节点的世界变换
+    ORBEDEN_BIND_IGNORE
+    void UpdateWorldTransform() const;
+
 public:
     ORBEDEN_BIND_IGNORE
     EnsId parent;
@@ -33,19 +53,17 @@ public:
     ORBEDEN_BIND_IGNORE
     EnsId next;
 
+    //读取本地变换矩阵
     ORBEDEN_BIND_IGNORE
-    matrix4x4 localMatrix;
-    ORBEDEN_BIND_IGNORE
-    matrix4x4 worldMatrix;
-    ORBEDEN_BIND_IGNORE
-    vector3 worldPosition;
-    ORBEDEN_BIND_IGNORE
-    quaternion worldRotation;
+    matrix4x4 GetLocalMatrix() const;
 
+    //读取按需计算的世界矩阵
     ORBEDEN_BIND_IGNORE
-    bool transformCacheInitialized = false;
+    const matrix4x4& GetWorldMatrix() const;
+
+    //读取世界变换失效版本
     ORBEDEN_BIND_IGNORE
-    bool transformDirty = true;
+    uint64 GetWorldTransformRevision() const;
 
     //读取和修改父级，修改经过 World 层级逻辑。
     EnsId GetParent() const;
@@ -109,4 +127,7 @@ public:
     //获取下一个同级节点
     ORBEDEN_BIND_PROPERTY(nextSibling)
     EnsId GetNextSibling() const { return next; }
+
+    /// <summary>一次写入本地位置与旋转，并通知一次变换失效。</summary>
+    void WriteLocalPose(const vector3& position, const quaternion& rotation);
 };

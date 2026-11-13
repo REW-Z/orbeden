@@ -16,7 +16,6 @@
 #include "Runtime/Fonts/FontRasterizer.h"
 #include "Runtime/Object/Font.h"
 #include "Runtime/Object/Transform.h"
-#include "Rendering/TransformCache.h"
 #include "Profiler/Profiler.h"
 #include "Runtime/World.h"
 
@@ -49,8 +48,6 @@ namespace
         uint64 worldRevision = 0;
         uint64 managedGeneration = 0;
         World* world = nullptr;
-        //保存变换通知与矩阵读取版本
-        TransformCache transforms;
         uint64 transformRevision = 1;
 
         std::unordered_map<uint64, MeshRecord> meshes;
@@ -569,13 +566,12 @@ namespace
                 }
             }
 
-            //更新变换并复制矩阵
-            context->transforms.Update(*context->world);
+            //按需读取节点矩阵
             for (int32 index = 0; index < count; ++index)
             {
                 Transform* transform = context->world->GetTransform(nodes[index]);
-                localMatrices[index] = transform->localMatrix;
-                worldMatrices[index] = transform->worldMatrix;
+                localMatrices[index] = transform->GetLocalMatrix();
+                worldMatrices[index] = transform->GetWorldMatrix();
             }
             return 1;
         }

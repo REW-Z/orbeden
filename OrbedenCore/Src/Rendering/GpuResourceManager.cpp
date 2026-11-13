@@ -1139,21 +1139,51 @@ void GpuResourceManager::OnObjectDestroyed(Object* object)
 //释放对象销毁事件对应的 GPU 缓存
 void GpuResourceManager::ReleaseDestroyedResources()
 {
-    if (!backend) return;
+    if (!backend)
+    {
+        return;
+    }
+    PROFILE("Render/Resources/ReleaseDestroyed");
 
-    //释放销毁对象的 GPU 资源
-    DeleteGpuResources(backend, pendingMaterials);
-    DeleteGpuResources(backend, pendingMeshes);
+    //释放材质和网格缓存
+    {
+        PROFILE("Render/Resources/ReleaseDestroyed/Materials");
+        DeleteGpuResources(backend, pendingMaterials);
+    }
+    {
+        PROFILE("Render/Resources/ReleaseDestroyed/Meshes");
+        DeleteGpuResources(backend, pendingMeshes);
+    }
 
-    for (GpuTextureID& texture : pendingTextures) DeleteGpuResource(backend, texture);
-    pendingTextures.clear();
+    //释放纹理和附件目标
+    {
+        PROFILE("Render/Resources/ReleaseDestroyed/Textures");
+        for (GpuTextureID& texture : pendingTextures)
+        {
+            DeleteGpuResource(backend, texture);
+        }
+        pendingTextures.clear();
+    }
+    {
+        PROFILE("Render/Resources/ReleaseDestroyed/RenderTargets");
+        for (GpuRenderTargetID& target : pendingRenderTargets)
+        {
+            DeleteGpuResource(backend, target);
+        }
+        pendingRenderTargets.clear();
+    }
 
-    //附件目标自带颜色纹理，删除目标即释放两者。
-    for (GpuRenderTargetID& target : pendingRenderTargets) DeleteGpuResource(backend, target);
-    pendingRenderTargets.clear();
-
-    for (GpuCubeTextureID& skybox : pendingSkyboxes) DeleteGpuResource(backend, skybox);
-    pendingSkyboxes.clear();
-
-    DeleteGpuResources(backend, pendingShaders);
+    //释放天空盒和着色器
+    {
+        PROFILE("Render/Resources/ReleaseDestroyed/Skyboxes");
+        for (GpuCubeTextureID& skybox : pendingSkyboxes)
+        {
+            DeleteGpuResource(backend, skybox);
+        }
+        pendingSkyboxes.clear();
+    }
+    {
+        PROFILE("Render/Resources/ReleaseDestroyed/Shaders");
+        DeleteGpuResources(backend, pendingShaders);
+    }
 }

@@ -4418,6 +4418,31 @@
           "Arities": [
             1
           ]
+        },
+        {
+          "Name": "WriteLocalPose",
+          "Doc": "\u4E00\u6B21\u5199\u5165\u672C\u5730\u4F4D\u7F6E\u4E0E\u65CB\u8F6C\uFF0C\u5E76\u901A\u77E5\u4E00\u6B21\u53D8\u6362\u5931\u6548\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "position",
+              "Type": "const vector3\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "rotation",
+              "Type": "const quaternion\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
         }
       ]
     },

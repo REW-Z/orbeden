@@ -18,6 +18,7 @@ struct StaticMeshRendererRenderState
     bounds3 worldBounds;
     vector3 worldPosition;
     uint32 drawLayer = 1u;
+    uint64 transformRevision = 0;
 };
 
 //静态网格渲染组件

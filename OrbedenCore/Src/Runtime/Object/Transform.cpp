@@ -1,6 +1,7 @@
 #include "Runtime/Object/Transform.h"
 
 #include "Runtime/World.h"
+#include "Rendering/RenderMath.h"
 
 #include <algorithm>
 #include <cmath>
@@ -101,21 +102,7 @@ const vector3& Transform::GetResolvedLocalPosition() const
 //设置本地位置并通知变换缓存
 void Transform::SetLocalPosition(const vector3& value)
 {
-    if (localPosition.x == value.x && localPosition.y == value.y && localPosition.z == value.z) return;
-
-    //模拟期间 static 的世界变换不变：保留原值，也不发变换通知
-    World* world = GetWorld();
-    if (world && !world->CanChangeTransform(GetEnsId())) return;
-
-    //同步作者位移到当前派生位置
-    if (hasDerivedPosition)
-    {
-        derivedPosition.x += value.x - localPosition.x;
-        derivedPosition.y += value.y - localPosition.y;
-        derivedPosition.z += value.z - localPosition.z;
-    }
-    localPosition = value;
-    if (world) world->NotifyTransformChanged(GetEnsId());
+    WriteLocalPose(value, localRotation);
 }
 
 //获取本地旋转
@@ -127,14 +114,7 @@ const quaternion& Transform::GetLocalRotation() const
 //设置本地旋转并通知变换缓存
 void Transform::SetLocalRotation(const quaternion& value)
 {
-    if (localRotation.x == value.x && localRotation.y == value.y &&
-        localRotation.z == value.z && localRotation.w == value.w) return;
-
-    World* world = GetWorld();
-    if (world && !world->CanChangeTransform(GetEnsId())) return;
-
-    localRotation = value;
-    if (world) world->NotifyTransformChanged(GetEnsId());
+    WriteLocalPose(localPosition, value);
 }
 
 //获取本地缩放
@@ -160,5 +140,117 @@ void Transform::SetParent(EnsId value)
 {
     if (World* world = GetWorld()) world->SetParent(GetEnsId(), value);
 }
-vector3 Transform::GetWorldPosition() const { return worldPosition; }
-quaternion Transform::GetWorldRotation() const { return worldRotation; }
+
+//读取本地变换矩阵
+matrix4x4 Transform::GetLocalMatrix() const
+{
+    return RenderMath::TRS(GetResolvedLocalPosition(), localRotation, localScale);
+}
+
+//读取世界变换失效版本
+uint64 Transform::GetWorldTransformRevision() const
+{
+    return worldTransformRevision;
+}
+
+//使当前节点及其后代的世界变换缓存失效
+void Transform::InvalidateWorldTransform()
+{
+    worldTransformValid = false;
+    ++worldTransformRevision;
+
+    //递归标记后代缓存
+    World* world = GetWorld();
+    for (EnsId child = firstChild; !child.IsNull();)
+    {
+        Transform* transform = world->GetTransform(child);
+        EnsId nextChild = transform->next;
+        transform->InvalidateWorldTransform();
+        child = nextChild;
+    }
+}
+
+//按需计算当前节点的世界变换
+void Transform::UpdateWorldTransform() const
+{
+    if (worldTransformValid)
+    {
+        return;
+    }
+
+    //先读取父级的最新世界变换
+    World* world = GetWorld();
+    Transform* parentTransform = world ? world->GetTransform(parent) : nullptr;
+    if (parentTransform)
+    {
+        worldMatrix = RenderMath::Mul(parentTransform->GetWorldMatrix(), GetLocalMatrix());
+        worldRotation = RenderMath::Mul(parentTransform->GetWorldRotation(), localRotation);
+    }
+    else
+    {
+        worldMatrix = GetLocalMatrix();
+        worldRotation = localRotation;
+    }
+
+    worldPosition = RenderMath::GetTranslation(worldMatrix);
+    worldTransformValid = true;
+}
+
+//读取最新世界矩阵
+const matrix4x4& Transform::GetWorldMatrix() const
+{
+    UpdateWorldTransform();
+    return worldMatrix;
+}
+
+//读取最新世界位置
+vector3 Transform::GetWorldPosition() const
+{
+    UpdateWorldTransform();
+    return worldPosition;
+}
+
+//读取最新世界旋转
+quaternion Transform::GetWorldRotation() const
+{
+    UpdateWorldTransform();
+    return worldRotation;
+}
+
+//一次写入本地位置与旋转
+void Transform::WriteLocalPose(const vector3& position, const quaternion& rotation)
+{
+    bool positionChanged = localPosition.x != position.x || localPosition.y != position.y || localPosition.z != position.z;
+    bool rotationChanged = localRotation.x != rotation.x || localRotation.y != rotation.y
+        || localRotation.z != rotation.z || localRotation.w != rotation.w;
+    if (!positionChanged && !rotationChanged)
+    {
+        return;
+    }
+
+    //检查静态节点的写入约束
+    World* world = GetWorld();
+    if (world && !world->CanChangeTransform(GetEnsId()))
+    {
+        return;
+    }
+
+    //同步位置派生覆盖
+    if (positionChanged)
+    {
+        if (hasDerivedPosition)
+        {
+            derivedPosition.x += position.x - localPosition.x;
+            derivedPosition.y += position.y - localPosition.y;
+            derivedPosition.z += position.z - localPosition.z;
+        }
+        localPosition = position;
+    }
+    localRotation = rotation;
+
+    //统一通知变换变化
+    if (world)
+    {
+        world->NotifyTransformChanged(GetEnsId());
+    }
+}

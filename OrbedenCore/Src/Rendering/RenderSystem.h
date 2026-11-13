@@ -9,7 +9,6 @@
 #include "Rendering/InstanceDrawData.h"
 #include "Rendering/RenderItemSorter.h"
 #include "Rendering/SceneCuller.h"
-#include "Rendering/TransformCache.h"
 #include "Runtime/Gui/UIRenderer.h"
 
 #include <span>
@@ -100,7 +99,7 @@ private:
     UIRenderer uiRenderer;
 
     //缓存实体变换
-    TransformCache transformCache;
+
 
     //持久渲染场景
     RenderScene scene;

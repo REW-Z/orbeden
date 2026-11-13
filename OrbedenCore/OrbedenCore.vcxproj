@@ -214,7 +214,6 @@
     <ClInclude Include="Src\Scripting\NativeGameModule.h" />
     <ClInclude Include="Src\Rendering\RenderTypes.h" />
     <ClInclude Include="Src\Rendering\SceneCuller.h" />
-    <ClInclude Include="Src\Rendering\TransformCache.h" />
     <ClInclude Include="Src\Runtime\AssetPipeline.h" />
     <ClInclude Include="Src\Runtime\CookedAssetSerializer.h" />
     <ClInclude Include="Src\Runtime\Native\NativeCall.h" />
@@ -319,7 +318,6 @@
     <ClCompile Include="Src\Scripting\ScriptInterop.cpp" />
     <ClCompile Include="Src\Runtime\Object\Script.cpp" />
     <ClCompile Include="Src\Rendering\SceneCuller.cpp" />
-    <ClCompile Include="Src\Rendering\TransformCache.cpp" />
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
     <ClCompile Include="Src\Runtime\CookedAssetSerializer.cpp" />
     <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp" />

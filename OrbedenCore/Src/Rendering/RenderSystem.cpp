@@ -374,43 +374,63 @@ void RenderSystem::Render(World& world, float deltaTime)
 {
     PROFILE("Render/Frame");
 
-    //消费 Submit 快照：先换入 active 再清空 pending，之后的任何早退路径都不会把
-    //实例积压到下一次 Render，也不会带进下一个项目。
-    pendingInstanceSubmissions.swap(activeInstanceSubmissions);
-    pendingInstanceSubmissions.clear();
-    pendingSubmittedInstanceCount = 0;
-    readingDrawSubmissions = true;
-
-    if (!initialized || !window)
     {
-        FinishDrawSubmissions();
-        return;
+        PROFILE("Render/FramePreparation");
+
+        //消费本帧实例提交
+        {
+            PROFILE("Render/FramePreparation/InstanceSubmissions");
+            pendingInstanceSubmissions.swap(activeInstanceSubmissions);
+            pendingInstanceSubmissions.clear();
+            pendingSubmittedInstanceCount = 0;
+            readingDrawSubmissions = true;
+        }
+        if (!initialized || !window)
+        {
+            FinishDrawSubmissions();
+            return;
+        }
+
+        //记录首个 GPU 检查点及隐式开帧
+        {
+            PROFILE("Render/FramePreparation/FirstGpuCheckpoint");
+            backend->ProfileGpuStage("Render/GpuStage/BeforeScene");
+        }
+
+        //重置统计并累加着色器时间
+        {
+            PROFILE("Render/FramePreparation/State");
+            forwardPipeline.ResetBatchStats();
+            if (std::isfinite(deltaTime) && deltaTime > 0.0f)
+            {
+                elapsedTime += deltaTime;
+            }
+        }
+
+        //开始后端帧
+        {
+            PROFILE("Render/FramePreparation/BeginBackend");
+            backend->BeginFrame();
+        }
+
+        //释放已销毁对象的 GPU 缓存
+        {
+            PROFILE("Render/FramePreparation/ReleaseDestroyed");
+            gpuResourceManager.ReleaseDestroyedResources();
+        }
     }
-
-    //本帧批次统计从零开始，无相机与早退路径也会保留清零结果
-    backend->ProfileGpuStage("Render/GpuStage/BeforeScene");
-    forwardPipeline.ResetBatchStats();
-
-    //累加 Shader 时间
-    if (std::isfinite(deltaTime) && deltaTime > 0.0f)
-    {
-        elapsedTime += deltaTime;
-    }
-
-    //开始后端帧
-    backend->BeginFrame();
-
-    //释放已销毁对象的 GPU 资源
-    gpuResourceManager.ReleaseDestroyedResources();
 
     //刷新持久渲染场景
     {
         PROFILE("Render/SceneSync");
-        scene.Update(world, transformCache);
+        scene.Update(world);
     }
 
     //准备相机渲染数据
-    PrepareCameraRenderData();
+    {
+        PROFILE("Render/CameraPreparation");
+        PrepareCameraRenderData();
+    }
 
     scene.BeginRead();
 

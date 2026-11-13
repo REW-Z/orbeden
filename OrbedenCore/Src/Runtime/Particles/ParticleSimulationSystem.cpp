@@ -28,8 +28,6 @@ ParticleSimulationSystem* ParticleSimulationSystem::Current()
 bool ParticleSimulationSystem::OnInitialize(Application& application)
 {
     app = &application;
-    runtimeContext.SetTransformCache(&transformCache);
-    previewContext.SetTransformCache(&transformCache);
     runtimeContext.SetPhysicsSystem(application.GetSystem<PhysicsSystem>());
     previewContext.SetPhysicsSystem(runtimeContext.GetPhysicsSystem());
     previewContext.SetPreview(true);
@@ -50,7 +48,6 @@ void ParticleSimulationSystem::ResetContexts()
     runtimeContext.Reset();
     previewContext.Reset();
     pendingRegistrations.clear();
-    transformCache.Reset();
 }
 
 void ParticleSimulationSystem::Register(ParticleSystem& system)
@@ -101,7 +98,6 @@ void ParticleSimulationSystem::FlushRegistrations()
 void ParticleSimulationSystem::PrepareWorld(ParticleSimulationContext& context, World& world)
 {
     bool changed = context.BindWorld(world);
-    transformCache.Update(world);
     if (changed)
         world.ForEachComponent<ParticleSystem>([&](ParticleSystem* source) { if (source) context.RegisterEmitter(*source); });
     FlushRegistrations();
@@ -442,8 +438,8 @@ void ParticleSimulationContext::Reset()
 matrix4x4 ParticleSimulationContext::GetEmitterWorldMatrix(const ParticleEmitterState& state) const
 {
     ParticleSystem* source = state.source.Get();
-    if (!transformCache || !source) return matrix4x4();
-    return transformCache->GetWorldMatrix(source->GetEnsId());
+    Transform* transform = source ? source->GetEns()->Transform() : nullptr;
+    return transform ? transform->GetWorldMatrix() : matrix4x4();
 }
 
 //按配置分配拖尾点池
@@ -879,7 +875,7 @@ void ParticleSimulationContext::SpawnParticle(ParticleEmitterState& state, float
     }
     bool local = settings.main.simulationSpace == ParticleSimulationSpace::Local;
     Transform* transform = sourceHolder ? world->GetTransform(sourceHolder->GetEnsId()) : nullptr;
-    quaternion emitterRotation = transform ? transform->worldRotation : quaternion();
+    quaternion emitterRotation = transform ? transform->GetWorldRotation() : quaternion();
     quaternion rotation = RenderMath::Mul(parent ? parent->worldRotation : emitterRotation, RenderMath::RotationZ(startRotation));
     vector3 position = parent ? RotateDirection(parent->worldRotation, localPosition) : RenderMath::TransformPoint(emitterWorld, localPosition);
     if (parent) position = {position.x + parent->worldPosition.x, position.y + parent->worldPosition.y, position.z + parent->worldPosition.z};
@@ -1497,7 +1493,7 @@ void ParticleSimulationContext::QueueEvent(ParticleEmitterState& state, const Pa
     event.worldPosition = local ? RenderMath::TransformPoint(matrix,particle.position) : particle.position;
     event.worldVelocity = local ? RenderMath::TransformDirection(matrix,particle.velocity) : particle.velocity;
     event.worldRotation = RenderMath::Mul(particle.rotation,RenderMath::RotationZ(particle.angle-particle.startAngle));
-    if (local && transform) event.worldRotation = RenderMath::Mul(transform->worldRotation,event.worldRotation);
+    if (local && transform) event.worldRotation = RenderMath::Mul(transform->GetWorldRotation(),event.worldRotation);
     event.linearColor = {tint.r*particle.startLinearColor.r*particle.inheritedColor.r,tint.g*particle.startLinearColor.g*particle.inheritedColor.g,
         tint.b*particle.startLinearColor.b*particle.inheritedColor.b,tint.a*particle.startLinearColor.a*particle.inheritedColor.a};
     event.size = particle.startSize*particle.inheritedSize*std::max(0.0f,EvaluateCurve(settings.motion.sizeOverLifetime,age));

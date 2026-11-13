@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Rendering/RenderTypes.h"
-#include "Rendering/TransformCache.h"
 #include "Runtime/Object/ParticleSystem.h"
 #include "Runtime/Particles/ParticleSettings.h"
 
@@ -145,15 +144,10 @@ private:
     uint32 stepEventBudget = 0;
     //本步子出生的数量预算
     uint32 stepChildBudget = 0;
-    //发射器变换读取自模拟系统持有的独立缓存
-    TransformCache* transformCache = nullptr;
     //碰撞查询入口，为空时粒子不参与世界碰撞
     PhysicsSystem* physics = nullptr;
 
 public:
-    //设置读取发射器变换的缓存
-    void SetTransformCache(TransformCache* value) { transformCache = value; }
-
     //设置碰撞查询入口
     void SetPhysicsSystem(PhysicsSystem* value) { physics = value; }
 
@@ -287,8 +281,6 @@ private:
     ParticleSimulationContext runtimeContext;
     //编辑预览上下文：只推进显式播放的发射器
     ParticleSimulationContext previewContext;
-    //两套上下文复用的变换缓存
-    TransformCache transformCache;
     //等待并入上下文的注册项
     List<Ref<ParticleSystem>> pendingRegistrations;
 
@@ -342,7 +334,6 @@ public:
     const ParticleSimulationContext& GetRenderContext(bool preview) const;
 
     //读取模拟系统持有的变换缓存，粒子快照按它换算世界变换
-    const TransformCache& GetTransformCache() const { return transformCache; }
 
     //清空全部上下文与绑定
     void ResetContexts();

@@ -878,56 +878,123 @@ void VulkanRenderBackend::Shutdown()
 void VulkanRenderBackend::BeginFrame()
 {
     auto& s = *state;
-    if (s.recording || !s.device) return;
-    //回收已完成帧的 GPU 计时
-    for (auto& completed : s.frames)
+    if (s.recording || !s.device)
     {
-        if (!completed.timestampsSubmitted) continue;
-        VkResult status = vkGetFenceStatus(s.device, completed.fence);
-        if (status == VK_SUCCESS) s.ReadTimestamps(completed);
-        else if (status != VK_NOT_READY) Check(status, "vkGetFenceStatus(timestamps)");
+        return;
     }
+    PROFILE("Render/Backend/BeginFrame");
+
+    //回收已完成帧的 GPU 计时
+    {
+        PROFILE("Render/Backend/BeginFrame/ReadCompletedTimings");
+        for (auto& completed : s.frames)
+        {
+            if (!completed.timestampsSubmitted)
+            {
+                continue;
+            }
+            VkResult status = vkGetFenceStatus(s.device, completed.fence);
+            if (status == VK_SUCCESS)
+            {
+                s.ReadTimestamps(completed);
+            }
+            else if (status != VK_NOT_READY)
+            {
+                Check(status, "vkGetFenceStatus(timestamps)");
+            }
+        }
+    }
+
     s.frameIndex = (s.frameIndex + 1) % FrameCount;
     auto& frame = s.frames[s.frameIndex];
-    Check(vkWaitForFences(s.device, 1, &frame.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(frame)");
-    s.ReadTimestamps(frame);
-    s.completedSerial = std::max(s.completedSerial, frame.serial);
-    for (auto& release : frame.retired) release();
-    frame.retired.clear();
-    for (auto& upload : frame.uploads) upload.used = 0;
-    for (auto pool : frame.descriptorPools) Check(vkResetDescriptorPool(s.device, pool, 0), "vkResetDescriptorPool");
-    frame.descriptorPoolIndex = 0;
-    if (!frame.commandBuffers.empty()) vkFreeCommandBuffers(s.device, frame.pool, static_cast<uint32>(frame.commandBuffers.size()), frame.commandBuffers.data());
-    frame.commandBuffers.clear();
-    Check(vkResetCommandPool(s.device, frame.pool, 0), "vkResetCommandPool");
-    VkCommandBufferAllocateInfo allocation = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    allocation.commandPool = frame.pool; allocation.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; allocation.commandBufferCount = 1;
-    Check(vkAllocateCommandBuffers(s.device, &allocation, &frame.commands), "vkAllocateCommandBuffers");
-    frame.commandBuffers.push_back(frame.commands);
-    VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO }; begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    Check(vkBeginCommandBuffer(frame.commands, &begin), "vkBeginCommandBuffer");
+    {
+        PROFILE("Render/Backend/BeginFrame/WaitFence");
+        Check(vkWaitForFences(s.device, 1, &frame.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(frame)");
+    }
+    {
+        PROFILE("Render/Backend/BeginFrame/ReadFrameTimings");
+        s.ReadTimestamps(frame);
+        s.completedSerial = std::max(s.completedSerial, frame.serial);
+    }
+
+    //执行旧帧的延迟释放
+    {
+        PROFILE("Render/Backend/BeginFrame/ReleaseRetired");
+        for (auto& release : frame.retired)
+        {
+            release();
+        }
+        frame.retired.clear();
+    }
+
+    //重置上传页和描述符池
+    {
+        PROFILE("Render/Backend/BeginFrame/ResetUploads");
+        for (auto& upload : frame.uploads)
+        {
+            upload.used = 0;
+        }
+    }
+    {
+        PROFILE("Render/Backend/BeginFrame/ResetDescriptors");
+        for (auto pool : frame.descriptorPools)
+        {
+            Check(vkResetDescriptorPool(s.device, pool, 0), "vkResetDescriptorPool");
+        }
+        frame.descriptorPoolIndex = 0;
+    }
+
+    //重置命令池并开始录制
+    {
+        PROFILE("Render/Backend/BeginFrame/ResetCommands");
+        if (!frame.commandBuffers.empty())
+        {
+            vkFreeCommandBuffers(s.device, frame.pool, static_cast<uint32>(frame.commandBuffers.size()), frame.commandBuffers.data());
+        }
+        frame.commandBuffers.clear();
+        Check(vkResetCommandPool(s.device, frame.pool, 0), "vkResetCommandPool");
+        VkCommandBufferAllocateInfo allocation = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        allocation.commandPool = frame.pool;
+        allocation.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocation.commandBufferCount = 1;
+        Check(vkAllocateCommandBuffers(s.device, &allocation, &frame.commands), "vkAllocateCommandBuffers");
+        frame.commandBuffers.push_back(frame.commands);
+        VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        Check(vkBeginCommandBuffer(frame.commands, &begin), "vkBeginCommandBuffer");
+    }
+
+    //初始化本帧绑定状态
     s.recording = true;
     s.commandsPending = false;
     s.drawBindings = {};
     GetPipelineState() = {};
+
     //开始当前采集帧的 GPU 计时
-    frame.timestampCount = 0;
-    frame.droppedTimestamps = 0;
-    frame.profileFrameIndex = Profiler::GetCaptureFrameIndex();
-    frame.profileGeneration = Profiler::GetCaptureGeneration();
-    if (s.timestampValidBits && frame.profileFrameIndex >= 0)
     {
-        if (!frame.timestamps)
+        PROFILE("Render/Backend/BeginFrame/BeginGpuTiming");
+        frame.timestampCount = 0;
+        frame.droppedTimestamps = 0;
+        frame.profileFrameIndex = Profiler::GetCaptureFrameIndex();
+        frame.profileGeneration = Profiler::GetCaptureGeneration();
+        if (s.timestampValidBits && frame.profileFrameIndex >= 0)
         {
-            VkQueryPoolCreateInfo queries = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
-            queries.queryType = VK_QUERY_TYPE_TIMESTAMP; queries.queryCount = TimestampCapacity;
-            Check(vkCreateQueryPool(s.device, &queries, nullptr, &frame.timestamps), "vkCreateQueryPool(timestamps)");
+            if (!frame.timestamps)
+            {
+                VkQueryPoolCreateInfo queries = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+                queries.queryType = VK_QUERY_TYPE_TIMESTAMP;
+                queries.queryCount = TimestampCapacity;
+                Check(vkCreateQueryPool(s.device, &queries, nullptr, &frame.timestamps), "vkCreateQueryPool(timestamps)");
+            }
+            vkCmdResetQueryPool(s.RecordCommands(), frame.timestamps, 0, TimestampCapacity);
+            s.WriteTimestamp("FrameStart");
+            Profiler::MarkGpuPending(frame.profileGeneration, frame.profileFrameIndex);
         }
-        vkCmdResetQueryPool(s.RecordCommands(), frame.timestamps, 0, TimestampCapacity);
-        s.WriteTimestamp("FrameStart");
-        Profiler::MarkGpuPending(frame.profileGeneration, frame.profileFrameIndex);
+        else
+        {
+            frame.profileFrameIndex = -1;
+        }
     }
-    else frame.profileFrameIndex = -1;
 }
 
 //记录当前采集帧的 GPU 阶段检查点

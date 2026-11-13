@@ -423,7 +423,7 @@ Application::Initialize 创建 ParticleSimulationSystem。它的 Update/FixedUpd
 
 两入口均使用固定粒子步长 `float64 h=1.0/60.0 秒`、每次最多8步。deltaTime 非有限或负值视为0；进入累积器的 dt=min(deltaTime,0.25)，大于0.25的差值立即加入droppedSimulationSeconds。执行 `floor((accumulator+1e-9)/h)` 的前8步；超过8步的完整 h 丢弃并统计 droppedSimulationSeconds，保留不足h的余数，浮点误差造成的-1e-9以内余数取0。停止/暂停整个应用不调用 runtime 入口，不积压补帧。状态切换后的首步消费命令，Render 次数不影响 accumulator。时间线端点比较容差1e-9；每条已处理Burst保存循环号与事件索引，不能因容差重复触发。
 
-每个 Step 顺序：更新世界/引用有效性→更新 TransformCache→同步配置/状态→按组件 ObjectId 生成出生时间表→对已有粒子积分并产生碰撞/死亡事件→按时间表出生并只积分本步剩余时间→更新拖尾→处理子发射器事件→重建世界 bounds→递增 stepIndex。出生/事件顺序由时间、ObjectId、birthId、event、ruleIndex确定。发射器变换以本 Step 开始的快照为准，不在一个 Step 内插值父物体运动。
+每个 Step 顺序：更新世界/引用有效性→同步配置/状态→按组件 ObjectId 生成出生时间表→对已有粒子积分并产生碰撞/死亡事件→按时间表出生并只积分本步剩余时间→更新拖尾→处理子发射器事件→重建世界 bounds→递增 stepIndex。出生/事件顺序由时间、ObjectId、birthId、event、ruleIndex确定。发射器变换以本 Step 开始的快照为准，不在一个 Step 内插值父物体运动。
 
 `AdvanceRuntime` 在首次绑定或 World contentRevision 改变时清 context、ForEachComponent<ParticleSystem> 收集一次；后续 attach/detach 通知维护注册。组件 disabled/worldInactive 时立即清该状态。不得仅比较 World 地址，场景原地替换会复用地址，依据 `World.h:89`。
 
@@ -505,7 +505,7 @@ Step 结束按 `(eventTime,sourceObjectId,birthId,event序号,ruleIndex)` 派发
 
 `ParticleFrameSnapshot` 保存 World/revision、context kind、`List<ParticleRenderRecord>`、`List<ParticleTrailRenderRecord>`。ParticleRenderRecord 含 sourceObjectId、EnsId owner、birthId、worldPosition、worldRotation、size、angle、linearColor、uvRect、worldModel、worldBounds、Ref<Mesh>、材质引用快照、drawLayer、cast/receiveShadows、renderPath、renderMode、blendMode。ParticleTrailRenderRecord 含 owner/sourceObjectId/trailId、世界空间点及已求值width/color/length、材质、路径、层。尾迹Alpha过期值用所属Emitter.simulationTime求出后放快照，暂停Emitter不会因其它Emitter推进而失去尾迹。所有数据仅在本次 Render 内有效。
 
-`ParticleRenderer::CaptureFrame(World&, const ParticleSimulationContext&, const TransformCache&, ParticleFrameSnapshot&)`：解析有效组件、求最终颜色尺寸/图集、把Local转World、复制资源引用、生成保守bounds；不改变 age 或随机数。先以发射器合并 AABB 粗剔除，再逐粒子/段剔除。隐藏或离屏仍模拟碰撞、寿命与子发射器，不用可见性暂停状态。
+`ParticleRenderer::CaptureFrame(World&, const ParticleSimulationContext&, ParticleFrameSnapshot&)`：解析有效组件、求最终颜色尺寸/图集、把Local转World、复制资源引用、生成保守bounds；不改变 age 或随机数。先以发射器合并 AABB 粗剔除，再逐粒子/段剔除。隐藏或离屏仍模拟碰撞、寿命与子发射器，不用可见性暂停状态。
 
 Billboard bounds 为中心±半径，半径=`sqrt(2)*size/2`，Local size乘发射器世界最大基长度。Mesh bounds 为源 localBounds 经完整worldModel变换。Trail 每段AABB包住两端并向每轴扩展最大半宽。无粒子也无尾迹时bounds.valid=false。非有限bounds不提交，错误计数。
 
@@ -716,7 +716,7 @@ PROFILE区域固定名称：`Render/BuildBatches`、`Render/UploadInstances`、`
 |---|---|
 | `bool Initialize(RenderBackend*)` | 保存backend；quad延迟创建 |
 | `bool PrepareQuad()` | 按第13.2节CPU固定4顶点6索引上传44字节Mesh布局；创建普通、InstancedMesh、InstancedTrail三份VAO共享一份VBO/IBO；失败释放本次已创建资源 |
-| `void CaptureFrame(World&, const ParticleSimulationContext&, const TransformCache&, ParticleFrameSnapshot&)` | 第13.1节快照；无模拟写入 |
+| `void CaptureFrame(World&, const ParticleSimulationContext&, ParticleFrameSnapshot&)` | 第13.1节快照；无模拟写入 |
 | `void AppendCameraItems(const ParticleFrameSnapshot&, const RenderCamera&, List<DrawItem>&)` | 按bounds/layer过滤；Billboard按相机建立model；Mesh逐子网格；trail逐段建立角点/距离；追加而不清原列表 |
 | `void BuildMeshInstances(const DrawBatch&, const List<DrawItem>&, List<GpuMeshInstance>&)` | 从有序items复制model；CPU求逆转置normal；写线性tint与UV；结果顺序严格对应透明序列 |
 | `void BuildTrailInstances(const DrawBatch&, const List<DrawItem>&, List<GpuTrailInstance>&)` | 从该相机trail角点快照写112字节记录；不重新计算另一套side |
@@ -755,9 +755,9 @@ RenderBatchStatsAbi完全按第17节16项uint64顺序，128字节；ParticleSimu
 
 ### 19.4 初始化、关闭与资源安全点
 
-Application现有系统创建顺序中，ParticleSimulationSystem放在PhysicsSystem之后、RenderSystem之前；初始化不查询RenderSystem，避免循环GetSystem。模拟推进仍使用Tick末尾显式调用，不依赖创建顺序实现LateUpdate排序。RenderSystem初始化时从现有系统取得simulation指针；World读取/提交前调用ResetContexts，World退出与Application关闭前先解除其TransformCache监听。
+Application现有系统创建顺序中，ParticleSimulationSystem放在PhysicsSystem之后、RenderSystem之前；初始化不查询RenderSystem，避免循环GetSystem。模拟推进仍使用Tick末尾显式调用，不依赖创建顺序实现LateUpdate排序。RenderSystem初始化时从现有系统取得simulation指针；World读取/提交前调用ResetContexts，World退出与Application关闭前清理上下文。
 
-模拟系统拥有独立TransformCache；preview和runtime复用该cache监听当前World，两个context只读其结果。Shader或Mesh热更不得持有跨帧GpuMesh/GpuMaterial/GpuShader裸指针。单Render中资源解析和GPU上传先于批次key构造；绘制期间不触发资产重导入。资源失效事件在Render安全点处理。
+模拟与渲染通过 Transform 的按需读取接口获取发射器变换；preview 和 runtime 不再维护独立 TransformCache，缓存由各 Transform 持有。Shader或Mesh热更不得持有跨帧GpuMesh/GpuMaterial/GpuShader裸指针。单Render中资源解析和GPU上传先于批次key构造；绘制期间不触发资产重导入。资源失效事件在Render安全点处理。
 
 RenderSystem对Submit使用 `bool readingDrawSubmissions`，从消费active到EndFrame为true；开始消费前把pending.swap(active)，清新的pending。各早退出路径使用局部scope guard，清active并重置bool；拒绝期间Submit返回false。NoWindow/未初始化Render也消费并清pending，不积压实例到下一个项目。
 

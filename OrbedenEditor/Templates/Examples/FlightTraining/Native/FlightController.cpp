@@ -164,10 +164,10 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
                 float32 steerRadians = wheel->steerAngle * Pi / 180.0f;
                 forward = Add(Scale(forward, std::cos(steerRadians)), Scale(Cross(normal, forward), std::sin(steerRadians)));
             }
-            const float32* matrix = wheelTransform->worldMatrix.m;
+            const float32* matrix = wheelTransform->GetWorldMatrix().m;
             float32 scale = std::sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]);
             float32 compression = wheel->GetCompression();
-            vector3 mount = RenderMath::TransformPoint(wheelTransform->worldMatrix, wheel->wheelOffset);
+            vector3 mount = RenderMath::TransformPoint(wheelTransform->GetWorldMatrix(), wheel->wheelOffset);
             vector3 contact = Add(mount, Scale(normal, -((wheel->suspensionRestLength + wheel->wheelRadius) * scale - compression)));
             vector3 offset = Add(contact, Scale(center, -1.0f));
             vector3 velocity = Add(body->linearVelocity, Cross(body->angularVelocity, offset));
@@ -248,7 +248,6 @@ void FlightController::EvaluateForces(const RigidBody& body, const Transform& tr
     }
 
     //同步飞机与引用节点的世界变换
-    transformCache.Update(*world);
     quaternion rotation = transform.GetWorldRotation();
     quaternion inverse{ -rotation.x, -rotation.y, -rotation.z, rotation.w };
     vector3 center = transform.GetWorldPosition();

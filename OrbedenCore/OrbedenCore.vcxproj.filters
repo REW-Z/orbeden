@@ -187,9 +187,6 @@
     <ClInclude Include="Src\Rendering\RenderScene.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Rendering\TransformCache.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Src\Rendering\SceneCuller.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -467,9 +464,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\RenderScene.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Rendering\TransformCache.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\SceneCuller.cpp">
