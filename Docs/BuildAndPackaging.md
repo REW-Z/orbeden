@@ -958,7 +958,7 @@ Vulkan 继续缓存连续绘制的管线、资源组合及原生绑定，在新�
 
 **更新做的事**（`ProjectUpdate::UpdateProject`）：
 
-1. 用当前模板的 `Templates/Project/` 覆盖项目根下的脚手架——**只覆盖模板里有的文件**，不删除任何东西，`Build/` 子树跳过，`.oeproj` 不覆盖（否则会冲掉 `startupWorld` 与 `lastWorld`），`GameSettings.ini` 已有则不覆盖（否则会冲掉作者调好的值），只有项目里缺这份文件时才用模板补上；
+1. 用当前模板的 `Templates/Project/` 覆盖项目根下的脚手架——**只覆盖模板里有的文件**，不删除任何东西，`Build/` 子树跳过，`.oeproj` 不覆盖（否则会冲掉 `startupWorld` 与 `lastWorld`），`GameSettings.ini`、项目根目录的 `.gitignore` 和 `.gitattributes` 已有则跳过，缺失时才从模板补齐；
 2. 用**镜像语义**重置 `Content/Builtin/`（等同于 Dev 面板的 `Reset Builtin`）：覆盖同名文件，并**删除模板里已经没有的文件**；
 3. 刷新 `Lib/` 下的 SDK 快照（Core C# 运行库、绑定目标转发、`OrbedenSdk.path`）；
 4. 最后写入新的版本号。**写版本号是最后一步，写成功即代表一次完整更新**；中途失败则不写，下次打开仍会提示。

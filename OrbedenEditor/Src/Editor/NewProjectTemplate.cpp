@@ -186,13 +186,12 @@ bool NewProjectTemplate::CopyTemplateTree(const std::string& sourceDirectory,
             {
                 //.oeproj 记着该项目的启动场景与上次编辑的场景，一律不覆盖。
                 skip = relative == ProjectFileName;
-                if (!skip && relative == GameSettingsFile::FileName)
+                if (!skip && (relative == GameSettingsFile::FileName || relative == ".gitignore" || relative == ".gitattributes"))
                 {
-                    //项目级设置存的是作者调好的值，已有就不覆盖；项目里缺这份文件时才用模板补齐。
-                    //查询失败也按已有处理，宁可不动项目里的那份。
+                    //保留已有的项目设置与根目录 Git 规则
                     std::error_code existsError;
-                    bool settingsExist = std::filesystem::exists(targetRoot / relative, existsError);
-                    skip = settingsExist || static_cast<bool>(existsError);
+                    bool targetExists = std::filesystem::exists(targetRoot / relative, existsError);
+                    skip = targetExists || static_cast<bool>(existsError);
                 }
             }
             if (!skip)
