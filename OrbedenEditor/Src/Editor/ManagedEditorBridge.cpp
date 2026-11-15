@@ -1096,10 +1096,9 @@ namespace
         uint32 fogEnabled = 0;
         uint32 quality = 0;
         uint32 atmosphereReserved = 0;
-        //地心，单位为米
-        float64 planetCenterX = 0.0;
-        float64 planetCenterY = -6371000.0;
-        float64 planetCenterZ = 0.0;
+        //参考半径与观察海拔，单位米
+        float64 planetRadiusMeters = 6371000.0;
+        float64 altitudeMeters = 0.0;
         float32 metersPerWorldUnit = 1.0f;
         float32 aerosolDensity = 1.0f;
         float32 sunRadianceScale = 20.0f;
@@ -1119,31 +1118,32 @@ namespace
         //原浓雾调试视图的格子，保留以维持其后字段的偏移
         uint32 fogDebugViewReserved = 0;
         float32 denseFogReservedTail2 = 0.0f;
+        vector3 upDirection = { 0.0f, 1.0f, 0.0f };
     };
-    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 168);
+    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 176);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, upDirection) == 160);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, skyMode) == 64);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, fogEnabled) == 68);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, quality) == 72);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, atmosphereReserved) == 76);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, planetCenterX) == 80);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, planetCenterY) == 88);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, planetCenterZ) == 96);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, metersPerWorldUnit) == 104);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, aerosolDensity) == 108);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, sunRadianceScale) == 112);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, atmosphereReservedTail) == 116);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogEnabled) == 120);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogMode) == 124);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogVisibilityMeters) == 128);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogTopHeight) == 132);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogLayerHeightReserved) == 136);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogFadeReserved) == 140);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogScatteringScale) == 144);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogSunScatteringScale) == 148);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReservedTail) == 152);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogTopFadeMeters) == 156);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogDebugViewReserved) == 160);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReservedTail2) == 164);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, planetRadiusMeters) == 80);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, altitudeMeters) == 88);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, metersPerWorldUnit) == 96);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, aerosolDensity) == 100);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, sunRadianceScale) == 104);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, atmosphereReservedTail) == 108);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogEnabled) == 112);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogMode) == 116);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogVisibilityMeters) == 120);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogTopHeight) == 124);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogLayerHeightReserved) == 128);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogFadeReserved) == 132);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogScatteringScale) == 136);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogSunScatteringScale) == 140);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReservedTail) == 144);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogTopFadeMeters) == 148);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogDebugViewReserved) == 152);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReservedTail2) == 156);
 
     //读取世界级渲染设置。Key 借用 World 里的字符串，只在本次调用期间有效。
     uint8 ORBEDEN_NATIVE_CALL GetManagedWorldRenderSettings(void* context, EditorWorldRenderSettingsAbi* settings)
@@ -1164,9 +1164,9 @@ namespace
         settings->skyMode = static_cast<uint32>(source.skyMode);
         settings->fogEnabled = source.atmosphere.fogEnabled ? 1u : 0u;
         settings->quality = static_cast<uint32>(source.atmosphere.quality);
-        settings->planetCenterX = source.atmosphere.planetCenterX;
-        settings->planetCenterY = source.atmosphere.planetCenterY;
-        settings->planetCenterZ = source.atmosphere.planetCenterZ;
+        settings->planetRadiusMeters = source.atmosphere.planetRadiusMeters;
+        settings->altitudeMeters = source.atmosphere.altitudeMeters;
+        settings->upDirection = source.atmosphere.upDirection;
         settings->metersPerWorldUnit = source.atmosphere.metersPerWorldUnit;
         settings->aerosolDensity = source.atmosphere.aerosolDensity;
         settings->sunRadianceScale = source.atmosphere.sunRadianceScale;
@@ -1207,9 +1207,9 @@ namespace
         target.skyMode = static_cast<SkyMode>(settings->skyMode);
         target.atmosphere.fogEnabled = settings->fogEnabled != 0;
         target.atmosphere.quality = static_cast<AtmosphereQuality>(settings->quality);
-        target.atmosphere.planetCenterX = settings->planetCenterX;
-        target.atmosphere.planetCenterY = settings->planetCenterY;
-        target.atmosphere.planetCenterZ = settings->planetCenterZ;
+        target.atmosphere.planetRadiusMeters = settings->planetRadiusMeters;
+        target.atmosphere.altitudeMeters = settings->altitudeMeters;
+        target.atmosphere.upDirection = settings->upDirection;
         target.atmosphere.metersPerWorldUnit = settings->metersPerWorldUnit;
         target.atmosphere.aerosolDensity = settings->aerosolDensity;
         target.atmosphere.sunRadianceScale = settings->sunRadianceScale;

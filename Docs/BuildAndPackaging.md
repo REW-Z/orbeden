@@ -585,6 +585,12 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+#### 版本 132：大气配置改用半径与海拔
+
+删除世界大气的球心 XYZ 与 `Ens.SetPlanetEnvironment`，Rendering 面板改为配置参考半径、观察海拔及折叠项中的径向向上方向；Sky Mode 为 Atmosphere、空气透视关闭时仍可编辑天空参数。C# 使用自动生成的 `Ens.renderSettings` 读、改、写完整世界渲染配置，包含天空、空气透视、浓雾和环境反射。观察条件属于世界大气模块，同一世界的视口共用，Camera、RenderCamera 与底层坐标迁移均不持有大气状态；地图脚本自行更新海拔与当前坐标系下的向上方向。太阳仍自动取主方向光。
+
+世界文件保留 `planetRadiusMeters`，新增 `altitudeMeters` 与 `atmosphereUpDirection`，删除球心属性的读取和写入，不迁移旧内容。旧场景缺少观察条件时使用海拔 0 米、向上 +Y。需重建 Core、Editor，同步项目 SDK 并重建游戏原生与托管代码；Player 重新发布。示例模板同步 `Content/Examples/FlightTraining/main.world`，Builtin 仅 README 更新，无着色器变更。AviatorSage 的 MapSystem 已更新相关调用，Global 地心坐标只参与地图自身计算。
+
 #### 版本 131：预编译委托支持反向已知签名调用
 
 C++ 使用现有 `ComponentProxy.TryBindMethod` 与 `ManagedMethod<TResult(TArgs...)>` 绑定 C# 公开实例方法；C# 在现有 Core 中通过 `ManagedMethodSignatures.Register` / `RegisterAction` 登记完整签名。绑定阶段创建强类型委托，调用阶段通过固定 `UnmanagedCallersOnly` 入口及预编译泛型适配函数执行，不做反射调用、运行时代码生成或源生成，不新增工程。支持 0～16 参数，自动封送字符串、数组、对象引用与指针。标量调用不装箱、不分配托管参数数组，反向入口使用每参数原生布局地址。用法与 NativeAOT 签名登记、裁剪要求见[脚本系统](ScriptSystem.md#85-c-调用-c已知签名绑定)。

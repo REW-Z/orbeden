@@ -102,7 +102,9 @@ PBS、Blinn-Phong 和普通透明材质支持全局环境镜面反射，使用 C
 | Atmosphere ＋ Fog 关 | 程序化天空与太阳盘正常显示，场景材质不加空气透视 |
 | Atmosphere ＋ Fog 开 | 天空与表面共用同一套密度、太阳输入与单次散射算法 |
 
-参数：`Quality` 选择 Low 或 Balanced；`Aerosol Density` 只缩放 Mie（0 关闭 Mie、保留 Rayleigh）；`Sun Radiance Scale` 只缩放散射亮度与太阳盘；`Planet Center` 是地心在当前世界原点坐标系内的位置（米，默认 6371 km 在原点正下方，即原点位于海平面）；`Meters Per World Unit` 是世界单位到米的换算，世界用更小尺度表达长距离时改它。
+参数：`Quality` 选择 Low 或 Balanced；`Aerosol Density` 只缩放 Mie（0 关闭 Mie、保留 Rayleigh）；`Sun Radiance Scale` 只缩放散射亮度与太阳盘；`Planet Radius (m)` 是参考半径，`Altitude (m)` 是观察海拔，与相机场景位置无关；`Meters Per World Unit` 是世界单位到米的换算，世界用更小尺度表达长距离时改它。
+
+脚本通过 `Ens.renderSettings` 读、改、写完整世界配置（含 `atmosphere.denseFog` 全部字段）。`atmosphere.altitudeMeters` 与 `atmosphere.upDirection` 描述世界大气的观察条件；向上方向在界面 `Atmosphere Orientation` 中配置，使用世界坐标，不取相机自身 Up。Camera 不参与大气配置。太阳方向与亮度仍自动读取主方向光。完整字段与示例见引擎文档 `Docs/RenderingPipeline.md`。
 
 天空查找表按**方向**存放：行是地平线相对仰角（地平线落在 v=0.5 的节点行边界上，靠地平线平方加密），列是视线与太阳方向的夹角余弦；表与相机朝向无关。从大气层外观察时，命中的地球画成相机 clearColor 底板（代表未加载的远地形），遮挡边界由天空着色器逐像素解析求交、按 `fwidth` 做一像素覆盖过渡，底板透光率取自太阳透光率表（该表存光学厚度 τ），都与天空表的分辨率无关。
 

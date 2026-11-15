@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <World>
-    <RenderSettings skybox="Builtin/Skyboxes/soft_daylight.orbsky" skyboxEnabled="true" ambientColor="0.340000004 0.370000005 0.419999987 1" ambientIntensity="1" reflectionEnvironment="" reflectionIntensity="0" skyMode="1" atmosphereFogEnabled="true" atmosphereQuality="1" planetCenterX="0" planetCenterY="-6371000" planetCenterZ="0" denseFogEnabled="true" denseFogMode="1" fogVisibilityMeters="8000" fogTopHeight="2000" fogScatteringScale="1" fogSunScatteringScale="1" fogTopFadeMeters="20" metersPerWorldUnit="1" aerosolDensity="1" sunRadianceScale="20" />
+    <RenderSettings skybox="Builtin/Skyboxes/soft_daylight.orbsky" skyboxEnabled="true" ambientColor="0.340000004 0.370000005 0.419999987 1" ambientIntensity="1" reflectionEnvironment="" reflectionIntensity="0" skyMode="1" atmosphereFogEnabled="true" atmosphereQuality="1" planetRadiusMeters="6371000" altitudeMeters="1" denseFogEnabled="true" denseFogMode="1" fogVisibilityMeters="8000" fogTopHeight="2000" fogScatteringScale="1" fogSunScatteringScale="1" fogTopFadeMeters="20" metersPerWorldUnit="1" aerosolDensity="1" sunRadianceScale="20" />
     <Ens stableId="world://FlightTraining/main/root" name="FreeFlight" localActive="true" static="false" layer="0" editorSelectable="false">
         <Component type="Transform" stableId="world://FlightTraining/main/root/Transform/3a639e9e-57f0-4557-b9b6-dbc1327fd307">
             <Field name="localPosition" type="vector3" value="0 0 0" />

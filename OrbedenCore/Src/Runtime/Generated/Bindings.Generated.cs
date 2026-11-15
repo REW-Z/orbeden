@@ -7,6 +7,63 @@ namespace Orbeden
 {
 internal static unsafe class GeneratedBindingCodecs
 {
+    internal static void Write_AtmosphereQuality(NativeBindingWriter writer, global::Orbeden.AtmosphereQuality value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.AtmosphereQuality Read_AtmosphereQuality(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.AtmosphereQuality)reader.Scalar<uint>();
+    }
+    internal static void Write_AtmosphereSettings(NativeBindingWriter writer, global::Orbeden.AtmosphereSettings value)
+    {
+        Write_bool(writer, value.@fogEnabled);
+        Write_AtmosphereQuality(writer, value.@quality);
+        Write_DenseFogSettings(writer, value.@denseFog);
+        Write_float64(writer, value.@planetRadiusMeters);
+        Write_float64(writer, value.@altitudeMeters);
+        Write_vector3(writer, value.@upDirection);
+        Write_float32(writer, value.@metersPerWorldUnit);
+        Write_float32(writer, value.@aerosolDensity);
+        Write_float32(writer, value.@sunRadianceScale);
+    }
+    internal static global::Orbeden.AtmosphereSettings Read_AtmosphereSettings(ref NativeBindingReader reader)
+    {
+        var block = reader.Block(sizeof(byte) + sizeof(uint) + sizeof(byte) + sizeof(uint) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(double) + sizeof(double) + sizeof(global::Orbeden.vector3) + sizeof(float) + sizeof(float) + sizeof(float));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.AtmosphereSettings value = default;
+        value.@fogEnabled = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@quality = (global::Orbeden.AtmosphereQuality)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@denseFog.@enabled = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@denseFog.@mode = (global::Orbeden.DenseFogMode)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@denseFog.@visibilityMeters = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@denseFog.@topHeightMeters = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@denseFog.@topFadeMeters = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@denseFog.@scatteringScale = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@denseFog.@sunScatteringScale = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@planetRadiusMeters = (double)Unsafe.ReadUnaligned<double>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(double));
+        value.@altitudeMeters = (double)Unsafe.ReadUnaligned<double>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(double));
+        value.@upDirection = (global::Orbeden.vector3)Unsafe.ReadUnaligned<global::Orbeden.vector3>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.vector3));
+        value.@metersPerWorldUnit = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@aerosolDensity = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@sunRadianceScale = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        return value;
+    }
     internal static void Write_BlendMode(NativeBindingWriter writer, global::Orbeden.BlendMode value)
     {
         writer.Scalar((uint)value);
@@ -46,6 +103,45 @@ internal static unsafe class GeneratedBindingCodecs
     internal static global::Orbeden.CullMode Read_CullMode(ref NativeBindingReader reader)
     {
         return (global::Orbeden.CullMode)reader.Scalar<uint>();
+    }
+    internal static void Write_DenseFogMode(NativeBindingWriter writer, global::Orbeden.DenseFogMode value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.DenseFogMode Read_DenseFogMode(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.DenseFogMode)reader.Scalar<uint>();
+    }
+    internal static void Write_DenseFogSettings(NativeBindingWriter writer, global::Orbeden.DenseFogSettings value)
+    {
+        Write_bool(writer, value.@enabled);
+        Write_DenseFogMode(writer, value.@mode);
+        Write_float32(writer, value.@visibilityMeters);
+        Write_float32(writer, value.@topHeightMeters);
+        Write_float32(writer, value.@topFadeMeters);
+        Write_float32(writer, value.@scatteringScale);
+        Write_float32(writer, value.@sunScatteringScale);
+    }
+    internal static global::Orbeden.DenseFogSettings Read_DenseFogSettings(ref NativeBindingReader reader)
+    {
+        var block = reader.Block(sizeof(byte) + sizeof(uint) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float));
+        ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
+        global::Orbeden.DenseFogSettings value = default;
+        value.@enabled = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
+        cursor = ref Unsafe.Add(ref cursor, sizeof(byte));
+        value.@mode = (global::Orbeden.DenseFogMode)Unsafe.ReadUnaligned<uint>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(uint));
+        value.@visibilityMeters = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@topHeightMeters = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@topFadeMeters = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@scatteringScale = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@sunScatteringScale = (float)Unsafe.ReadUnaligned<float>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        return value;
     }
     internal static void Write_DrawQueue(NativeBindingWriter writer, global::Orbeden.DrawQueue value)
     {
@@ -991,6 +1087,14 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return NativeBindingRuntime.Wrap<global::Orbeden.Shader>(reader.Scalar<int>());
     }
+    internal static void Write_Ref_Skybox_(NativeBindingWriter writer, global::Orbeden.Skybox? value)
+    {
+        writer.Scalar(NativeBindingRuntime.GetObjectId(value));
+    }
+    internal static global::Orbeden.Skybox? Read_Ref_Skybox_(ref NativeBindingReader reader)
+    {
+        return NativeBindingRuntime.Wrap<global::Orbeden.Skybox>(reader.Scalar<int>());
+    }
     internal static void Write_Ref_Texture2D_(NativeBindingWriter writer, global::Orbeden.Texture2D? value)
     {
         writer.Scalar(NativeBindingRuntime.GetObjectId(value));
@@ -1006,6 +1110,30 @@ internal static unsafe class GeneratedBindingCodecs
     internal static global::Orbeden.Reflection.FieldKind Read_Reflection__FieldKind(ref NativeBindingReader reader)
     {
         return (global::Orbeden.Reflection.FieldKind)reader.Scalar<int>();
+    }
+    internal static void Write_RenderSettings(NativeBindingWriter writer, global::Orbeden.RenderSettings value)
+    {
+        Write_Ref_Skybox_(writer, value.@skybox);
+        Write_bool(writer, value.@skyboxEnabled);
+        Write_SkyMode(writer, value.@skyMode);
+        Write_AtmosphereSettings(writer, value.@atmosphere);
+        Write_color(writer, value.@ambientColor);
+        Write_float32(writer, value.@ambientIntensity);
+        Write_Ref_Skybox_(writer, value.@reflectionEnvironment);
+        Write_float32(writer, value.@reflectionIntensity);
+    }
+    internal static global::Orbeden.RenderSettings Read_RenderSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.RenderSettings value = new();
+        value.@skybox = Read_Ref_Skybox_(ref reader);
+        value.@skyboxEnabled = Read_bool(ref reader);
+        value.@skyMode = Read_SkyMode(ref reader);
+        value.@atmosphere = Read_AtmosphereSettings(ref reader);
+        value.@ambientColor = Read_color(ref reader);
+        value.@ambientIntensity = Read_float32(ref reader);
+        value.@reflectionEnvironment = Read_Ref_Skybox_(ref reader);
+        value.@reflectionIntensity = Read_float32(ref reader);
+        return value;
     }
     internal static void Write_ScriptDomain(NativeBindingWriter writer, global::Orbeden.ScriptDomain value)
     {
@@ -1130,6 +1258,14 @@ internal static unsafe class GeneratedBindingCodecs
     internal static global::Orbeden.Shader? Read_Shader_(ref NativeBindingReader reader)
     {
         return NativeBindingRuntime.Wrap<global::Orbeden.Shader>(reader.Scalar<int>());
+    }
+    internal static void Write_SkyMode(NativeBindingWriter writer, global::Orbeden.SkyMode value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.SkyMode Read_SkyMode(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.SkyMode)reader.Scalar<uint>();
     }
     internal static void Write_StringId(NativeBindingWriter writer, string value)
     {
@@ -1358,7 +1494,7 @@ internal static class GeneratedBindingRegistration
     {
         NativeBindingRuntime.Register(typeof(global::Orbeden.Object), "Object", 11880064706505753351UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Component), "Component", 3730866753121215061UL, null);
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 4849731042518187294UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 1271523575787013593UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Font), "Font", 8904294447050588615UL, (ens, pointer) => new global::Orbeden.Font(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 17629515747893046868UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 3298412916009026265UL, (ens, pointer) => new global::Orbeden.Material(pointer));
@@ -1385,6 +1521,72 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.TriangleMeshCollider), "TriangleMeshCollider", 18386403692128320197UL, (ens, pointer) => new global::Orbeden.TriangleMeshCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.ResourceLoadOperation), "ResourceLoadOperation", 14895700534675878464UL, null, 6);
     }
+}
+}
+namespace Orbeden
+{
+public struct RenderSettings
+{
+    public global::Orbeden.Skybox? @skybox;
+    public bool @skyboxEnabled;
+    public global::Orbeden.SkyMode @skyMode;
+    public global::Orbeden.AtmosphereSettings @atmosphere;
+    public global::Orbeden.color @ambientColor;
+    public float @ambientIntensity;
+    public global::Orbeden.Skybox? @reflectionEnvironment;
+    public float @reflectionIntensity;
+}
+}
+namespace Orbeden
+{
+public enum SkyMode : uint
+{
+    Cubemap = 0,
+    Atmosphere = 1,
+}
+}
+namespace Orbeden
+{
+public struct AtmosphereSettings
+{
+    public bool @fogEnabled;
+    public global::Orbeden.AtmosphereQuality @quality;
+    public global::Orbeden.DenseFogSettings @denseFog;
+    public double @planetRadiusMeters;
+    public double @altitudeMeters;
+    public global::Orbeden.vector3 @upDirection;
+    public float @metersPerWorldUnit;
+    public float @aerosolDensity;
+    public float @sunRadianceScale;
+}
+}
+namespace Orbeden
+{
+public enum AtmosphereQuality : uint
+{
+    Low = 0,
+    Balanced = 1,
+}
+}
+namespace Orbeden
+{
+public struct DenseFogSettings
+{
+    public bool @enabled;
+    public global::Orbeden.DenseFogMode @mode;
+    public float @visibilityMeters;
+    public float @topHeightMeters;
+    public float @topFadeMeters;
+    public float @scatteringScale;
+    public float @sunScatteringScale;
+}
+}
+namespace Orbeden
+{
+public enum DenseFogMode : uint
+{
+    Height = 0,
+    Distance = 1,
 }
 }
 namespace Orbeden
@@ -2116,6 +2318,32 @@ namespace Orbeden
 [NativeBinding("Ens")]
 public unsafe partial class Ens
 {
+    public global::Orbeden.RenderSettings @renderSettings
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 2, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_RenderSettings(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+        set
+        {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_RenderSettings(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 5, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
+        }
+        }
+    }
     public string @CaptureSnapshot()
     {
         NativeBindingBuffer result = default;
@@ -2143,20 +2371,15 @@ public unsafe partial class Ens
         fixed (byte* pointer_text = bytes_text)
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 2, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 3, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_text, bytes_text.Length), (byte)(@preserveIdentity ? 1 : 0), &result));
         return NativeBindingRuntime.Wrap<global::Orbeden.Ens>(result);
         }
     }
     public void @RebaseCoordinates(global::Orbeden.quaternion @rotation, global::Orbeden.vector3 @translation)
     {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 3, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 4, this);
         NativeBindingRuntime.Check(callback(InstanceId, @rotation, @translation));
-    }
-    public void @SetPlanetEnvironment(double @radius, double @centerX, double @centerY, double @centerZ)
-    {
-        var callback = (delegate* unmanaged[Cdecl]<int, double, double, double, double, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 4, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @radius, @centerX, @centerY, @centerZ));
     }
 }
 }

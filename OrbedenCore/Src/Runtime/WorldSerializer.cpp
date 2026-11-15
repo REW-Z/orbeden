@@ -764,9 +764,12 @@ namespace
                 }
 
                 if (!ReadFloat64Attribute(token, "planetRadiusMeters", atmosphere.planetRadiusMeters)) return false;
-                if (!ReadFloat64Attribute(token, "planetCenterX", atmosphere.planetCenterX)) return false;
-                if (!ReadFloat64Attribute(token, "planetCenterY", atmosphere.planetCenterY)) return false;
-                if (!ReadFloat64Attribute(token, "planetCenterZ", atmosphere.planetCenterZ)) return false;
+                if (!ReadFloat64Attribute(token, "altitudeMeters", atmosphere.altitudeMeters)) return false;
+                const std::string& upDirection = GetAttribute(token, "atmosphereUpDirection");
+                if (!upDirection.empty() && !Reflection::SetFromXmlValue(atmosphere.upDirection, upDirection))
+                {
+                    return false;
+                }
                 if (!ReadFloat32Attribute(token, "metersPerWorldUnit", atmosphere.metersPerWorldUnit)) return false;
                 if (!ReadFloat32Attribute(token, "aerosolDensity", atmosphere.aerosolDensity)) return false;
                 if (!ReadFloat32Attribute(token, "sunRadianceScale", atmosphere.sunRadianceScale)) return false;
@@ -1018,10 +1021,9 @@ std::string WorldSerializer::CaptureWorld(const World& world)
         << "\" skyMode=\"" << static_cast<uint32>(world.renderSettings.skyMode)
         << "\" atmosphereFogEnabled=\"" << (world.renderSettings.atmosphere.fogEnabled ? "true" : "false")
         << "\" atmosphereQuality=\"" << static_cast<uint32>(world.renderSettings.atmosphere.quality)
-        << "\" planetCenterX=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterX);
-    output << "\" planetRadiusMeters=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetRadiusMeters);
-    output << "\" planetCenterY=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterY);
-    output << "\" planetCenterZ=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterZ);
+        << "\" planetRadiusMeters=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetRadiusMeters);
+    output << "\" altitudeMeters=\""; WriteFloat64(output, world.renderSettings.atmosphere.altitudeMeters);
+    output << "\" atmosphereUpDirection=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.upDirection));
     output << "\" denseFogEnabled=\"" << (world.renderSettings.atmosphere.denseFog.enabled ? "true" : "false")
         << "\" denseFogMode=\"" << static_cast<uint32>(world.renderSettings.atmosphere.denseFog.mode)
         << "\" fogVisibilityMeters=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.visibilityMeters))

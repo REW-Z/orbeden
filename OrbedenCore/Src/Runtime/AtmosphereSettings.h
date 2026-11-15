@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Defines/types.h"
+#include "Runtime/EngineTypes.h"
 
 //天空背景的来源。数值稳定，编辑器 ABI 与世界文件按数值保存。
 enum class SkyMode : uint32
@@ -66,12 +66,12 @@ public:
     //浓雾介质，默认关闭，老场景画面不变
     DenseFogSettings denseFog;
 
-    //地心在当前世界原点坐标系内的位置，单位为米。
     //球面参考半径，单位米
     float64 planetRadiusMeters = 6371000.0;
-    float64 planetCenterX = 0.0;
-    float64 planetCenterY = -6371000.0;
-    float64 planetCenterZ = 0.0;
+    //大气观察海拔，单位米，与场景位置无关
+    float64 altitudeMeters = 0.0;
+    //观察地点的径向向上方向，使用当前世界坐标系
+    vector3 upDirection = { 0.0f, 1.0f, 0.0f };
 
     //一个世界单位对应的米数，允许世界用更小的尺度表达很长的距离。
     float32 metersPerWorldUnit = 1.0f;

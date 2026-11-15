@@ -41,19 +41,18 @@ internal static class EditorEnvironmentSettings
     private static string reflectionEnvironmentKey = string.Empty;
     private static float reflectionIntensity = 1.0f;
 
-    //大气草稿：地心三个分量用文本承载，失焦时才解析，输入中途的半截数字不会写进草稿
+    //大气草稿：半径与海拔使用双精度文本
     private static SkyMode skyMode = SkyMode.Cubemap;
     private static bool atmosphereFogEnabled;
     private static AtmosphereQuality atmosphereQuality = AtmosphereQuality.Low;
     private static float aerosolDensity = 1.0f;
     private static float sunRadianceScale = 20.0f;
     private static float metersPerWorldUnit = 1.0f;
-    private static double planetCenterX;
-    private static double planetCenterY = -6371000.0;
-    private static double planetCenterZ;
-    private static string planetCenterXText = "0";
-    private static string planetCenterYText = "-6371000";
-    private static string planetCenterZText = "0";
+    private static double planetRadiusMeters = 6371000.0;
+    private static double altitudeMeters;
+    private static vector3 upDirection = new(0, 1, 0);
+    private static string planetRadiusText = "6371000";
+    private static string altitudeText = "0";
     private static string fieldError = string.Empty;
 
     //浓雾草稿：能见度按 MOR 定义，单位米；雾层没有底面，雾顶以下都有雾
@@ -90,7 +89,8 @@ internal static class EditorEnvironmentSettings
             aerosolDensity = 1.0f;
             sunRadianceScale = 20.0f;
             metersPerWorldUnit = 1.0f;
-            SetPlanetCenter(draft.PlanetCenterX, draft.PlanetCenterY, draft.PlanetCenterZ);
+            SetPlanetParameters(draft.PlanetRadiusMeters, draft.AltitudeMeters);
+            upDirection = draft.UpDirection;
             denseFogEnabled = false;
             denseFogMode = DenseFogMode.Height;
             fogVisibilityMeters = 200.0f;
@@ -115,7 +115,8 @@ internal static class EditorEnvironmentSettings
         aerosolDensity = draft.AerosolDensity;
         sunRadianceScale = draft.SunRadianceScale;
         metersPerWorldUnit = draft.MetersPerWorldUnit;
-        SetPlanetCenter(draft.PlanetCenterX, draft.PlanetCenterY, draft.PlanetCenterZ);
+        SetPlanetParameters(draft.PlanetRadiusMeters, draft.AltitudeMeters);
+        upDirection = draft.UpDirection;
 
         denseFogEnabled = draft.DenseFogEnabled;
         denseFogMode = (DenseFogMode)Math.Clamp(draft.DenseFogMode, 0u, 1u);
@@ -126,22 +127,20 @@ internal static class EditorEnvironmentSettings
         fogTopFadeMeters = draft.FogTopFadeMeters;
     }
 
-    /// <summary>把地心同时写进数值草稿与文本草稿。</summary>
-    private static void SetPlanetCenter(double x, double y, double z)
+    /// <summary>同步半径与观察海拔草稿</summary>
+    private static void SetPlanetParameters(double radius, double altitude)
     {
-        planetCenterX = x;
-        planetCenterY = y;
-        planetCenterZ = z;
-        planetCenterXText = FromInvariant(x);
-        planetCenterYText = FromInvariant(y);
-        planetCenterZText = FromInvariant(z);
+        planetRadiusMeters = radius;
+        altitudeMeters = altitude;
+        planetRadiusText = FromInvariant(radius);
+        altitudeText = FromInvariant(altitude);
     }
 
-    /// <summary>按 InvariantCulture 往返写出坐标文本。</summary>
+    /// <summary>按 InvariantCulture 往返写出参数文本。</summary>
     private static string FromInvariant(double value) => value.ToString("R", CultureInfo.InvariantCulture);
 
-    /// <summary>解析一个地心分量；文本非法时保留旧值并记录字段错误，不打断正在输入的内容。</summary>
-    private static void CommitPlanetCenter(string label, string text, ref double value)
+    /// <summary>解析一个大气参数</summary>
+    private static void CommitPlanetParameter(string label, string text, ref double value)
     {
         if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) && double.IsFinite(parsed))
         {
@@ -179,9 +178,9 @@ internal static class EditorEnvironmentSettings
             SkyMode = (uint)skyMode,
             FogEnabled = atmosphereFogEnabled,
             Quality = (uint)atmosphereQuality,
-            PlanetCenterX = planetCenterX,
-            PlanetCenterY = planetCenterY,
-            PlanetCenterZ = planetCenterZ,
+            PlanetRadiusMeters = planetRadiusMeters,
+            AltitudeMeters = altitudeMeters,
+            UpDirection = upDirection,
             MetersPerWorldUnit = metersPerWorldUnit,
             AerosolDensity = aerosolDensity,
             SunRadianceScale = sunRadianceScale,
@@ -194,11 +193,26 @@ internal static class EditorEnvironmentSettings
             FogTopFadeMeters = fogTopFadeMeters,
         };
 
-        if (!double.IsFinite(planetCenterX) || !double.IsFinite(planetCenterY) || !double.IsFinite(planetCenterZ))
+        if (!double.TryParse(planetRadiusText, NumberStyles.Float, CultureInfo.InvariantCulture, out double radius)
+            || !double.IsFinite(radius) || radius <= 0.0)
         {
-            fieldError = "Planet center must be a finite number.";
+            fieldError = "Planet Radius must be greater than zero.";
             return false;
         }
+        if (!double.TryParse(altitudeText, NumberStyles.Float, CultureInfo.InvariantCulture, out double altitude)
+            || !double.IsFinite(altitude) || altitude <= -radius)
+        {
+            fieldError = "Altitude must be finite and above the planet center.";
+            return false;
+        }
+        float upLengthSquared = upDirection.x * upDirection.x + upDirection.y * upDirection.y + upDirection.z * upDirection.z;
+        if (!float.IsFinite(upLengthSquared) || upLengthSquared <= 1.0e-12f)
+        {
+            fieldError = "Atmosphere Up must be a finite nonzero direction.";
+            return false;
+        }
+        atmosphere.PlanetRadiusMeters = radius;
+        atmosphere.AltitudeMeters = altitude;
         if (!float.IsFinite(metersPerWorldUnit) || metersPerWorldUnit <= 0.0f)
         {
             fieldError = "Meters Per World Unit must be greater than zero.";
@@ -307,8 +321,8 @@ internal static class EditorEnvironmentSettings
                         EditorTheme.Current.LogError);
                 }
 
-                //雾关闭时这组参数整块收起，勾上后始终展开，不提供手动收放
-                if (atmosphereFogEnabled)
+                //显示天空与空气透视共用参数
+                if (atmosphereFogEnabled || skyMode == SkyMode.Atmosphere)
                 {
                     AtmosphereQuality selectedQuality = atmosphereQuality;
                     if (DrawEnum("Quality", ref selectedQuality)) { atmosphereQuality = selectedQuality; dirty = true; }
@@ -322,15 +336,41 @@ internal static class EditorEnvironmentSettings
                         sunRadianceScale = Math.Clamp(sunRadianceScale, 0.0f, 100.0f);
                         dirty = true;
                     }
-                    if (EditorGUI.InputText("Planet Center X", ref planetCenterXText)) { CommitPlanetCenter("Planet Center X", planetCenterXText, ref planetCenterX); dirty = true; }
-                    if (EditorGUI.InputText("Planet Center Y", ref planetCenterYText)) { CommitPlanetCenter("Planet Center Y", planetCenterYText, ref planetCenterY); dirty = true; }
-                    if (EditorGUI.InputText("Planet Center Z", ref planetCenterZText)) { CommitPlanetCenter("Planet Center Z", planetCenterZText, ref planetCenterZ); dirty = true; }
-                    if (EditorGUI.InputFloat("Meters Per World Unit", ref metersPerWorldUnit))
-                    {
-                        metersPerWorldUnit = Math.Clamp(metersPerWorldUnit, 0.0001f, 10000.0f);
-                        dirty = true;
-                    }
                     EditorGUI.Label("Aerial perspective is thin haze over kilometres. Shared with the Atmosphere sky mode.");
+                }
+
+                EditorGUI.Separator();
+                if (EditorGUI.InputText("Planet Radius (m)", ref planetRadiusText))
+                {
+                    CommitPlanetParameter("Planet Radius", planetRadiusText, ref planetRadiusMeters);
+                    dirty = true;
+                }
+                if (EditorGUI.InputText("Altitude (m)", ref altitudeText))
+                {
+                    CommitPlanetParameter("Altitude", altitudeText, ref altitudeMeters);
+                    dirty = true;
+                }
+                EditorGUI.Label("Altitude is independent of scene position. Scripts can update it from the player's current altitude.");
+                int orientation = NativeEditorGUI.TreeNode("Atmosphere Orientation", false, false, false);
+                if ((orientation & 1) != 0)
+                {
+                    try
+                    {
+                        if (EditorGUI.InputVector3("Up Direction", ref upDirection))
+                        {
+                            dirty = true;
+                        }
+                        EditorGUI.Label("World-space radial up at the observation point. Defaults to +Y; map scripts can update it after changing the local frame.");
+                    }
+                    finally
+                    {
+                        NativeEditorGUI.TreePop();
+                    }
+                }
+                if (EditorGUI.InputFloat("Meters Per World Unit", ref metersPerWorldUnit))
+                {
+                    metersPerWorldUnit = Math.Clamp(metersPerWorldUnit, 0.0001f, 10000.0f);
+                    dirty = true;
                 }
 
                 EditorGUI.Separator();

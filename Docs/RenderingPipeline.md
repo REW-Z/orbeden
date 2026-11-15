@@ -211,6 +211,36 @@ u_Time
 - 表面合成在光照、自发光与 tint 之后：alpha 混合用 `rgb × T + L`，加性混合只用 `rgb × T`。折射与热浪采样的相机颜色已经含雾，不再调用表面加雾函数；雨玻璃只给本地反光乘该表面的 `T`。
 - 菜单与设置入口在 Rendering 面板；世界文件保存全部大气参数，缺失属性按默认值读取。
 
+世界大气配置使用参考半径 `planetRadiusMeters`、观察海拔 `altitudeMeters`（单位米）及当地径向向上方向 `upDirection`，不保存球心 XYZ，也不读取相机的绝对场景位置。Camera、RenderCamera 和底层坐标迁移接口没有大气字段或处理逻辑；海拔与方向是大气模块自身的输入，同一世界的各视口共用。
+
+Rendering 面板直接配置参考半径与海拔；`Atmosphere Orientation` 折叠项可修改向上方向，默认世界 +Y。地图从自己的 Global 坐标计算玩家海拔和径向向上，再把方向转换到当前 Local 系，每帧及坐标原点迁移后写入大气配置。Local -Y 无需指向球心，相机转头也不改变这个方向。
+
+界面与脚本访问同一份完整世界配置。C# 使用读、改、写方式，结构是副本，修改后必须写回；以下字段及 `denseFog` 的全部字段均可在 Rendering 面板配置：
+
+```csharp
+var environment = Ens.renderSettings;
+environment.skyboxEnabled = true;
+environment.skyMode = SkyMode.Atmosphere;
+environment.atmosphere.planetRadiusMeters = 1_000_000;
+environment.atmosphere.altitudeMeters = 100;
+environment.atmosphere.upDirection = new vector3(0, 1, 0);
+environment.atmosphere.quality = AtmosphereQuality.Balanced;
+environment.atmosphere.fogEnabled = true;
+environment.atmosphere.aerosolDensity = 0.2f;
+environment.atmosphere.sunRadianceScale = 20;
+environment.atmosphere.metersPerWorldUnit = 1;
+environment.atmosphere.denseFog.enabled = true;
+environment.atmosphere.denseFog.mode = DenseFogMode.Height;
+environment.atmosphere.denseFog.visibilityMeters = 8000;
+environment.atmosphere.denseFog.topHeightMeters = 2000;
+environment.atmosphere.denseFog.topFadeMeters = 20;
+environment.atmosphere.denseFog.scatteringScale = 1;
+environment.atmosphere.denseFog.sunScatteringScale = 1;
+Ens.renderSettings = environment;
+```
+
+太阳方向与颜色、强度仍自动取自场景主方向光，优先使用第一个开启阴影的方向光；没有主方向光时散射亮度为零。海拔不乘 `metersPerWorldUnit`；该比例只换算场景内的相对距离。
+
 相机高度没有停用阈值：每条射线由着色器求大气球壳的入射点、出射点与地球交点，相机在大气层外时从入射点开始积分，射线不经过大气时返回零散射与单位透光率，观察表面时再以表面距离截断。只有落到地心以下的位置才判为无效并回退天空盒。
 
 **浓雾**是独立于球形大气的第二种介质，默认关闭，有自己的开关（`denseFog.enabled`），不受 `fogEnabled` 支配。密度模型由 `denseFog.mode` 选择：`Height` 密度只随高度变化（谷地积雾、山脊露出），`Distance` 密度与高度无关、只按相机距离加雾（没有高度参数，适合由脚本按飞行高度驱动）。它用 `visibilityMeters` 按 MOR（5% 透射阈值）描述自身消光，雾层没有底面：低于雾顶高度的所有高度都保持满密度，只在雾顶一侧衰减。高度按**平地近似**沿射线线性变化，分段剖面因此整条有初等原函数，透光率是路径积分的一次求值——不建查找表，也不做逐像素求积与球面边界求交。散射亮度取世界环境光乘 `fogScatteringScale`，环境光为零时浓雾不发光，夜间不会自行泛白。六面天空与程序化天空都被浓雾遮蔽，各算一次。

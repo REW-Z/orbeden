@@ -64,9 +64,8 @@ internal struct EditorWorldRenderSettingsAbi
     public uint FogEnabled;
     public uint Quality;
     public uint AtmosphereReserved;
-    public double PlanetCenterX;
-    public double PlanetCenterY;
-    public double PlanetCenterZ;
+    public double PlanetRadiusMeters;
+    public double AltitudeMeters;
     public float MetersPerWorldUnit;
     public float AerosolDensity;
     public float SunRadianceScale;
@@ -86,17 +85,18 @@ internal struct EditorWorldRenderSettingsAbi
     //原浓雾调试视图的格子，保留以维持其后字段的偏移
     public uint FogDebugViewReserved;
     public float DenseFogReservedTail2;
+    public vector3 UpDirection;
 }
 
 /// <summary>世界级大气设置，字段与原生 RenderSettings::atmosphere 一一对应。</summary>
 internal struct WorldAtmosphereSettings
 {
+    public vector3 UpDirection;
     public uint SkyMode;
     public bool FogEnabled;
     public uint Quality;
-    public double PlanetCenterX;
-    public double PlanetCenterY;
-    public double PlanetCenterZ;
+    public double PlanetRadiusMeters;
+    public double AltitudeMeters;
     public float MetersPerWorldUnit;
     public float AerosolDensity;
     public float SunRadianceScale;
@@ -164,7 +164,8 @@ public static unsafe class EditorApplication
         reflectionIntensity = 1.0f;
         atmosphere = new WorldAtmosphereSettings
         {
-            PlanetCenterY = -6371000.0,
+            PlanetRadiusMeters = 6371000.0,
+            UpDirection = new vector3(0, 1, 0),
             MetersPerWorldUnit = 1.0f,
             AerosolDensity = 1.0f,
             SunRadianceScale = 20.0f,
@@ -189,9 +190,9 @@ public static unsafe class EditorApplication
             SkyMode = settings.SkyMode,
             FogEnabled = settings.FogEnabled != 0,
             Quality = settings.Quality,
-            PlanetCenterX = settings.PlanetCenterX,
-            PlanetCenterY = settings.PlanetCenterY,
-            PlanetCenterZ = settings.PlanetCenterZ,
+            PlanetRadiusMeters = settings.PlanetRadiusMeters,
+            AltitudeMeters = settings.AltitudeMeters,
+            UpDirection = settings.UpDirection,
             MetersPerWorldUnit = settings.MetersPerWorldUnit,
             AerosolDensity = settings.AerosolDensity,
             SunRadianceScale = settings.SunRadianceScale,
@@ -227,9 +228,9 @@ public static unsafe class EditorApplication
                 SkyMode = atmosphere.SkyMode,
                 FogEnabled = atmosphere.FogEnabled ? 1u : 0u,
                 Quality = atmosphere.Quality,
-                PlanetCenterX = atmosphere.PlanetCenterX,
-                PlanetCenterY = atmosphere.PlanetCenterY,
-                PlanetCenterZ = atmosphere.PlanetCenterZ,
+                PlanetRadiusMeters = atmosphere.PlanetRadiusMeters,
+                AltitudeMeters = atmosphere.AltitudeMeters,
+                UpDirection = atmosphere.UpDirection,
                 MetersPerWorldUnit = atmosphere.MetersPerWorldUnit,
                 AerosolDensity = atmosphere.AerosolDensity,
                 SunRadianceScale = atmosphere.SunRadianceScale,
@@ -261,17 +262,19 @@ public static unsafe class EditorApplication
     /// <summary>校验环境设置载荷的尺寸与关键偏移；托管与原生布局不一致时立刻中止。</summary>
     private static void CheckRenderSettingsLayout()
     {
-        bool matches = Marshal.SizeOf<EditorWorldRenderSettingsAbi>() == 168
+        bool matches = Marshal.SizeOf<EditorWorldRenderSettingsAbi>() == 176
             && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.SkyMode)).ToInt32() == 64
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.PlanetCenterX)).ToInt32() == 80
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.MetersPerWorldUnit)).ToInt32() == 104
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.SunRadianceScale)).ToInt32() == 112
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.DenseFogEnabled)).ToInt32() == 120
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogVisibilityMeters)).ToInt32() == 128
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogScatteringScale)).ToInt32() == 144
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogSunScatteringScale)).ToInt32() == 148
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogTopFadeMeters)).ToInt32() == 156
-            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogDebugViewReserved)).ToInt32() == 160;
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.PlanetRadiusMeters)).ToInt32() == 80
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.AltitudeMeters)).ToInt32() == 88
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.UpDirection)).ToInt32() == 160
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.MetersPerWorldUnit)).ToInt32() == 96
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.SunRadianceScale)).ToInt32() == 104
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.DenseFogEnabled)).ToInt32() == 112
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogVisibilityMeters)).ToInt32() == 120
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogScatteringScale)).ToInt32() == 136
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogSunScatteringScale)).ToInt32() == 140
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogTopFadeMeters)).ToInt32() == 148
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogDebugViewReserved)).ToInt32() == 152;
         if (!matches)
         {
             throw new InvalidOperationException("EditorWorldRenderSettingsAbi layout does not match the native bridge.");

@@ -440,9 +440,6 @@ bool AtmosphereRenderer::MatchesFrame(const AtmosphereFrame& current, const Atmo
         && current.settings.fogEnabled == other.settings.fogEnabled
         && current.settings.quality == other.settings.quality
         && current.settings.planetRadiusMeters == other.settings.planetRadiusMeters
-        && current.settings.planetCenterX == other.settings.planetCenterX
-        && current.settings.planetCenterY == other.settings.planetCenterY
-        && current.settings.planetCenterZ == other.settings.planetCenterZ
         && current.settings.metersPerWorldUnit == other.settings.metersPerWorldUnit
         && current.settings.aerosolDensity == other.settings.aerosolDensity
         && current.settings.sunRadianceScale == other.settings.sunRadianceScale;
@@ -461,8 +458,7 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
     //非法设置停用本相机大气
     const bool valid = std::isfinite(atmosphere.planetRadiusMeters) && atmosphere.planetRadiusMeters > 0 && std::isfinite(atmosphere.metersPerWorldUnit) && atmosphere.metersPerWorldUnit > 0.0f
         && std::isfinite(atmosphere.aerosolDensity) && std::isfinite(atmosphere.sunRadianceScale)
-        && std::isfinite(atmosphere.planetCenterX) && std::isfinite(atmosphere.planetCenterY)
-        && std::isfinite(atmosphere.planetCenterZ) && skyMode <= 1u && quality <= 1u
+        && skyMode <= 1u && quality <= 1u
         && std::isfinite(atmosphere.denseFog.visibilityMeters) && atmosphere.denseFog.visibilityMeters > 0.0f
         && std::isfinite(atmosphere.denseFog.topHeightMeters) && std::isfinite(atmosphere.denseFog.scatteringScale)
         && std::isfinite(atmosphere.denseFog.sunScatteringScale)
@@ -484,29 +480,18 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
 
     if (!outFrame.fogActive && !outFrame.skyActive && !outFrame.denseFogActive) return true;
 
-    //相机位置换算到米，再求高度与向上方向
-    const float64 metersPerWorldUnit = static_cast<float64>(atmosphere.metersPerWorldUnit);
-    const float64 positionX = static_cast<float64>(camera.position.x) * metersPerWorldUnit - atmosphere.planetCenterX;
-    const float64 positionY = static_cast<float64>(camera.position.y) * metersPerWorldUnit - atmosphere.planetCenterY;
-    const float64 positionZ = static_cast<float64>(camera.position.z) * metersPerWorldUnit - atmosphere.planetCenterZ;
-    const float64 radius = std::sqrt(positionX * positionX + positionY * positionY + positionZ * positionZ);
-    if (!(radius > 0.0))
+    //读取世界大气观察条件
+    const float64 altitudeMeters = atmosphere.altitudeMeters;
+    const vector3 up = atmosphere.upDirection;
+    const float32 upLength = std::sqrt(RenderMath::Dot(up, up));
+    if (!std::isfinite(altitudeMeters) || altitudeMeters <= -atmosphere.planetRadiusMeters
+        || !std::isfinite(upLength) || upLength <= 1.0e-6f)
     {
-        ReportConfigError("Atmosphere camera position is degenerate; the camera falls back to the skybox path.");
+        ReportConfigError("Atmosphere camera altitude or up direction is invalid; the camera falls back to the skybox path.");
         return false;
     }
-
-    //相机可以在大气层外：保留真实高度，由着色器求入射与出射，不按高度停用
-    //半径为零或落到地心以下属于无效位置，不是低海拔地形
-    const float64 heightKm = radius / 1000.0 - (atmosphere.planetRadiusMeters / 1000.0);
-    if (heightKm <= -(atmosphere.planetRadiusMeters / 1000.0))
-    {
-        ReportConfigError("Atmosphere camera position is invalid: the camera is at or below the planet center.");
-        return false;
-    }
-    outFrame.cameraHeightKm = static_cast<float32>(heightKm);
-    outFrame.cameraUp = { static_cast<float32>(positionX / radius), static_cast<float32>(positionY / radius),
-        static_cast<float32>(positionZ / radius) };
+    outFrame.cameraHeightKm = static_cast<float32>(altitudeMeters / 1000.0);
+    outFrame.cameraUp = { up.x / upLength, up.y / upLength, up.z / upLength };
 
     //只接受透视投影：正交投影的 w 行不含 -z 项
     if (std::fabs(camera.projectionMatrix.m[11] + 1.0f) > 1.0e-4f)

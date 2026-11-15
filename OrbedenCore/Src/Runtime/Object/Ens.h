@@ -10,6 +10,7 @@
 class Ens;
 class World;
 class Transform;
+struct RenderSettings;
 
 typedef void (*EnsVisitorFunction)(Ens* ens, void* userData);
 
@@ -83,8 +84,13 @@ public:
     //迁移当前世界的局部坐标系
     void RebaseCoordinates(const quaternion& rotation, const vector3& translation);
 
-    //设置球形大气的地心和半径
-    void SetPlanetEnvironment(float64 radius, float64 centerX, float64 centerY, float64 centerZ);
+    //读取所属世界的完整渲染配置副本
+    ORBEDEN_BIND_PROPERTY(renderSettings)
+    RenderSettings GetRenderSettings() const;
+
+    //写入所属世界的完整渲染配置
+    ORBEDEN_BIND_PROPERTY(renderSettings)
+    void SetRenderSettings(const RenderSettings& settings);
 
 
     //获取所属层索引

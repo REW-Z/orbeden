@@ -250,6 +250,18 @@
       "Doc": "",
       "Members": [
         {
+          "Name": "renderSettings",
+          "Doc": "\u8BFB\u53D6\u6240\u5C5E\u4E16\u754C\u7684\u5B8C\u6574\u6E32\u67D3\u914D\u7F6E\u526F\u672C",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "RenderSettings",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "CaptureSnapshot",
           "Doc": "\u6355\u83B7\u5B50\u6811\u7684\u8FD0\u884C\u65F6\u5FEB\u7167",
           "IsMethod": true,
@@ -325,41 +337,6 @@
           ],
           "Arities": [
             2
-          ]
-        },
-        {
-          "Name": "SetPlanetEnvironment",
-          "Doc": "\u8BBE\u7F6E\u7403\u5F62\u5927\u6C14\u7684\u5730\u5FC3\u548C\u534A\u5F84",
-          "IsMethod": true,
-          "IsStatic": false,
-          "Property": "",
-          "Type": "void",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [
-            {
-              "Name": "radius",
-              "Type": "float64",
-              "Default": ""
-            },
-            {
-              "Name": "centerX",
-              "Type": "float64",
-              "Default": ""
-            },
-            {
-              "Name": "centerY",
-              "Type": "float64",
-              "Default": ""
-            },
-            {
-              "Name": "centerZ",
-              "Type": "float64",
-              "Default": ""
-            }
-          ],
-          "Arities": [
-            4
           ]
         }
       ]
@@ -4996,6 +4973,79 @@
   ],
   "Values": [
     {
+      "Name": "AtmosphereQuality",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.AtmosphereQuality",
+      "EnumBase": "uint32",
+      "Doc": "\u5927\u6C14\u79EF\u5206\u7684\u8D28\u91CF\u6863\u4F4D\u3002\u6570\u503C\u7A33\u5B9A\uFF0C\u7F16\u8F91\u5668 ABI \u4E0E\u4E16\u754C\u6587\u4EF6\u6309\u6570\u503C\u4FDD\u5B58\u3002",
+      "Values": [
+        {
+          "Name": "Low",
+          "Value": "0"
+        },
+        {
+          "Name": "Balanced",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "AtmosphereSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.AtmosphereSettings",
+      "EnumBase": "int32",
+      "Doc": "\u4E16\u754C\u7EA7\u5927\u6C14\u53C2\u6570\uFF0C\u4E0D\u6302\u5728\u5177\u4F53 Ens \u4E0A\u3002\n\u5BC6\u5EA6\u53EA\u968F\u8DDD\u5730\u5FC3\u7684\u9AD8\u5EA6\u53D8\u5316\uFF0C\u5730\u5F62\u8D77\u4F0F\u4E0D\u53C2\u4E0E\uFF1B\u957F\u5EA6\u5355\u4F4D\u7EDF\u4E00\u4E3A\u7C73\u3002",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "fogEnabled",
+          "Type": "bool",
+          "Doc": "\u53EA\u63A7\u5236\u7269\u4F53\u8868\u9762\u7684\u7A7A\u6C14\u900F\u89C6\uFF0C\u4E0D\u63A7\u5236\u6D53\u96FE\uFF08\u6D53\u96FE\u6709\u81EA\u5DF1\u7684\u5F00\u5173\uFF09\u3001\u7A0B\u5E8F\u5316\u5929\u7A7A\u3001\u592A\u9633\u76D8\u3001\u706F\u5149\u6216\u53CD\u5C04\u3002"
+        },
+        {
+          "Name": "quality",
+          "Type": "AtmosphereQuality",
+          "Doc": ""
+        },
+        {
+          "Name": "denseFog",
+          "Type": "DenseFogSettings",
+          "Doc": "\u6D53\u96FE\u4ECB\u8D28\uFF0C\u9ED8\u8BA4\u5173\u95ED\uFF0C\u8001\u573A\u666F\u753B\u9762\u4E0D\u53D8"
+        },
+        {
+          "Name": "planetRadiusMeters",
+          "Type": "float64",
+          "Doc": "\u7403\u9762\u53C2\u8003\u534A\u5F84\uFF0C\u5355\u4F4D\u7C73"
+        },
+        {
+          "Name": "altitudeMeters",
+          "Type": "float64",
+          "Doc": "\u5927\u6C14\u89C2\u5BDF\u6D77\u62D4\uFF0C\u5355\u4F4D\u7C73\uFF0C\u4E0E\u573A\u666F\u4F4D\u7F6E\u65E0\u5173"
+        },
+        {
+          "Name": "upDirection",
+          "Type": "vector3",
+          "Doc": "\u89C2\u5BDF\u5730\u70B9\u7684\u5F84\u5411\u5411\u4E0A\u65B9\u5411\uFF0C\u4F7F\u7528\u5F53\u524D\u4E16\u754C\u5750\u6807\u7CFB"
+        },
+        {
+          "Name": "metersPerWorldUnit",
+          "Type": "float32",
+          "Doc": "\u4E00\u4E2A\u4E16\u754C\u5355\u4F4D\u5BF9\u5E94\u7684\u7C73\u6570\uFF0C\u5141\u8BB8\u4E16\u754C\u7528\u66F4\u5C0F\u7684\u5C3A\u5EA6\u8868\u8FBE\u5F88\u957F\u7684\u8DDD\u79BB\u3002"
+        },
+        {
+          "Name": "aerosolDensity",
+          "Type": "float32",
+          "Doc": "Mie \u6563\u5C04\u4E0E\u6D88\u5149\u7684\u500D\u7387\uFF0C0 \u53EA\u5173\u95ED Mie\uFF0CRayleigh \u4FDD\u7559\u3002"
+        },
+        {
+          "Name": "sunRadianceScale",
+          "Type": "float32",
+          "Doc": "\u6563\u5C04\u4EAE\u5EA6\u4E0E\u592A\u9633\u76D8\u7684\u500D\u7387\uFF0C\u4E0D\u6539\u53D8\u6D88\u5149\u3001\u8868\u9762\u4E3B\u5149\u6216\u73AF\u5883\u5149\u3002"
+        }
+      ]
+    },
+    {
       "Name": "BlendMode",
       "Kind": "enum",
       "ManagedName": "Orbeden.BlendMode",
@@ -5116,6 +5166,69 @@
         }
       ],
       "Fields": []
+    },
+    {
+      "Name": "DenseFogMode",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.DenseFogMode",
+      "EnumBase": "uint32",
+      "Doc": "\u6D53\u96FE\u7684\u5BC6\u5EA6\u6A21\u578B\u3002\u6570\u503C\u7A33\u5B9A\uFF0C\u7F16\u8F91\u5668 ABI \u4E0E\u4E16\u754C\u6587\u4EF6\u6309\u6570\u503C\u4FDD\u5B58\u3002",
+      "Values": [
+        {
+          "Name": "Height",
+          "Value": "0"
+        },
+        {
+          "Name": "Distance",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "DenseFogSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.DenseFogSettings",
+      "EnumBase": "int32",
+      "Doc": "\u8D34\u5730\u6D53\u5BC6\u4ECB\u8D28\uFF0C\u4E0E\u7403\u5F62\u5927\u6C14\u7684\u8584\u973E\u5206\u5F00\u914D\u7F6E\u3002\n\u80FD\u89C1\u5EA6\u6309 MOR \u5B9A\u4E49\uFF085% \u900F\u5C04\u9608\u503C\uFF09\uFF1AsigmaT = -ln(0.05) / visibilityMeters\u3002\n\u8BE5\u503C\u53EA\u63CF\u8FF0\u6D53\u96FE\u81EA\u8EAB\u7684\u6D88\u5149\uFF0C\u4E0D\u542B\u80CC\u666F\u5927\u6C14\uFF0C\u754C\u9762\u4E0E\u5B9E\u73B0\u53E3\u5F84\u4E00\u81F4\u3002\n\u5BC6\u5EA6\u53EA\u968F\u76F8\u5BF9\u53C2\u8003\u7403\u9762\u7684\u9AD8\u5EA6\u53D8\u5316\uFF0C\u9996\u7248\u4E0D\u505A\u6C34\u5E73\u96FE\u533A\u3001\u4E09\u7EF4\u566A\u58F0\u4E0E\u4F53\u79EF\u9634\u5F71\u3002\n\u96FE\u5C42\u6CA1\u6709\u5E95\u9762\uFF1A\u4F4E\u4E8E\u96FE\u9876\u9AD8\u5EA6\u7684\u6240\u6709\u9AD8\u5EA6\u90FD\u4FDD\u6301\u6EE1\u5BC6\u5EA6\uFF0C\u53EA\u5728\u96FE\u9876\u4E00\u4FA7\u8870\u51CF\u3002\n\u9AD8\u5EA6\u6CBF\u5C04\u7EBF\u6309\u5E73\u5730\u8FD1\u4F3C\u79EF\u5206\uFF1A\u4ECB\u8D28\u5C3A\u5EA6\uFF08\u80FD\u89C1\u5EA6\u51E0\u5341\u7C73\u5230\u51E0\u516C\u91CC\u3001\u96FE\u9876\u51E0\u5341\u7C73\u5230\u51E0\u516C\u91CC\uFF09\u8FDC\u5C0F\u4E8E\u5730\u7403\u534A\u5F84\uFF0C\n\u6574\u6761\u5256\u9762\u6709\u521D\u7B49\u539F\u51FD\u6570\uFF0C\u9010\u50CF\u7D20\u53EA\u505A\u4E00\u6B21\u6C42\u503C\uFF0C\u4E0D\u505A\u6C42\u79EF\u4E5F\u4E0D\u6C42\u4EA4\u3002",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "enabled",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "mode",
+          "Type": "DenseFogMode",
+          "Doc": "\u5BC6\u5EA6\u6A21\u578B\u3002\u8DDD\u79BB\u96FE\u4E0B\u96FE\u9876\u4E0E\u8870\u51CF\u5C3A\u5EA6\u4E0D\u53C2\u4E0E\u8BA1\u7B97\uFF0C\u754C\u9762\u4E5F\u4E0D\u5C55\u793A"
+        },
+        {
+          "Name": "visibilityMeters",
+          "Type": "float32",
+          "Doc": "\u6D53\u96FE\u53C2\u8003\u9AD8\u5EA6\u5904\u7684\u80FD\u89C1\u5EA6\uFF0C\u5355\u4F4D\u7C73"
+        },
+        {
+          "Name": "topHeightMeters",
+          "Type": "float32",
+          "Doc": "\u96FE\u9876\u9AD8\u5EA6\uFF0C\u5355\u4F4D\u7C73\uFF0C\u76F8\u5BF9\u53C2\u8003\u7403\u9762"
+        },
+        {
+          "Name": "topFadeMeters",
+          "Type": "float32",
+          "Doc": "\u96FE\u9876\u8870\u51CF\u5C3A\u5EA6\uFF0C\u5355\u4F4D\u7C73\uFF1B\u540D\u4E49\u9876\u90E8\u5BC6\u5EA6\u7EA6\u4E3A 5%\uFF0C\u4E0A\u65B9\u5EF6\u4F38\u7A00\u8584\u5C3E\u90E8\uFF0C\u4E0D\u5F97\u8D85\u8FC7\u96FE\u9876\u9AD8\u5EA6"
+        },
+        {
+          "Name": "scatteringScale",
+          "Type": "float32",
+          "Doc": "\u73AF\u5883\u5149\u6563\u5C04\u500D\u7387\uFF0C\u989C\u8272\u53D6\u81EA\u4E16\u754C\u73AF\u5883\u5149"
+        },
+        {
+          "Name": "sunScatteringScale",
+          "Type": "float32",
+          "Doc": "\u4E3B\u5149\u6563\u5C04\u500D\u7387\uFF1B1 \u8868\u793A\u6D53\u96FE\u88AB\u4E3B\u5149\u5B8C\u5168\u7167\u4EAE\u65F6\u4E0E\u767D\u8272\u6F2B\u53CD\u5C04\u9762\u540C\u4EAE\u5EA6"
+        }
+      ]
     },
     {
       "Name": "DrawQueue",
@@ -6486,6 +6599,56 @@
       "Fields": []
     },
     {
+      "Name": "RenderSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.RenderSettings",
+      "EnumBase": "int32",
+      "Doc": "\u4E16\u754C\u7EA7\u6E32\u67D3\u73AF\u5883\u53C2\u6570\uFF0C\u4E0D\u6302\u5728\u5177\u4F53 Ens \u4E0A\u3002",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "skybox",
+          "Type": "Ref\u003CSkybox\u003E",
+          "Doc": ""
+        },
+        {
+          "Name": "skyboxEnabled",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "skyMode",
+          "Type": "SkyMode",
+          "Doc": "\u80CC\u666F\u6765\u6E90\uFF0C\u4E0E skyboxEnabled \u76F8\u4E92\u72EC\u7ACB\uFF1A\u5F00\u5173\u51B3\u5B9A\u753B\u4E0D\u753B\u80CC\u666F\uFF0C\u6A21\u5F0F\u51B3\u5B9A\u753B\u54EA\u4E00\u79CD\u3002"
+        },
+        {
+          "Name": "atmosphere",
+          "Type": "AtmosphereSettings",
+          "Doc": "\u5927\u6C14\u53C2\u6570\uFF1A\u5929\u7A7A\u6A21\u5F0F\u9009\u7A0B\u5E8F\u5316\u5929\u7A7A\u3001\u7A7A\u6C14\u900F\u89C6\u5F00\u5173\u90FD\u4F1A\u8BFB\u8FD9\u91CC\u7684\u5B57\u6BB5\u3002"
+        },
+        {
+          "Name": "ambientColor",
+          "Type": "color",
+          "Doc": "sRGB \u989C\u8272\uFF0C\u751F\u6210\u6E32\u67D3\u5FEB\u7167\u65F6\u8F6C\u7EBF\u6027\uFF1B\u9ED8\u8BA4\u989C\u8272\u7528\u4E8E\u67D4\u548C\u7684\u73AF\u5883\u8865\u5149"
+        },
+        {
+          "Name": "ambientIntensity",
+          "Type": "float32",
+          "Doc": "\u7EBF\u6027\u7F8E\u672F\u5F3A\u5EA6\uFF0C\u4E0E\u65B9\u5411\u5149\u4E00\u81F4\uFF1A0 \u5173\u95ED\uFF0C1 \u4F7F\u7528\u57FA\u51C6\u4EAE\u5EA6\uFF0C\u5141\u8BB8\u5927\u4E8E 1"
+        },
+        {
+          "Name": "reflectionEnvironment",
+          "Type": "Ref\u003CSkybox\u003E",
+          "Doc": "\u72EC\u7ACB\u53CD\u5C04\u73AF\u5883\uFF1B\u672A\u6307\u5B9A\u65F6\u4F7F\u7528 skybox\uFF0C\u4E0D\u53D7\u80CC\u666F\u663E\u793A\u5F00\u5173\u5F71\u54CD"
+        },
+        {
+          "Name": "reflectionIntensity",
+          "Type": "float32",
+          "Doc": "\u73AF\u5883\u955C\u9762\u53CD\u5C04\u7684\u7EBF\u6027\u5F3A\u5EA6\uFF0C0 \u5173\u95ED\uFF0C1 \u4F7F\u7528\u73AF\u5883\u539F\u59CB\u4EAE\u5EA6"
+        }
+      ]
+    },
+    {
       "Name": "ScriptDomain",
       "Kind": "enum",
       "ManagedName": "Orbeden.ScriptDomain",
@@ -6705,6 +6868,24 @@
           "Doc": ""
         }
       ]
+    },
+    {
+      "Name": "SkyMode",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.SkyMode",
+      "EnumBase": "uint32",
+      "Doc": "\u5929\u7A7A\u80CC\u666F\u7684\u6765\u6E90\u3002\u6570\u503C\u7A33\u5B9A\uFF0C\u7F16\u8F91\u5668 ABI \u4E0E\u4E16\u754C\u6587\u4EF6\u6309\u6570\u503C\u4FDD\u5B58\u3002",
+      "Values": [
+        {
+          "Name": "Cubemap",
+          "Value": "0"
+        },
+        {
+          "Name": "Atmosphere",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
     },
     {
       "Name": "SubMesh",

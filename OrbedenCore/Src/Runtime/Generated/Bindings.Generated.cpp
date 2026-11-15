@@ -7,6 +7,7 @@
 #include "Rendering/InstanceDrawData.h"
 #include "Rendering/RenderTypes.h"
 #include "ResourceManager/ResourceLoadOperation.h"
+#include "Runtime/AtmosphereSettings.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/CharacterController.h"
 #include "Runtime/Object/Collider.h"
@@ -31,6 +32,7 @@
 #include "Runtime/Object/WheelCollider.h"
 #include "Runtime/Particles/ParticleSettings.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/RenderSettings.h"
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -75,6 +77,10 @@ void ORBEDEN_NATIVE_CALL ReleaseHandle_ResourceLoadOperation(uint64 id)
         handles_ResourceLoadOperation.erase(id);
     }
 }
+void Write_AtmosphereQuality(NativeBindingWriter& writer, AtmosphereQuality const& value);
+AtmosphereQuality Read_AtmosphereQuality(NativeBindingReader& reader);
+void Write_AtmosphereSettings(NativeBindingWriter& writer, AtmosphereSettings const& value);
+AtmosphereSettings Read_AtmosphereSettings(NativeBindingReader& reader);
 void Write_BlendMode(NativeBindingWriter& writer, BlendMode const& value);
 BlendMode Read_BlendMode(NativeBindingReader& reader);
 void Write_CharacterControllerShape(NativeBindingWriter& writer, CharacterControllerShape const& value);
@@ -85,6 +91,10 @@ void Write_ColliderGeometryType(NativeBindingWriter& writer, ColliderGeometryTyp
 ColliderGeometryType Read_ColliderGeometryType(NativeBindingReader& reader);
 void Write_CullMode(NativeBindingWriter& writer, CullMode const& value);
 CullMode Read_CullMode(NativeBindingReader& reader);
+void Write_DenseFogMode(NativeBindingWriter& writer, DenseFogMode const& value);
+DenseFogMode Read_DenseFogMode(NativeBindingReader& reader);
+void Write_DenseFogSettings(NativeBindingWriter& writer, DenseFogSettings const& value);
+DenseFogSettings Read_DenseFogSettings(NativeBindingReader& reader);
 void Write_DrawQueue(NativeBindingWriter& writer, DrawQueue const& value);
 DrawQueue Read_DrawQueue(NativeBindingReader& reader);
 void Write_DrawStrategy(NativeBindingWriter& writer, DrawStrategy const& value);
@@ -205,10 +215,14 @@ void Write_Ref_Mesh_(NativeBindingWriter& writer, Ref<Mesh> const& value);
 Ref<Mesh> Read_Ref_Mesh_(NativeBindingReader& reader);
 void Write_Ref_Shader_(NativeBindingWriter& writer, Ref<Shader> const& value);
 Ref<Shader> Read_Ref_Shader_(NativeBindingReader& reader);
+void Write_Ref_Skybox_(NativeBindingWriter& writer, Ref<Skybox> const& value);
+Ref<Skybox> Read_Ref_Skybox_(NativeBindingReader& reader);
 void Write_Ref_Texture2D_(NativeBindingWriter& writer, Ref<Texture2D> const& value);
 Ref<Texture2D> Read_Ref_Texture2D_(NativeBindingReader& reader);
 void Write_Reflection__FieldKind(NativeBindingWriter& writer, Reflection::FieldKind const& value);
 Reflection::FieldKind Read_Reflection__FieldKind(NativeBindingReader& reader);
+void Write_RenderSettings(NativeBindingWriter& writer, RenderSettings const& value);
+RenderSettings Read_RenderSettings(NativeBindingReader& reader);
 void Write_ScriptDomain(NativeBindingWriter& writer, ScriptDomain const& value);
 ScriptDomain Read_ScriptDomain(NativeBindingReader& reader);
 void Write_ShaderColorSlot(NativeBindingWriter& writer, ShaderColorSlot const& value);
@@ -229,6 +243,8 @@ void Write_ShaderTextureSlot(NativeBindingWriter& writer, ShaderTextureSlot cons
 ShaderTextureSlot Read_ShaderTextureSlot(NativeBindingReader& reader);
 void Write_Shader_(NativeBindingWriter& writer, Shader* const& value);
 Shader* Read_Shader_(NativeBindingReader& reader);
+void Write_SkyMode(NativeBindingWriter& writer, SkyMode const& value);
+SkyMode Read_SkyMode(NativeBindingReader& reader);
 void Write_StringId(NativeBindingWriter& writer, StringId const& value);
 StringId Read_StringId(NativeBindingReader& reader);
 void Write_SubMesh(NativeBindingWriter& writer, SubMesh const& value);
@@ -272,6 +288,93 @@ void Write_vector2(NativeBindingWriter& writer, vector2 const& value);
 vector2 Read_vector2(NativeBindingReader& reader);
 void Write_vector3(NativeBindingWriter& writer, vector3 const& value);
 vector3 Read_vector3(NativeBindingReader& reader);
+void Write_AtmosphereQuality(NativeBindingWriter& writer, AtmosphereQuality const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+AtmosphereQuality Read_AtmosphereQuality(NativeBindingReader& reader)
+{
+    return static_cast<AtmosphereQuality>(reader.Scalar<uint32>());
+}
+void Write_AtmosphereSettings(NativeBindingWriter& writer, AtmosphereSettings const& value)
+{
+    Write_bool(writer, value.fogEnabled);
+    Write_AtmosphereQuality(writer, value.quality);
+    Write_DenseFogSettings(writer, value.denseFog);
+    Write_float64(writer, value.planetRadiusMeters);
+    Write_float64(writer, value.altitudeMeters);
+    Write_vector3(writer, value.upDirection);
+    Write_float32(writer, value.metersPerWorldUnit);
+    Write_float32(writer, value.aerosolDensity);
+    Write_float32(writer, value.sunRadianceScale);
+}
+AtmosphereSettings Read_AtmosphereSettings(NativeBindingReader& reader)
+{
+    auto block = reader.Block(1, sizeof(uint8) + sizeof(uint32) + sizeof(uint8) + sizeof(uint32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float64) + sizeof(float64) + sizeof(vector3) + sizeof(float32) + sizeof(float32) + sizeof(float32));
+    const uint8* cursor = block.data();
+    AtmosphereSettings value{};
+    uint8 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.fogEnabled = static_cast<bool>(raw0);
+    uint32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.quality = static_cast<AtmosphereQuality>(raw1);
+    uint8 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.denseFog.enabled = static_cast<bool>(raw2);
+    uint32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.denseFog.mode = static_cast<DenseFogMode>(raw3);
+    float32 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.denseFog.visibilityMeters = static_cast<float32>(raw4);
+    float32 raw5;
+    std::memcpy(&raw5, cursor, sizeof(raw5));
+    cursor += sizeof(raw5);
+    value.denseFog.topHeightMeters = static_cast<float32>(raw5);
+    float32 raw6;
+    std::memcpy(&raw6, cursor, sizeof(raw6));
+    cursor += sizeof(raw6);
+    value.denseFog.topFadeMeters = static_cast<float32>(raw6);
+    float32 raw7;
+    std::memcpy(&raw7, cursor, sizeof(raw7));
+    cursor += sizeof(raw7);
+    value.denseFog.scatteringScale = static_cast<float32>(raw7);
+    float32 raw8;
+    std::memcpy(&raw8, cursor, sizeof(raw8));
+    cursor += sizeof(raw8);
+    value.denseFog.sunScatteringScale = static_cast<float32>(raw8);
+    float64 raw9;
+    std::memcpy(&raw9, cursor, sizeof(raw9));
+    cursor += sizeof(raw9);
+    value.planetRadiusMeters = static_cast<float64>(raw9);
+    float64 raw10;
+    std::memcpy(&raw10, cursor, sizeof(raw10));
+    cursor += sizeof(raw10);
+    value.altitudeMeters = static_cast<float64>(raw10);
+    vector3 raw11;
+    std::memcpy(&raw11, cursor, sizeof(raw11));
+    cursor += sizeof(raw11);
+    value.upDirection = static_cast<vector3>(raw11);
+    float32 raw12;
+    std::memcpy(&raw12, cursor, sizeof(raw12));
+    cursor += sizeof(raw12);
+    value.metersPerWorldUnit = static_cast<float32>(raw12);
+    float32 raw13;
+    std::memcpy(&raw13, cursor, sizeof(raw13));
+    cursor += sizeof(raw13);
+    value.aerosolDensity = static_cast<float32>(raw13);
+    float32 raw14;
+    std::memcpy(&raw14, cursor, sizeof(raw14));
+    cursor += sizeof(raw14);
+    value.sunRadianceScale = static_cast<float32>(raw14);
+    return value;
+}
 void Write_BlendMode(NativeBindingWriter& writer, BlendMode const& value)
 {
     writer.Scalar(static_cast<uint32>(value));
@@ -311,6 +414,59 @@ void Write_CullMode(NativeBindingWriter& writer, CullMode const& value)
 CullMode Read_CullMode(NativeBindingReader& reader)
 {
     return static_cast<CullMode>(reader.Scalar<uint32>());
+}
+void Write_DenseFogMode(NativeBindingWriter& writer, DenseFogMode const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+DenseFogMode Read_DenseFogMode(NativeBindingReader& reader)
+{
+    return static_cast<DenseFogMode>(reader.Scalar<uint32>());
+}
+void Write_DenseFogSettings(NativeBindingWriter& writer, DenseFogSettings const& value)
+{
+    Write_bool(writer, value.enabled);
+    Write_DenseFogMode(writer, value.mode);
+    Write_float32(writer, value.visibilityMeters);
+    Write_float32(writer, value.topHeightMeters);
+    Write_float32(writer, value.topFadeMeters);
+    Write_float32(writer, value.scatteringScale);
+    Write_float32(writer, value.sunScatteringScale);
+}
+DenseFogSettings Read_DenseFogSettings(NativeBindingReader& reader)
+{
+    auto block = reader.Block(1, sizeof(uint8) + sizeof(uint32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32));
+    const uint8* cursor = block.data();
+    DenseFogSettings value{};
+    uint8 raw0;
+    std::memcpy(&raw0, cursor, sizeof(raw0));
+    cursor += sizeof(raw0);
+    value.enabled = static_cast<bool>(raw0);
+    uint32 raw1;
+    std::memcpy(&raw1, cursor, sizeof(raw1));
+    cursor += sizeof(raw1);
+    value.mode = static_cast<DenseFogMode>(raw1);
+    float32 raw2;
+    std::memcpy(&raw2, cursor, sizeof(raw2));
+    cursor += sizeof(raw2);
+    value.visibilityMeters = static_cast<float32>(raw2);
+    float32 raw3;
+    std::memcpy(&raw3, cursor, sizeof(raw3));
+    cursor += sizeof(raw3);
+    value.topHeightMeters = static_cast<float32>(raw3);
+    float32 raw4;
+    std::memcpy(&raw4, cursor, sizeof(raw4));
+    cursor += sizeof(raw4);
+    value.topFadeMeters = static_cast<float32>(raw4);
+    float32 raw5;
+    std::memcpy(&raw5, cursor, sizeof(raw5));
+    cursor += sizeof(raw5);
+    value.scatteringScale = static_cast<float32>(raw5);
+    float32 raw6;
+    std::memcpy(&raw6, cursor, sizeof(raw6));
+    cursor += sizeof(raw6);
+    value.sunScatteringScale = static_cast<float32>(raw6);
+    return value;
 }
 void Write_DrawQueue(NativeBindingWriter& writer, DrawQueue const& value)
 {
@@ -1461,6 +1617,14 @@ Ref<Shader> Read_Ref_Shader_(NativeBindingReader& reader)
 {
     return Ref<Shader>(NativeBindings::Optional<Shader>(reader.Scalar<int32>()));
 }
+void Write_Ref_Skybox_(NativeBindingWriter& writer, Ref<Skybox> const& value)
+{
+    writer.Scalar(NativeBindings::Id(value.Get()));
+}
+Ref<Skybox> Read_Ref_Skybox_(NativeBindingReader& reader)
+{
+    return Ref<Skybox>(NativeBindings::Optional<Skybox>(reader.Scalar<int32>()));
+}
 void Write_Ref_Texture2D_(NativeBindingWriter& writer, Ref<Texture2D> const& value)
 {
     writer.Scalar(NativeBindings::Id(value.Get()));
@@ -1476,6 +1640,30 @@ void Write_Reflection__FieldKind(NativeBindingWriter& writer, Reflection::FieldK
 Reflection::FieldKind Read_Reflection__FieldKind(NativeBindingReader& reader)
 {
     return static_cast<Reflection::FieldKind>(reader.Scalar<int32>());
+}
+void Write_RenderSettings(NativeBindingWriter& writer, RenderSettings const& value)
+{
+    Write_Ref_Skybox_(writer, value.skybox);
+    Write_bool(writer, value.skyboxEnabled);
+    Write_SkyMode(writer, value.skyMode);
+    Write_AtmosphereSettings(writer, value.atmosphere);
+    Write_color(writer, value.ambientColor);
+    Write_float32(writer, value.ambientIntensity);
+    Write_Ref_Skybox_(writer, value.reflectionEnvironment);
+    Write_float32(writer, value.reflectionIntensity);
+}
+RenderSettings Read_RenderSettings(NativeBindingReader& reader)
+{
+    RenderSettings value{};
+    value.skybox = Read_Ref_Skybox_(reader);
+    value.skyboxEnabled = Read_bool(reader);
+    value.skyMode = Read_SkyMode(reader);
+    value.atmosphere = Read_AtmosphereSettings(reader);
+    value.ambientColor = Read_color(reader);
+    value.ambientIntensity = Read_float32(reader);
+    value.reflectionEnvironment = Read_Ref_Skybox_(reader);
+    value.reflectionIntensity = Read_float32(reader);
+    return value;
 }
 void Write_ScriptDomain(NativeBindingWriter& writer, ScriptDomain const& value)
 {
@@ -1608,6 +1796,14 @@ void Write_Shader_(NativeBindingWriter& writer, Shader* const& value)
 Shader* Read_Shader_(NativeBindingReader& reader)
 {
     return NativeBindings::Optional<Shader>(reader.Scalar<int32>());
+}
+void Write_SkyMode(NativeBindingWriter& writer, SkyMode const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+SkyMode Read_SkyMode(NativeBindingReader& reader)
+{
+    return static_cast<SkyMode>(reader.Scalar<uint32>());
 }
 void Write_StringId(NativeBindingWriter& writer, StringId const& value)
 {
@@ -1994,7 +2190,19 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_1(int32 objectId, EnsId* result
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_2(int32 objectId, NativeBindingSlice text, uint8 preserveIdentity, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_2(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Ens>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_RenderSettings(writer, instance->GetRenderSettings()); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_3(int32 objectId, NativeBindingSlice text, uint8 preserveIdentity, int32* result)
 {
     try
     {
@@ -2009,7 +2217,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_2(int32 objectId, NativeBinding
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_3(int32 objectId, quaternion rotation, vector3 translation)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_4(int32 objectId, quaternion rotation, vector3 translation)
 {
     try
     {
@@ -2020,12 +2228,15 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_3(int32 objectId, quaternion ro
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_4(int32 objectId, float64 radius, float64 centerX, float64 centerY, float64 centerZ)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_5(int32 objectId, NativeBindingSlice settings)
 {
     try
     {
         auto* instance = NativeBindings::Require<Ens>(objectId);
-        instance->SetPlanetEnvironment(radius, centerX, centerY, centerZ);
+        NativeBindingReader reader_settings(settings);
+        auto decoded_settings = Read_RenderSettings(reader_settings);
+        reader_settings.Complete();
+        instance->SetRenderSettings(decoded_settings);
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -7470,8 +7681,8 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(Orbeden::Object::StaticType(), 11880064706505753351ULL, { functions_Orbeden_Object, 10 });
     static void* functions_Component[] = { reinterpret_cast<void*>(&Call_Component_0) };
     NativeBindings::Register(Component::StaticType(), 3730866753121215061ULL, { functions_Component, 1 });
-    static void* functions_Ens[] = { reinterpret_cast<void*>(&Call_Ens_0), reinterpret_cast<void*>(&Call_Ens_1), reinterpret_cast<void*>(&Call_Ens_2), reinterpret_cast<void*>(&Call_Ens_3), reinterpret_cast<void*>(&Call_Ens_4) };
-    NativeBindings::Register(Ens::StaticType(), 4849731042518187294ULL, { functions_Ens, 5 });
+    static void* functions_Ens[] = { reinterpret_cast<void*>(&Call_Ens_0), reinterpret_cast<void*>(&Call_Ens_1), reinterpret_cast<void*>(&Call_Ens_2), reinterpret_cast<void*>(&Call_Ens_3), reinterpret_cast<void*>(&Call_Ens_4), reinterpret_cast<void*>(&Call_Ens_5) };
+    NativeBindings::Register(Ens::StaticType(), 1271523575787013593ULL, { functions_Ens, 6 });
     static void* functions_Font[] = { reinterpret_cast<void*>(&Call_Font_0), reinterpret_cast<void*>(&Call_Font_1), reinterpret_cast<void*>(&Call_Font_2), reinterpret_cast<void*>(&Call_Font_3), reinterpret_cast<void*>(&Call_Font_4), reinterpret_cast<void*>(&Call_Font_5), reinterpret_cast<void*>(&Call_Font_6), reinterpret_cast<void*>(&Call_Font_7), reinterpret_cast<void*>(&Call_Font_8), reinterpret_cast<void*>(&Call_Font_9), reinterpret_cast<void*>(&Call_Font_10), reinterpret_cast<void*>(&Call_Font_11), reinterpret_cast<void*>(&Call_Font_12), reinterpret_cast<void*>(&Call_Font_13), reinterpret_cast<void*>(&Call_Font_14), reinterpret_cast<void*>(&Call_Font_15), reinterpret_cast<void*>(&Call_Font_16), reinterpret_cast<void*>(&Call_Font_17), reinterpret_cast<void*>(&Call_Font_18), reinterpret_cast<void*>(&Call_Font_19), reinterpret_cast<void*>(&Call_Font_20), reinterpret_cast<void*>(&Call_Font_21), reinterpret_cast<void*>(&Call_Font_22), reinterpret_cast<void*>(&Call_Font_23), reinterpret_cast<void*>(&Call_Font_24) };
     NativeBindings::Register(Font::StaticType(), 8904294447050588615ULL, { functions_Font, 25 });
     static void* functions_InstanceDrawList[] = { reinterpret_cast<void*>(&Call_InstanceDrawList_0), reinterpret_cast<void*>(&Call_InstanceDrawList_1), reinterpret_cast<void*>(&Call_InstanceDrawList_2), reinterpret_cast<void*>(&Call_InstanceDrawList_3), reinterpret_cast<void*>(&Call_InstanceDrawList_4) };

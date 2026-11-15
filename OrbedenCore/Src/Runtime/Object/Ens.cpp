@@ -358,12 +358,16 @@ void Ens::RebaseCoordinates(const quaternion& rotation, const vector3& translati
     GetWorld()->RebaseCoordinates(rotation, translation);
 }
 
-//设置球形大气的地心和半径
-void Ens::SetPlanetEnvironment(float64 radius, float64 centerX, float64 centerY, float64 centerZ)
+//读取世界渲染配置
+RenderSettings Ens::GetRenderSettings() const
 {
-    auto& atmosphere = GetWorld()->renderSettings.atmosphere;
-    atmosphere.planetRadiusMeters = radius;
-    atmosphere.planetCenterX = centerX;
-    atmosphere.planetCenterY = centerY;
-    atmosphere.planetCenterZ = centerZ;
+    return GetWorld()->renderSettings;
+}
+
+//写入世界渲染配置
+void Ens::SetRenderSettings(const RenderSettings& settings)
+{
+    World* world = GetWorld();
+    world->renderSettings = settings;
+    world->SetDirty();
 }

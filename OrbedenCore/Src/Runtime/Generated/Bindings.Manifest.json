@@ -5093,7 +5093,7 @@
           "Parameters": []
         },
         {
-          "Name": "planetCenterX",
+          "Name": "altitudeMeters",
           "Type": "float64",
           "Access": "public",
           "IsMethod": false,
@@ -5112,27 +5112,8 @@
           "Parameters": []
         },
         {
-          "Name": "planetCenterY",
-          "Type": "float64",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "planetCenterZ",
-          "Type": "float64",
+          "Name": "upDirection",
+          "Type": "vector3",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -13093,7 +13074,27 @@
           ]
         },
         {
-          "Name": "SetPlanetEnvironment",
+          "Name": "GetRenderSettings",
+          "Type": "RenderSettings",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "PropertyName": "renderSettings",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "SetRenderSettings",
           "Type": "void",
           "Access": "public",
           "IsMethod": true,
@@ -13106,28 +13107,14 @@
           "Changed": "",
           "Getter": "",
           "Setter": "",
+          "PropertyName": "renderSettings",
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
           "Parameters": [
             {
-              "Name": "radius",
-              "Type": "float64",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "centerX",
-              "Type": "float64",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "centerY",
-              "Type": "float64",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "centerZ",
-              "Type": "float64",
+              "Name": "settings",
+              "Type": "const RenderSettings\u0026",
               "DefaultValue": ""
             }
           ]
