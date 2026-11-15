@@ -301,25 +301,25 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 195);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 197);
     static_assert(sizeof(ProfileFrameSummary) == 104);
     static_assert(sizeof(ProfileGpuEvent) == 24);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 98);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 114);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 123);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 126);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 147);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 172);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 177);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 185);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 187);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 189);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 190);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 191);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 192);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getWorldEnsState, 193);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, readEnsHeader, 194);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 100);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 116);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 125);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 128);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 149);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 174);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 179);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 187);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 189);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 191);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 192);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 193);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 194);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getWorldEnsState, 195);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, readEnsHeader, 196);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -414,6 +414,12 @@ namespace
         }
         if (changed) mapped = Reflection::FormatArrayValues(elements);
         return changed;
+    }
+
+    //绘制游戏视图
+    void ORBEDEN_NATIVE_CALL EditorGuiDrawGameView(void* context)
+    {
+        static_cast<EditorSystem*>(context)->DrawGameView();
     }
 
     //判断是否允许托管层修改资源。
@@ -2278,6 +2284,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     EditorManagedApi editorApi;
     editorApi.engineApi = &engineApi;
     editorApi.gui = editorGUI.GetNativeApi();
+    editorApi.gui.gameViewContext = &editor;
+    editorApi.gui.drawGameView = reinterpret_cast<void*>(&EditorGuiDrawGameView);
     editorApi.application.context = &editor;
     editorApi.application.requestRepaint = reinterpret_cast<void*>(&RequestManagedRepaint);
     editorApi.application.isPlaying = reinterpret_cast<void*>(&IsManagedEditorPlaying);

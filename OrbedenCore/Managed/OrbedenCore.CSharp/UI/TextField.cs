@@ -492,6 +492,15 @@ public class TextField : UIControl
     private void DrawGlyphs(UIMeshBuilder mesh, TextLayoutResult current, vector2 origin, UIRect visible, color tint)
     {
         FontRasterMode rasterMode = GetRasterMode();
+        //按光栅字号绘制正文、占位文字与组合文字
+        Canvas? canvas = GetCanvas();
+        bool pixelBitmap = rasterMode == FontRasterMode.Bitmap && canvas != null
+            && (canvas.GetRenderMode() == CanvasRenderMode.Offscreen
+                || (canvas.GetRenderMode() == CanvasRenderMode.Overlay && UIWorldContext.Current?.IsEditorMode == false));
+        float drawFontSize = pixelBitmap
+            ? MathF.Max(1.0f, MathF.Round(current.fontSize * mesh.ViewScale)) / mesh.ViewScale
+            : current.fontSize;
+
         UIMaterialKind kind = rasterMode switch
         {
             FontRasterMode.SDF => UIMaterialKind.SDF,
@@ -506,7 +515,7 @@ public class TextField : UIControl
             if (!glyph.entry.HasPixels) continue;
             glyphPages.Add((glyph.entry, glyph.entry.PageGeneration));
             vector2 pen = new(origin.x + glyph.position.x, origin.y + glyph.position.y);
-            if (!glyph.entry.TryGetTargetRect(pen, current.fontSize, out UIRect target)) continue;
+            if (!glyph.entry.TryGetTargetRect(pen, drawFontSize, out UIRect target)) continue;
             if (!TryClip(target, visible, out UIRect clipped)) continue;
 
             //按字形图集切换绘制片段

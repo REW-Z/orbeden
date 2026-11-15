@@ -25753,7 +25753,18 @@
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
-          "Parameters": []
+          "Parameters": [
+            {
+              "Name": "displaySize",
+              "Type": "const vector2\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "useGameInput",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
         },
         {
           "Name": "DrawFpsLabel",
@@ -26759,6 +26770,55 @@
         {
           "Name": "IsEnabled",
           "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "SetPointerTransform",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "origin",
+              "Type": "vector2",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "scale",
+              "Type": "vector2",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "RawMousePos",
+          "Type": "vector2",
           "Access": "public",
           "IsMethod": true,
           "IsStatic": true,
@@ -56268,6 +56328,25 @@
           "Parameters": []
         },
         {
+          "Name": "mainOutputTarget",
+          "Type": "RenderTargetID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "elapsedTime",
           "Type": "float32",
           "Access": "private",
@@ -57085,6 +57164,31 @@
             {
               "Name": "value",
               "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetMainOutputTarget",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "target",
+              "Type": "RenderTargetID",
               "DefaultValue": ""
             }
           ]

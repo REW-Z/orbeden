@@ -145,6 +145,7 @@ private:
 
     //是否渲染直接画到主 framebuffer 的相机（游戏相机）；编辑器编辑态关闭，Play 与 Player 打开
     bool mainFramebufferRendering = true;
+    RenderTargetID mainOutputTarget;
     float32 elapsedTime = 0.0f;
 
     //显式实例提交：Submit 写入 pending，Render 开始时整体换入 active 并清空 pending。
@@ -242,6 +243,9 @@ public:
 
     //设置是否渲染直接画到主 framebuffer 的相机  
     void SetMainFramebufferRendering(bool value);
+
+    //设置游戏默认输出目标，空 ID 表示窗口帧缓冲
+    void SetMainOutputTarget(RenderTargetID target);
 
     //创建带深度缓冲的离屏渲染目标并返回逻辑 ID  
     RenderTargetID CreateRenderTarget(int32 width, int32 height);

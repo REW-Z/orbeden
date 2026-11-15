@@ -65,6 +65,9 @@ private:
     std::string projectFilePath;
     EditorLayoutState editorLayout;
     EditorGuiConfigState editorGuiConfig;
+    //宽高同时为 0 表示跟随 GamePanel
+    int32 gameViewWidth = 0;
+    int32 gameViewHeight = 0;
     std::string lastError;
     bool worldLoaded = false;
     std::string temporaryWorldSnapshot;
@@ -141,6 +144,12 @@ public:
 
     //获取编辑器 GUI 配置；打开项目时从 .oeproj 读入，缺失走默认值
     const EditorGuiConfigState& GetEditorGuiConfig() const;
+
+    //读取项目游戏视图分辨率，(0, 0) 表示跟随 GamePanel
+    std::pair<int32, int32> GetGameViewResolution() const;
+
+    //保存项目游戏视图分辨率，(0, 0) 表示跟随 GamePanel
+    bool SaveGameViewResolution(int32 width, int32 height);
 
     //重新从项目文件读取编辑器 GUI 配置；文件被编辑器面板改写后用它刷新
     bool ReloadEditorGuiConfig();

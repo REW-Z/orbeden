@@ -257,7 +257,7 @@ Orbeden 保留自己的 `Canvas`、`UILayout` 和批量 ABI，不要求照搬 Un
   ABI 层按标识核对对象类型并持有 `Ref<Material>` 直到该帧被替换；渲染器用材质的 shader 程序绘制，
   按名字绑定颜色与浮点槽，纹理槽从 2 起（0/1 保留给 UI 纹理与软遮罩覆盖率）。
   保留参数（`u_Model`、`u_ViewProjection`、`u_Texture`、`u_Tint`、`u_MaterialKind`、`u_DistanceRange`、
-  `u_Coverage*`、`u_Viewport*`）由提交器写入，材质同名参数被跳过。
+  `u_Coverage*`、`u_Viewport*`、`u_BitmapPixelSnap`）由提交器写入，材质同名参数被跳过。
   材质缺失、类型不符或 shader 不可用时退回内置材质并按来源报一次诊断。
 - 运行期实例：`Material::CopyFrom` 复制 shader、队列与全部槽位；托管侧用
   `Object.CreateInstance<Material>()` + `CopyFrom` 得到可改可释放的实例。

@@ -82,6 +82,7 @@ private:
     bool tabMergeTargetHovered = false;
     bool repaintPending = false;
     std::string standalonePanel;
+    std::string backgroundPanel;
 
     //本帧停靠区矩形，供面板判断自己是否贴着外圈
     vector2 dockAreaPosition = { 0.0f, 0.0f };
@@ -113,8 +114,8 @@ public:
     //绘制 Views 菜单内容
     void DrawViewsMenu();
 
-    //绘制所有可见面板
-    void DrawPanels();
+    //绘制所有可见面板，可指定铺在底层的工作区面板
+    void DrawPanels(const char* backgroundPanelId = nullptr);
 
     /// <summary>独占工作区绘制一个面板，不改动项目停靠布局。</summary>
     void DrawStandalonePanel(const char* id);

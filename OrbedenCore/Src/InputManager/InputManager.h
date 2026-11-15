@@ -84,6 +84,12 @@ public:
     //判断输入系统是否接收平台事件
     static bool IsEnabled();
 
+    //设置窗口指针到游戏画面的坐标转换
+    static void SetPointerTransform(vector2 origin, vector2 scale);
+
+    //读取平台鼠标原始位置
+    static vector2 RawMousePos();
+
     //清理本帧瞬时输入状态，保留等待事件期间采集的事件与键占有
     static void BeginFrame();
 

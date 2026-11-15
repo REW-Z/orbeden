@@ -108,6 +108,8 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, byte, byte*, int, int, int> TreeRow;
     public delegate* unmanaged[Cdecl]<byte*, int, uint*, byte> InputUInt;
     public delegate* unmanaged[Cdecl]<byte*, int, ulong*, byte> InputULong;
+    public IntPtr GameViewContext;
+    public delegate* unmanaged[Cdecl]<IntPtr, void> DrawGameView;
 }
 #pragma warning restore CS0649
 
@@ -211,6 +213,12 @@ internal static unsafe class NativeEditorGUI
     internal static void DrawSceneView()
     {
         if (initialized && api.DrawSceneView != null) api.DrawSceneView();
+    }
+
+    //绘制游戏画面
+    internal static void DrawGameView()
+    {
+        api.DrawGameView(api.GameViewContext);
     }
 
     //解析场景视口当前鼠标位置的投放点

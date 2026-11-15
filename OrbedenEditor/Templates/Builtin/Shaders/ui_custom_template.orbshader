@@ -5,6 +5,7 @@
 //  u_Texture、u_Tint           本片段的纹理与合成颜色
 //  u_MaterialKind              内置模式：0 直通、1 预乘、2 位图字形、3 SDF、4 MSDF
 //  u_DistanceRange             距离场取值范围
+//  u_BitmapPixelSnap           屏幕与离屏 Bitmap 的像素对齐及纹素取样开关
 //  u_Coverage、u_CoverageEnabled  软遮罩覆盖率与其开关
 //  u_ViewportSize、u_ViewportOrigin  视口尺寸与原点，用于把 gl_FragCoord 换算到视口内
 //
@@ -26,6 +27,8 @@ layout(location = 2) in vec4 a_Tint;
 
 uniform mat4 u_Model;
 uniform mat4 u_ViewProjection;
+uniform vec3 u_ViewportSize;
+uniform int u_BitmapPixelSnap;
 
 out vec2 v_Uv;
 out vec4 v_Tint;
@@ -34,7 +37,20 @@ void main()
 {
     v_Uv = a_Uv;
     v_Tint = a_Tint;
-    gl_Position = u_ViewProjection * u_Model * vec4(a_Position, 1.0);
+    mat4 transform = u_ViewProjection * u_Model;
+    gl_Position = transform * vec4(a_Position, 1.0);
+    if (u_BitmapPixelSnap == 1)
+    {
+        vec2 axisX = transform[0].xy * u_ViewportSize.xy;
+        vec2 axisY = transform[1].xy * u_ViewportSize.xy;
+        if (abs(axisX.y) <= 1e-5 * abs(axisX.x) && abs(axisY.x) <= 1e-5 * abs(axisY.y))
+        {
+            //对齐屏幕位图字形的像素边界
+            vec2 pixel = (gl_Position.xy / gl_Position.w * 0.5 + 0.5) * u_ViewportSize.xy;
+            pixel = floor(pixel + 0.5);
+            gl_Position.xy = (pixel / u_ViewportSize.xy * 2.0 - 1.0) * gl_Position.w;
+        }
+    }
 }
 
 --------frag
@@ -49,6 +65,7 @@ uniform vec3 u_ViewportSize;
 uniform vec3 u_ViewportOrigin;
 uniform float u_DistanceRange;
 uniform int u_MaterialKind;
+uniform int u_BitmapPixelSnap;
 uniform int u_CoverageEnabled;
 
 //本模板的示例参数：在材质资源上按名字配置。
@@ -80,6 +97,13 @@ vec4 SampleSource()
 {
     if (u_MaterialKind == 3) return vec4(1.0, 1.0, 1.0, DistanceCoverage(texture(u_Texture, v_Uv).r));
     if (u_MaterialKind == 4) return vec4(1.0, 1.0, 1.0, DistanceCoverage(Median(texture(u_Texture, v_Uv).rgb)));
+    if (u_MaterialKind == 2 && u_BitmapPixelSnap == 1)
+    {
+        //直接读取屏幕位图字形的纹素覆盖率
+        ivec2 atlasSize = textureSize(u_Texture, 0);
+        ivec2 texel = clamp(ivec2(floor(v_Uv * vec2(atlasSize))), ivec2(0), atlasSize - ivec2(1));
+        return vec4(1.0, 1.0, 1.0, texelFetch(u_Texture, texel, 0).r);
+    }
     vec4 sampled = texture(u_Texture, v_Uv);
     return u_MaterialKind == 2 ? vec4(1.0, 1.0, 1.0, sampled.r) : sampled;
 }

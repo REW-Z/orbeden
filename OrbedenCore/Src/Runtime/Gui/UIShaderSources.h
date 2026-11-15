@@ -13,6 +13,8 @@ layout(location = 2) in vec4 a_Tint;
 
 uniform mat4 u_Model;
 uniform mat4 u_ViewProjection;
+uniform vec3 u_ViewportSize;
+uniform int u_BitmapPixelSnap;
 
 out vec2 v_Uv;
 out vec4 v_Tint;
@@ -21,7 +23,20 @@ void main()
 {
     v_Uv = a_Uv;
     v_Tint = a_Tint;
-    gl_Position = u_ViewProjection * u_Model * vec4(a_Position, 1.0);
+    mat4 transform = u_ViewProjection * u_Model;
+    gl_Position = transform * vec4(a_Position, 1.0);
+    if (u_BitmapPixelSnap == 1)
+    {
+        vec2 axisX = transform[0].xy * u_ViewportSize.xy;
+        vec2 axisY = transform[1].xy * u_ViewportSize.xy;
+        if (abs(axisX.y) <= 1e-5 * abs(axisX.x) && abs(axisY.x) <= 1e-5 * abs(axisY.y))
+        {
+            //对齐屏幕位图字形的像素边界
+            vec2 pixel = (gl_Position.xy / gl_Position.w * 0.5 + 0.5) * u_ViewportSize.xy;
+            pixel = floor(pixel + 0.5);
+            gl_Position.xy = (pixel / u_ViewportSize.xy * 2.0 - 1.0) * gl_Position.w;
+        }
+    }
 })";
 
     //UI 片元：按材质种类取样，统一输出预乘颜色。
@@ -38,6 +53,7 @@ uniform vec3 u_ViewportSize;
 uniform vec3 u_ViewportOrigin;
 uniform float u_DistanceRange;
 uniform int u_MaterialKind;
+uniform int u_BitmapPixelSnap;
 //0 表示没有裁剪层，覆盖率恒为 1。
 uniform int u_CoverageEnabled;
 
@@ -77,6 +93,13 @@ void main()
     else if (u_MaterialKind == 4)
     {
         source = vec4(1.0, 1.0, 1.0, DistanceCoverage(Median(texture(u_Texture, v_Uv).rgb)));
+    }
+    else if (u_MaterialKind == 2 && u_BitmapPixelSnap == 1)
+    {
+        //直接读取屏幕位图字形的纹素覆盖率
+        ivec2 atlasSize = textureSize(u_Texture, 0);
+        ivec2 texel = clamp(ivec2(floor(v_Uv * vec2(atlasSize))), ivec2(0), atlasSize - ivec2(1));
+        source = vec4(1.0, 1.0, 1.0, texelFetch(u_Texture, texel, 0).r);
     }
     else
     {

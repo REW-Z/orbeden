@@ -1,9 +1,11 @@
 #include "Rendering/ImGuiLayer.h"
 
 #include "Log/Log.h"
+#include "InputManager/InputManager.h"
 #include "Platform/GlfwWindow.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <imgui_impl_glfw.h>
 
 bool ImGuiLayer::Initialize(IWindow* window, RenderBackend& backend)
@@ -64,13 +66,39 @@ void ImGuiLayer::Shutdown()
     initialized = false;
 }
 
-void ImGuiLayer::BeginFrame()
+void ImGuiLayer::BeginFrame(const vector2& displaySize, bool useGameInput)
 {
     if (!initialized) return;
 
     ImGui::SetCurrentContext(context);
     renderer.BeginFrame();
     ImGui_ImplGlfw_NewFrame();
+    if (useGameInput)
+    {
+        //匹配游戏输出尺寸与输入坐标
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2(displaySize.x, displaySize.y);
+        io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+        if (InputManager::IsEnabled())
+        {
+            vector2 mouse = InputManager::MousePos();
+            for (ImGuiInputEvent& event : context->InputEventsQueue)
+            {
+                if (event.Type == ImGuiInputEventType_MousePos)
+                {
+                    event.MousePos.PosX = mouse.x;
+                    event.MousePos.PosY = mouse.y;
+                }
+            }
+            io.AddMousePosEvent(mouse.x, mouse.y);
+        }
+        else
+        {
+            io.ClearEventsQueue();
+            io.ClearInputKeys();
+            io.ClearInputMouse();
+        }
+    }
     ImGui::NewFrame();
 }
 

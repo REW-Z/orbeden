@@ -15,6 +15,7 @@ namespace
     constexpr usize MaxPendingEvents = 4096;
 
     //事件种类与设备；与 UIInputKind/UIInputDevice 的数值一致，这里不引用 UI 合同头文件。
+    constexpr uint32 EventKindPointerMove = 0;
     constexpr uint32 EventKindPointerDown = 1;
     constexpr uint32 EventKindPointerUp = 2;
     constexpr uint32 EventKindPointerCancel = 3;
@@ -46,6 +47,8 @@ namespace
     uint64 nextEventSequence = 1;
     vector2 mousePos{};
     vector2 mouseMov{};
+    vector2 pointerOrigin{};
+    vector2 pointerScale{ 1.0f, 1.0f };
     bool inputEnabled = true;
     bool eventOverflowReported = false;
 
@@ -97,12 +100,20 @@ namespace
 //设置输入系统是否接收平台事件
 void InputManager::SetEnabled(bool value)
 {
+    bool lostFocus = inputEnabled && !value;
     inputEnabled = value;
     if (!inputEnabled)
     {
         ClearInputState();
         pendingEvents.clear();
         eventOverflowReported = false;
+        if (lostFocus)
+        {
+            InputEvent event;
+            event.kind = EventKindWindowFocusLost;
+            event.sequence = nextEventSequence++;
+            pendingEvents.push_back(std::move(event));
+        }
     }
 }
 
@@ -110,6 +121,26 @@ void InputManager::SetEnabled(bool value)
 bool InputManager::IsEnabled()
 {
     return inputEnabled;
+}
+
+//设置窗口指针到游戏画面的坐标转换
+void InputManager::SetPointerTransform(vector2 origin, vector2 scale)
+{
+    if (pointerOrigin.x == origin.x && pointerOrigin.y == origin.y
+        && pointerScale.x == scale.x && pointerScale.y == scale.y)
+    {
+        return;
+    }
+
+    pointerOrigin = origin;
+    pointerScale = scale;
+    mouseMov = {};
+}
+
+//读取平台鼠标原始位置
+vector2 InputManager::RawMousePos()
+{
+    return mousePos;
 }
 
 //清理本帧瞬时输入状态
@@ -172,9 +203,11 @@ void InputManager::SetRawKeyState(uint32 rawKey, bool pressed)
 //写入鼠标位置
 void InputManager::SetMousePosition(float32 x, float32 y)
 {
-    if (!inputEnabled) return;
-    mouseMov.x += x - mousePos.x;
-    mouseMov.y += y - mousePos.y;
+    if (inputEnabled)
+    {
+        mouseMov.x += x - mousePos.x;
+        mouseMov.y += y - mousePos.y;
+    }
     mousePos.x = x;
     mousePos.y = y;
 }
@@ -183,6 +216,15 @@ void InputManager::SetMousePosition(float32 x, float32 y)
 void InputManager::PushEvent(InputEvent event)
 {
     if (!inputEnabled) return;
+
+    //转换事件位置与指针移动量
+    event.position.x = (event.position.x - pointerOrigin.x) * pointerScale.x;
+    event.position.y = (event.position.y - pointerOrigin.y) * pointerScale.y;
+    if (event.kind == EventKindPointerMove)
+    {
+        event.delta.x *= pointerScale.x;
+        event.delta.y *= pointerScale.y;
+    }
 
     if (pendingEvents.size() >= MaxPendingEvents)
     {
@@ -283,13 +325,14 @@ bool InputManager::KeyUp(KeyEnum key)
 //读取鼠标当前位置
 vector2 InputManager::MousePos()
 {
-    return inputEnabled ? mousePos : vector2{};
+    return inputEnabled ? vector2((mousePos.x - pointerOrigin.x) * pointerScale.x,
+        (mousePos.y - pointerOrigin.y) * pointerScale.y) : vector2{};
 }
 
 //读取鼠标本帧移动量
 vector2 InputManager::MouseMov()
 {
-    return inputEnabled ? mouseMov : vector2{};
+    return inputEnabled ? vector2(mouseMov.x * pointerScale.x, mouseMov.y * pointerScale.y) : vector2{};
 }
 
 //读取本帧未被 UI 消费的纵向滚轮刻度

@@ -6,6 +6,7 @@
 #include "Profiler/Profiler.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -76,7 +77,7 @@ bool PanelManager::RegisterPanel(std::unique_ptr<IEditorPanel> panel)
     {
         defaultLayoutPending = true;
     }
-    else if (info.defaultVisible && info.defaultDock != PanelDockPlacement::Floating)
+    else if (backgroundPanel.empty() && info.defaultVisible && info.defaultDock != PanelDockPlacement::Floating)
     {
         DockPanel(info.id, FindWorkspaceNode(), info.defaultDock);
     }
@@ -119,11 +120,24 @@ void PanelManager::DrawViewsMenu()
     for (PanelEntry& entry : panels)
     {
         if (entry.info.fixedWorkspace) continue;
+        if (entry.info.id == backgroundPanel)
+        {
+            bool visible = true;
+            ImGui::BeginDisabled();
+            ImGui::Checkbox(entry.info.title.c_str(), &visible);
+            ImGui::EndDisabled();
+            continue;
+        }
         bool visible = entry.visible;
         if (ImGui::Checkbox(entry.info.title.c_str(), &visible))
         {
             SetPanelVisible(entry.info.id.c_str(), visible);
         }
+    }
+
+    if (!backgroundPanel.empty())
+    {
+        return;
     }
 
     ImGui::Separator();
@@ -144,14 +158,23 @@ void PanelManager::DrawViewsMenu()
 }
 
 //绘制所有可见面板
-void PanelManager::DrawPanels()
+void PanelManager::DrawPanels(const char* backgroundPanelId)
 {
-    if (!standalonePanel.empty())
+    backgroundPanel = backgroundPanelId ? backgroundPanelId : "";
+    if (!backgroundPanel.empty())
     {
-        if (PanelEntry* previous = FindPanel(standalonePanel.c_str())) previous->panel->OnPanelHidden();
+        DrawStandalonePanel(backgroundPanel.c_str());
+    }
+    else if (!standalonePanel.empty())
+    {
+        PanelEntry* previous = FindPanel(standalonePanel.c_str());
+        if (previous && !previous->visible)
+        {
+            previous->panel->OnPanelHidden();
+        }
         standalonePanel.clear();
     }
-    if (defaultLayoutPending)
+    if (backgroundPanel.empty() && defaultLayoutPending)
     {
         BuildDefaultDockLayout();
     }
@@ -159,7 +182,7 @@ void PanelManager::DrawPanels()
     //从浮动标题栏发布停靠载荷
     for (PanelEntry& entry : panels)
     {
-        if (!entry.visible || !entry.moving || entry.dockNode >= 0) continue;
+        if (!entry.visible || entry.info.id == backgroundPanel || !entry.moving || entry.dockNode >= 0) continue;
         if (!ImGui::IsMouseDragging(ImGuiMouseButton_Left) && draggedPanel != entry.info.id) continue;
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern | ImGuiDragDropFlags_SourceNoPreviewTooltip))
         {
@@ -168,20 +191,29 @@ void PanelManager::DrawPanels()
             ImGui::EndDragDropSource();
         }
     }
-    DrawDockHost();
-    for (PanelEntry& entry : panels)
+    if (backgroundPanel.empty())
     {
-        if (entry.visible && entry.panel && entry.dockNode < 0 && !entry.osWindow) DrawFloatingPanel(entry);
+        DrawDockHost();
     }
     for (PanelEntry& entry : panels)
     {
-        if (entry.visible && entry.panel && entry.dockNode < 0 && entry.osWindow) DrawFloatingOsPanel(entry);
+        if (entry.visible && entry.info.id != backgroundPanel && entry.panel && entry.dockNode < 0 && !entry.osWindow)
+        {
+            DrawFloatingPanel(entry);
+        }
+    }
+    for (PanelEntry& entry : panels)
+    {
+        if (entry.visible && entry.info.id != backgroundPanel && entry.panel && entry.dockNode < 0 && entry.osWindow)
+        {
+            DrawFloatingOsPanel(entry);
+        }
     }
     //释放位置决定主窗口内浮动还是独立 GLFW 窗口
     if (!draggedPanel.empty() && !EditorGUI::IsLeftMouseDownAnywhere())
     {
         PanelEntry* entry = FindPanel(draggedPanel.c_str());
-        if (entry && entry->dockNode >= 0 && !pendingDock.pending)
+        if (entry && !pendingDock.pending && (entry->dockNode >= 0 || EditorGUI::IsCursorOutsideMainWindow()))
         {
             if (EditorGUI::IsCursorOutsideMainWindow())
                 pendingFloat = { true, draggedPanel, EditorGUI::GetCursorScreenPosition(), true };
@@ -210,9 +242,18 @@ void PanelManager::DrawStandalonePanel(const char* id)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-    bool visible = ImGui::Begin("##standalone_workspace", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove
-        | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar);
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar;
+    if (backgroundPanel == id)
+    {
+        flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoFocusOnAppearing;
+    }
+    bool visible = ImGui::Begin("##standalone_workspace", nullptr, flags);
     ImGui::PopStyleVar(3);
+    if (backgroundPanel == id)
+    {
+        ImGui::BringWindowToDisplayBack(ImGui::GetCurrentContext()->CurrentWindow->RootWindow);
+    }
     if (visible)
     {
         PROFILE(entry->profileName.c_str());
@@ -243,6 +284,17 @@ void PanelManager::ResetDockLayout()
 //应用项目中保存的面板布局
 void PanelManager::ApplyLayout(const EditorLayoutState& layout)
 {
+    //结束临时工作区面板
+    if (!standalonePanel.empty())
+    {
+        PanelEntry* previous = FindPanel(standalonePanel.c_str());
+        if (previous && !previous->visible)
+        {
+            previous->panel->OnPanelHidden();
+        }
+        standalonePanel.clear();
+    }
+    backgroundPanel.clear();
     ClearPendingCommands();
     for (PanelEntry& entry : panels) DestroyFloatingOsWindow(entry);
 
@@ -275,18 +327,14 @@ void PanelManager::ApplyLayout(const EditorLayoutState& layout)
         {
             node->tabs.push_back(entry->info.id);
         }
-        if (state.hasPosition)
-        {
-            entry->hasPosition = true;
-            entry->position = state.position;
-            entry->applyPosition = true;
-        }
-        if (state.hasSize && state.size.x > 0.0f && state.size.y > 0.0f)
-        {
-            entry->hasSize = true;
-            entry->size = state.size;
-            entry->applySize = true;
-        }
+        entry->hasPosition = state.hasPosition;
+        entry->position = state.position;
+        entry->applyPosition = state.hasPosition;
+        entry->hasSize = state.hasSize && state.size.x > 0.0f && state.size.y > 0.0f;
+        entry->size = entry->hasSize ? state.size : entry->info.defaultSize;
+        entry->applySize = true;
+        entry->moving = false;
+        entry->focused = false;
         //恢复上次承载在独立窗口中的面板，固定工作区面板不参与
         if (state.floatingWindow && state.visible && !entry->info.fixedWorkspace)
         {
@@ -433,6 +481,16 @@ void PanelManager::SetPanelVisible(const char* id, bool visible)
         CompactDockNode(oldNode);
     }
     ApplyVisibility(*entry, visible);
+    repaintPending = true;
+    if (!backgroundPanel.empty())
+    {
+        if (visible)
+        {
+            entry->applyPosition = entry->hasPosition;
+            entry->applySize = true;
+        }
+        return;
+    }
     if (visible && wasDetached)
     {
         CreateFloatingOsWindow(*entry);
@@ -1153,9 +1211,16 @@ void PanelManager::ApplyPendingCommands()
         if (entry && !entry->info.fixedWorkspace)
         {
             int32 oldNode = entry->dockNode;
-            entry->returnDockNode = oldNode;
-            RemovePanelFromDock(entry->info.id);
-            CompactDockNode(oldNode);
+            if (oldNode >= 0)
+            {
+                entry->returnDockNode = oldNode;
+                RemovePanelFromDock(entry->info.id);
+                CompactDockNode(oldNode);
+            }
+            if (!pendingFloat.independent)
+            {
+                DestroyFloatingOsWindow(*entry);
+            }
             entry->hasPosition = true;
             entry->position = pendingFloat.position;
             entry->applyPosition = true;
@@ -1261,11 +1326,15 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
     if (titleHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) ImGui::OpenPopup(menuId.c_str());
     if (ImGui::BeginPopup(menuId.c_str()))
     {
-        if (ImGui::MenuItem("Merge into Main Window"))
+        if (backgroundPanel.empty() && ImGui::MenuItem("Merge into Main Window"))
         {
             int32 target = FindDockNode(entry.returnDockNode) ? entry.returnDockNode : FindBestDockTarget(dockRoot);
             if (target < 0) target = dockRoot;
             if (target >= 0) pendingDock = { true, entry.info.id, target, PanelDockPlacement::Center };
+        }
+        if (!backgroundPanel.empty() && ImGui::MenuItem("Move to Separate Window"))
+        {
+            pendingFloat = { true, entry.info.id, EditorGUI::GetCursorScreenPosition(), true };
         }
         if (ImGui::MenuItem("Close")) pendingClosePanel = entry.info.id;
         ImGui::EndPopup();
@@ -1397,9 +1466,19 @@ void PanelManager::DrawFloatingOsPanel(PanelEntry& entry)
     if (host.ShouldClose()) pendingClosePanel = entry.info.id;
     if (host.TakeDockBackRequest())
     {
-        int32 target = FindDockNode(entry.returnDockNode) ? entry.returnDockNode : FindBestDockTarget(dockRoot);
-        if (target < 0) target = dockRoot;
-        if (target >= 0) pendingDock = { true, entry.info.id, target, PanelDockPlacement::Center };
+        if (!backgroundPanel.empty())
+        {
+            double x = 0.0;
+            double y = 0.0;
+            glfwGetCursorPos(EditorGUI::GetMainGlfwWindow(), &x, &y);
+            pendingFloat = { true, entry.info.id, { static_cast<float32>(x), static_cast<float32>(y) }, false };
+        }
+        else
+        {
+            int32 target = FindDockNode(entry.returnDockNode) ? entry.returnDockNode : FindBestDockTarget(dockRoot);
+            if (target < 0) target = dockRoot;
+            if (target >= 0) pendingDock = { true, entry.info.id, target, PanelDockPlacement::Center };
+        }
     }
 
     if (!host.BeginFrame()) return;

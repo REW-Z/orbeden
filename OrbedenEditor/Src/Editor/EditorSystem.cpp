@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -30,6 +31,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <sstream>
+#include <tuple>
 #include <unordered_set>
 #include <utility>
 #define GLFW_INCLUDE_NONE
@@ -37,6 +39,37 @@
 
 namespace
 {
+    //游戏画面分辨率预设
+    constexpr std::tuple<int32, int32, const char*> GameViewPresets[] =
+    {
+        { 1024, 768, "XGA (4:3)" },
+        { 1280, 720, "720p / Nintendo Switch" },
+        { 1280, 800, "Steam Deck / Steam Deck OLED" },
+        { 1280, 1024, "SXGA (5:4)" },
+        { 1366, 768, "HD laptop" },
+        { 1440, 900, "WXGA+ (16:10)" },
+        { 1600, 900, "HD+ (16:9)" },
+        { 1680, 1050, "WSXGA+ (16:10)" },
+        { 1920, 1080, "1080p / Switch 2 / ROG Ally" },
+        { 1920, 1200, "WUXGA / Legion Go S" },
+        { 2560, 1080, "Ultrawide FHD (21:9)" },
+        { 2560, 1440, "1440p / QHD (16:9)" },
+        { 2560, 1600, "WQXGA / Legion Go" },
+        { 2880, 1800, "Laptop OLED (16:10)" },
+        { 3000, 2000, "Laptop (3:2)" },
+        { 3200, 1800, "QHD+ (16:9)" },
+        { 3440, 1440, "Ultrawide QHD (21:9)" },
+        { 3840, 1600, "Ultrawide (24:10)" },
+        { 3840, 2160, "4K UHD / Switch 2 TV output" },
+        { 3840, 2400, "4K (16:10)" },
+        { 5120, 1440, "Dual QHD (32:9)" },
+        { 5120, 2160, "5K2K ultrawide (21:9)" },
+        { 5120, 2880, "5K (16:9)" },
+        { 6016, 3384, "6K (16:9)" },
+        { 7680, 2160, "Dual 4K (32:9)" },
+        { 7680, 4320, "8K UHD (16:9)" },
+    };
+
     //日志唤醒回调：新日志写入时叫醒编辑器主循环
     void WakeEditorLoop(void* context)
     {
@@ -552,6 +585,7 @@ EditorSystem::~EditorSystem()
     app.SetPaused(false);
     app.SetSimulationEnabled(false);
     playMode.Stop();
+    ReleaseGameViewTarget();
     app.GetWorld().Clear();
     std::string nativeUnloadError;
     nativeGameModule.Unload(nativeUnloadError);
@@ -628,11 +662,15 @@ void EditorSystem::Update(World& world, float deltaTime)
         }
     }
 
-    //场景改为离屏渲染后主窗口不再被场景填充，需要在渲染前清空
-    if (!playMode.IsPlaying()) editorGUI.ClearMainFramebuffer();
+    //清空编辑器主窗口背景
+    editorGUI.ClearMainFramebuffer();
 
     //按场景视口当前可见性维护离屏目标，Play 期间同样需要释放
     editorScene.RefreshSceneViewTarget(world);
+    if (playMode.IsPlaying())
+    {
+        RefreshGameViewTarget();
+    }
 }
 
 //请求编辑器重绘并唤醒事件循环
@@ -679,8 +717,18 @@ void EditorSystem::RenderEditorGUI()
     if (!playMode.IsPlaying()) editorScene.PruneSelection(app.GetWorld());
     {
         PROFILE("Editor/Panels");
-        if (project.HasProject()) panelManager.DrawPanels();
-        else panelManager.DrawStandalonePanel("welcome");
+        if (playMode.IsPlaying())
+        {
+            panelManager.DrawPanels("game");
+        }
+        else if (project.HasProject())
+        {
+            panelManager.DrawPanels();
+        }
+        else
+        {
+            panelManager.DrawStandalonePanel("welcome");
+        }
     }
 
     //场景视口由 Scene 面板在自身内容区内绘制，Play 期间取消鼠标交互
@@ -1457,6 +1505,19 @@ void EditorSystem::StartPlayMode()
         }
     }
 
+    //准备游戏输出分辨率
+    ImGuiContext* guiContext = EditorGUI::GetMainContext();
+    ImGuiViewport* viewport = guiContext->Viewports[0];
+    ImVec2 framebufferScale = guiContext->IO.DisplayFramebufferScale;
+    gameViewPanelPixelWidth = std::clamp(static_cast<int32>(std::lround(viewport->WorkSize.x * framebufferScale.x)), 1, 8192);
+    gameViewPanelPixelHeight = std::clamp(static_cast<int32>(std::lround(viewport->WorkSize.y * framebufferScale.y)), 1, 8192);
+    gameViewRequestedWidth = 0;
+    gameViewRequestedHeight = 0;
+    if (!RefreshGameViewTarget())
+    {
+        return;
+    }
+
     //Play 期间的改动不落盘，进入前先关掉脏标记记录，避免同帧窗口漏标
     app.GetWorld().SetDirtyTrackingEnabled(false);
     editorScene.EnterPlayMode(app.GetWorld());
@@ -1480,6 +1541,7 @@ void EditorSystem::StartPlayMode()
                 ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
         {
             projectStatus = playMode.GetLastError();
+            ReleaseGameViewTarget();
             editorScene.RestoreCamera(app.GetWorld());
             return;
         }
@@ -1493,12 +1555,12 @@ void EditorSystem::StartPlayMode()
     }
     app.SetPaused(false);
     app.SetSimulationEnabled(true);
-    InputManager::SetEnabled(true);
+    InputManager::SetEnabled(false);
 
     //记录面板布局并隐藏全部编辑器面板，停止 Play 后恢复。
     panelManager.WriteLayout(playPanelLayout);
     panelManager.HideAllPanels();
-    //Play 期间游戏相机直接画主 framebuffer，编辑态则只渲染场景面板的离屏目标
+    //播放画面由 Game 面板显示
     if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
     {
         renderSystem->ClearUIEditorPreviewTarget();
@@ -1518,6 +1580,7 @@ void EditorSystem::RequestStop()
     app.SetSimulationEnabled(false);
     playMode.Stop();
     InputManager::SetEnabled(false);
+    ReleaseGameViewTarget();
     if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
         renderSystem->SetMainFramebufferRendering(false);
 
@@ -1807,6 +1870,192 @@ bool EditorSystem::SyncPlayerPackage(const std::string& packageRoot, std::string
 bool EditorSystem::IsPlaying() const
 {
     return playMode.IsPlaying();
+}
+
+//创建游戏视图输出目标
+bool EditorSystem::RefreshGameViewTarget()
+{
+    auto [width, height] = project.GetGameViewResolution();
+    if (width == 0 && height == 0)
+    {
+        width = gameViewPanelPixelWidth;
+        height = gameViewPanelPixelHeight;
+    }
+    if (width < 1 || height < 1)
+    {
+        return false;
+    }
+    if (gameViewTarget.IsValid() && gameViewTargetWidth == width && gameViewTargetHeight == height)
+    {
+        return true;
+    }
+    if (gameViewRequestedWidth == width && gameViewRequestedHeight == height)
+    {
+        return false;
+    }
+    gameViewRequestedWidth = width;
+    gameViewRequestedHeight = height;
+
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
+    RenderTargetID next = renderSystem->CreateRenderTarget(width, height);
+    if (!next.IsValid())
+    {
+        projectStatus = "Game render target creation failed: " + std::to_string(width) + " x " + std::to_string(height);
+        Log::Error(projectStatus.c_str());
+        return false;
+    }
+
+    RenderTargetID previous = gameViewTarget;
+    gameViewTarget = next;
+    gameViewTargetWidth = width;
+    gameViewTargetHeight = height;
+    renderSystem->SetMainOutputTarget(next);
+    if (previous.IsValid())
+    {
+        renderSystem->DeleteRenderTarget(previous);
+    }
+    RequestRepaint();
+    return true;
+}
+
+//释放游戏视图输出目标
+void EditorSystem::ReleaseGameViewTarget()
+{
+    editorGUI.SetGameViewInput(false, {}, {}, {});
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+    {
+        renderSystem->SetMainOutputTarget({});
+        if (gameViewTarget.IsValid())
+        {
+            renderSystem->DeleteRenderTarget(gameViewTarget);
+        }
+    }
+    gameViewTarget = {};
+    gameViewTargetWidth = 0;
+    gameViewTargetHeight = 0;
+    gameViewPanelPixelWidth = 0;
+    gameViewPanelPixelHeight = 0;
+    gameViewRequestedWidth = 0;
+    gameViewRequestedHeight = 0;
+}
+
+//应用并保存游戏视图分辨率
+bool EditorSystem::SetGameViewResolution(int32 width, int32 height)
+{
+    bool followsPanel = width == 0 && height == 0;
+    if (!followsPanel && (width < 1 || width > 8192 || height < 1 || height > 8192))
+    {
+        projectStatus = "Game resolution must follow GamePanel or have dimensions from 1 to 8192.";
+        return false;
+    }
+
+    //准备新的游戏输出目标
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
+    RenderTargetID next;
+    int32 renderWidth = followsPanel ? gameViewPanelPixelWidth : width;
+    int32 renderHeight = followsPanel ? gameViewPanelPixelHeight : height;
+    bool replaceTarget = IsPlaying() && (renderWidth != gameViewTargetWidth || renderHeight != gameViewTargetHeight);
+    if (replaceTarget)
+    {
+        next = renderSystem->CreateRenderTarget(renderWidth, renderHeight);
+        if (!next.IsValid())
+        {
+            projectStatus = "Game render target creation failed. Previous resolution retained.";
+            return false;
+        }
+    }
+
+    //提交项目配置
+    if (!project.SaveGameViewResolution(width, height))
+    {
+        if (next.IsValid())
+        {
+            renderSystem->DeleteRenderTarget(next);
+        }
+        projectStatus = project.GetLastError();
+        return false;
+    }
+
+    //切换游戏画面输出
+    if (replaceTarget)
+    {
+        RenderTargetID previous = gameViewTarget;
+        gameViewTarget = next;
+        gameViewTargetWidth = renderWidth;
+        gameViewTargetHeight = renderHeight;
+        renderSystem->SetMainOutputTarget(next);
+        renderSystem->DeleteRenderTarget(previous);
+    }
+    gameViewRequestedWidth = gameViewTargetWidth;
+    gameViewRequestedHeight = gameViewTargetHeight;
+    projectStatus = followsPanel ? "Game resolution follows GamePanel."
+        : "Game resolution: " + std::to_string(width) + " x " + std::to_string(height);
+    RequestRepaint();
+    return true;
+}
+
+//居中显示游戏画面并登记输入区域
+void EditorSystem::DrawGameView()
+{
+    if (!IsPlaying())
+    {
+        ImGui::TextUnformatted("Press Play to preview the game.");
+        return;
+    }
+
+    ImVec2 origin = ImGui::GetCursorScreenPos();
+    ImVec2 available = ImGui::GetContentRegionAvail();
+    if (available.x < 1.0f || available.y < 1.0f)
+    {
+        gameViewPanelPixelWidth = 0;
+        gameViewPanelPixelHeight = 0;
+        editorGUI.SetGameViewInput(false, {}, {}, {});
+        return;
+    }
+
+    //记录面板内容区的实际像素边界
+    ImVec2 framebufferScale = ImGui::GetIO().DisplayFramebufferScale;
+    ImVec2 pixelMin(std::ceil(origin.x * framebufferScale.x), std::ceil(origin.y * framebufferScale.y));
+    ImVec2 pixelMax(std::floor((origin.x + available.x) * framebufferScale.x),
+        std::floor((origin.y + available.y) * framebufferScale.y));
+    int32 panelWidth = std::clamp(static_cast<int32>(pixelMax.x - pixelMin.x), 1, 8192);
+    int32 panelHeight = std::clamp(static_cast<int32>(pixelMax.y - pixelMin.y), 1, 8192);
+    auto [width, height] = project.GetGameViewResolution();
+    bool followsPanel = width == 0 && height == 0;
+    if (panelWidth != gameViewPanelPixelWidth || panelHeight != gameViewPanelPixelHeight)
+    {
+        gameViewPanelPixelWidth = panelWidth;
+        gameViewPanelPixelHeight = panelHeight;
+        if (followsPanel)
+        {
+            RequestRepaint();
+        }
+    }
+
+    //按比例居中放置固定分辨率画面
+    float32 scale = std::min(available.x / gameViewTargetWidth, available.y / gameViewTargetHeight);
+    ImVec2 size(gameViewTargetWidth * scale, gameViewTargetHeight * scale);
+    ImVec2 position(origin.x + (available.x - size.x) * 0.5f, origin.y + (available.y - size.y) * 0.5f);
+    if (followsPanel && gameViewTargetWidth == panelWidth && gameViewTargetHeight == panelHeight)
+    {
+        //按一对一像素显示跟随面板的画面
+        size = ImVec2(gameViewTargetWidth / framebufferScale.x, gameViewTargetHeight / framebufferScale.y);
+        position = ImVec2(std::floor((pixelMin.x + pixelMax.x - gameViewTargetWidth) * 0.5f) / framebufferScale.x,
+            std::floor((pixelMin.y + pixelMax.y - gameViewTargetHeight) * 0.5f) / framebufferScale.y);
+    }
+    ImGui::GetWindowDrawList()->AddRectFilled(origin,
+        ImVec2(origin.x + available.x, origin.y + available.y), IM_COL32(0, 0, 0, 255));
+    ImGui::SetCursorScreenPos(position);
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
+    GpuTextureID texture = renderSystem->GetRenderTargetTexture(gameViewTarget);
+    ImGui::Image(static_cast<ImTextureID>(texture.id), size, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+    ImGui::SetCursorScreenPos(origin);
+    ImGui::Dummy(available);
+
+    //换算主窗口客户区内的输入区域
+    ImVec2 viewportOrigin = ImGui::GetMainViewport()->Pos;
+    editorGUI.SetGameViewInput(true, { position.x - viewportOrigin.x, position.y - viewportOrigin.y },
+        { size.x, size.y }, { static_cast<float32>(gameViewTargetWidth), static_cast<float32>(gameViewTargetHeight) });
 }
 
 bool EditorSystem::HasProject() const
@@ -2471,7 +2720,13 @@ void EditorSystem::DrawPlayToolbar()
         float32 buttonWidth = 36.0f;
         float32 spacing = ImGui::GetStyle().ItemSpacing.x;
         float32 totalWidth = buttonWidth * 3.0f + spacing * 2.0f;
-        ImGui::SetCursorPosX(std::max(0.0f, (ImGui::GetWindowWidth() - totalWidth) * 0.5f));
+        float32 windowWidth = ImGui::GetWindowWidth();
+        float32 padding = ImGui::GetStyle().WindowPadding.x;
+        float32 resolutionWidth = std::min(280.0f,
+            std::max(100.0f, (windowWidth - totalWidth - spacing - padding * 2.0f) * 0.5f));
+        float32 resolutionX = windowWidth - padding - resolutionWidth;
+        float32 playX = std::min((windowWidth - totalWidth) * 0.5f, resolutionX - spacing - totalWidth);
+        ImGui::SetCursorPosX(std::max(padding, playX));
         ImGui::SetCursorPosY(5.0f);
 
         //播放按钮。
@@ -2530,6 +2785,55 @@ void EditorSystem::DrawPlayToolbar()
         if (stopDisabled)
         {
             ImGui::EndDisabled();
+        }
+
+        //在工具栏右侧选择游戏分辨率
+        auto [width, height] = project.GetGameViewResolution();
+        bool followsPanel = width == 0 && height == 0;
+        char preview[64];
+        if (followsPanel)
+        {
+            if (gameViewTarget.IsValid())
+            {
+                std::snprintf(preview, sizeof(preview), "GamePanel Size (%d x %d)", gameViewTargetWidth, gameViewTargetHeight);
+            }
+            else
+            {
+                std::snprintf(preview, sizeof(preview), "GamePanel Size (Auto)");
+            }
+        }
+        else
+        {
+            std::snprintf(preview, sizeof(preview), "Game: %d x %d", width, height);
+        }
+        ImGui::SetCursorPos(ImVec2(resolutionX, (toolbarHeight - ImGui::GetFrameHeight()) * 0.5f));
+        ImGui::SetNextItemWidth(resolutionWidth);
+        if (ImGui::BeginCombo("##game_resolution", preview, ImGuiComboFlags_HeightLarge))
+        {
+            if (ImGui::Selectable("GamePanel Size (Auto)", followsPanel) && !followsPanel)
+            {
+                SetGameViewResolution(0, 0);
+            }
+            if (followsPanel)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+            ImGui::Separator();
+            for (const auto& [presetWidth, presetHeight, name] : GameViewPresets)
+            {
+                char label[160];
+                std::snprintf(label, sizeof(label), "%d x %d - %s", presetWidth, presetHeight, name);
+                bool selected = width == presetWidth && height == presetHeight;
+                if (ImGui::Selectable(label, selected) && !selected)
+                {
+                    SetGameViewResolution(presetWidth, presetHeight);
+                }
+                if (selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
         }
     }
 

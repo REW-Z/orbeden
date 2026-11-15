@@ -31,6 +31,9 @@ public static class EditorGUI
     /// <summary>绘制 Scene 面板的原生场景视口。</summary>
     public static void DrawSceneView() => NativeEditorGUI.DrawSceneView();
 
+    /// <summary>绘制 Game 面板的原生游戏画面</summary>
+    public static void DrawGameView() => NativeEditorGUI.DrawGameView();
+
     /// <summary>解析场景视口当前鼠标位置的投放点。</summary>
     internal static bool ResolveSceneDropPosition(out vector3 position) => NativeEditorGUI.ResolveSceneDropPosition(out position);
 

@@ -203,6 +203,15 @@ public class Text : UIVisual
         UIRect rect = GetLayout()?.GetResolvedRect() ?? new UIRect(new vector2(0.0f, 0.0f), new vector2(0.0f, 0.0f));
         TextLayoutResult result = GetOrBuildLayout(rect.Width, mesh.ViewScale);
 
+        //按光栅字号绘制屏幕与离屏位图文字
+        Canvas? canvas = GetCanvas();
+        bool pixelBitmap = GetRasterMode() == FontRasterMode.Bitmap && canvas != null
+            && (canvas.GetRenderMode() == CanvasRenderMode.Offscreen
+                || (canvas.GetRenderMode() == CanvasRenderMode.Overlay && UIWorldContext.Current?.IsEditorMode == false));
+        float drawFontSize = pixelBitmap
+            ? MathF.Max(1.0f, MathF.Round(result.fontSize * mesh.ViewScale)) / mesh.ViewScale
+            : result.fontSize;
+
         //定位：结果以块左下角为原点，垂直对齐只平移整块。
         vector2 origin = LayoutOrigin(result);
 
@@ -227,7 +236,7 @@ public class Text : UIVisual
             {
                 if (!glyph.entry.HasPixels || !ReferenceEquals(glyph.entry.Texture, texture)) continue;
                 vector2 pen = new(origin.x + glyph.position.x, origin.y + glyph.position.y);
-                if (!glyph.entry.TryGetTargetRect(pen, result.fontSize, out UIRect target)) continue;
+                if (!glyph.entry.TryGetTargetRect(pen, drawFontSize, out UIRect target)) continue;
                 mesh.AddQuad(target, UIMeshBuilder.ToTextureUv(glyph.entry.Uv.min, flipY),
                     UIMeshBuilder.ToTextureUv(glyph.entry.Uv.Max, flipY), white);
             }

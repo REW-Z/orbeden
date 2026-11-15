@@ -67,6 +67,13 @@ private:
     ManagedEditorBridge managedBridge;
     EditorScene editorScene;
     EditorPlayMode playMode;
+    RenderTargetID gameViewTarget;
+    int32 gameViewTargetWidth = 0;
+    int32 gameViewTargetHeight = 0;
+    int32 gameViewPanelPixelWidth = 0;
+    int32 gameViewPanelPixelHeight = 0;
+    int32 gameViewRequestedWidth = 0;
+    int32 gameViewRequestedHeight = 0;
     NativeGameModule nativeGameModule;
     int32 selectedPlayerTargetPlatform = 0;
     std::atomic_bool repaintRequested = true;
@@ -169,6 +176,12 @@ public:
 
     //判断是否正在 Play-In-Editor
     bool IsPlaying() const;
+
+    //绘制游戏视图纹理并登记输入区域
+    void DrawGameView();
+
+    //应用并保存游戏视图分辨率，(0, 0) 表示跟随 GamePanel
+    bool SetGameViewResolution(int32 width, int32 height);
 
     //判断是否已经打开项目
     bool HasProject() const;
@@ -291,6 +304,12 @@ private:
 
     //进入 Play-In-Editor；产物检查由调用方完成
     void StartPlayMode();
+
+    //创建或调整游戏视图输出目标
+    bool RefreshGameViewTarget();
+
+    //释放游戏视图输出目标
+    void ReleaseGameViewTarget();
 
     //绘制一个托管面板
     void DrawManagedPanel(int32 handle);

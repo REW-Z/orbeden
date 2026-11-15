@@ -548,25 +548,34 @@ struct VulkanRenderBackend::State
         info.samples = VK_SAMPLE_COUNT_1_BIT;
         info.tiling = VK_IMAGE_TILING_OPTIMAL;
         info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | (depth ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-        Check(vkCreateImage(device, &info, nullptr, &result.handle), "vkCreateImage");
-        VkMemoryRequirements requirements;
-        vkGetImageMemoryRequirements(device, result.handle, &requirements);
-        result.memoryBytes = requirements.size;
-        VkMemoryAllocateInfo allocation = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-        allocation.allocationSize = requirements.size;
-        allocation.memoryTypeIndex = FindMemory(requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        Check(vkAllocateMemory(device, &allocation, nullptr, &result.memory), "vkAllocateMemory(image)");
-        Check(vkBindImageMemory(device, result.handle, result.memory, 0), "vkBindImageMemory");
-        VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-        view.image = result.handle; view.viewType = layers == 6 ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
-        view.format = format; view.subresourceRange = { result.aspect, 0, levels, 0, layers };
-        Check(vkCreateImageView(device, &view, nullptr, &result.view), "vkCreateImageView");
-        VkSamplerCreateInfo sampler = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        sampler.magFilter = sampler.minFilter = linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-        sampler.mipmapMode = linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = repeat ? VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler.maxLod = static_cast<float32>(levels - 1);
-        Check(vkCreateSampler(device, &sampler, nullptr, &result.sampler), "vkCreateSampler");
+        try
+        {
+            Check(vkCreateImage(device, &info, nullptr, &result.handle), "vkCreateImage");
+            VkMemoryRequirements requirements;
+            vkGetImageMemoryRequirements(device, result.handle, &requirements);
+            result.memoryBytes = requirements.size;
+            VkMemoryAllocateInfo allocation = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+            allocation.allocationSize = requirements.size;
+            allocation.memoryTypeIndex = FindMemory(requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            Check(vkAllocateMemory(device, &allocation, nullptr, &result.memory), "vkAllocateMemory(image)");
+            Check(vkBindImageMemory(device, result.handle, result.memory, 0), "vkBindImageMemory");
+            VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+            view.image = result.handle; view.viewType = layers == 6 ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
+            view.format = format; view.subresourceRange = { result.aspect, 0, levels, 0, layers };
+            Check(vkCreateImageView(device, &view, nullptr, &result.view), "vkCreateImageView");
+            VkSamplerCreateInfo sampler = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+            sampler.magFilter = sampler.minFilter = linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+            sampler.mipmapMode = linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = repeat ? VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler.maxLod = static_cast<float32>(levels - 1);
+            Check(vkCreateSampler(device, &sampler, nullptr, &result.sampler), "vkCreateSampler");
+        }
+        catch (...)
+        {
+            //释放未完成分配的图像
+            DestroyImage(result);
+            throw;
+        }
         return result;
     }
 

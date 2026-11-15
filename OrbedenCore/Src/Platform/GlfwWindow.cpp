@@ -159,7 +159,7 @@ namespace
     //原始键与鼠标位置由回调写入；事件带的是那一时刻的位置。
     vector2 CurrentPointerPosition()
     {
-        return InputManager::MousePos();
+        return InputManager::RawMousePos();
     }
 
     KeyEnum MapKey(int key)
@@ -231,7 +231,7 @@ namespace
     void CursorPosCallback(GLFWwindow* glfwWindow, double x, double y)
     {
         (void)glfwWindow;
-        vector2 previous = InputManager::MousePos();
+        vector2 previous = InputManager::RawMousePos();
         vector2 position(static_cast<float32>(x), static_cast<float32>(y));
         InputManager::SetMousePosition(position.x, position.y);
 

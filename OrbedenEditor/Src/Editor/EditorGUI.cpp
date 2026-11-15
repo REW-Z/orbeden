@@ -2,6 +2,7 @@
 
 #include "Editor/EditorIcons.h"
 #include "Editor/EditorScene.h"
+#include "InputManager/InputManager.h"
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
 #include "Application.h"
@@ -2541,6 +2542,29 @@ void EditorGUI::UpdateKeyModifiers(ImGuiIO& io, int32 modifiers)
     io.AddKeyEvent(ImGuiMod_Super, (modifiers & GLFW_MOD_SUPER) != 0);
 }
 
+//登记游戏画面的输入区域与分辨率
+void EditorGUI::SetGameViewInput(bool active, const vector2& position, const vector2& size, const vector2& resolution)
+{
+    if (active != gameViewInputActive)
+    {
+        gameViewInputFocused = false;
+        InputManager::SetEnabled(false);
+    }
+    gameViewInputActive = active;
+    gameViewPosition = position;
+    gameViewSize = size;
+    if (active)
+    {
+        gameViewInputWindow = ImGui::GetCurrentContext()->CurrentWindow->ID;
+        InputManager::SetPointerTransform(position, vector2(resolution.x / size.x, resolution.y / size.y));
+    }
+    else
+    {
+        gameViewInputWindow = 0;
+        InputManager::SetPointerTransform({}, { 1.0f, 1.0f });
+    }
+}
+
 void EditorGUI::WindowFocusCallback(GLFWwindow* callbackWindow, int32 focused)
 {
     EditorGUI* editorGUI = activeInstance;
@@ -2549,6 +2573,11 @@ void EditorGUI::WindowFocusCallback(GLFWwindow* callbackWindow, int32 focused)
         ImGuiContext* previousContext = ImGui::GetCurrentContext();
         ImGui::SetCurrentContext(editorGUI->context);
         ImGui::GetIO().AddFocusEvent(focused != 0);
+        if (focused == 0 && editorGUI->gameViewInputActive)
+        {
+            editorGUI->gameViewInputFocused = false;
+            InputManager::SetEnabled(false);
+        }
         ImGui::SetCurrentContext(previousContext);
     }
     if (editorGUI && editorGUI->previousWindowFocusCallback)
@@ -2599,6 +2628,50 @@ void EditorGUI::MouseButtonCallback(GLFWwindow* callbackWindow, int32 button, in
         ImGuiIO& io = ImGui::GetIO();
         UpdateKeyModifiers(io, modifiers);
         io.AddMouseButtonEvent(button, action == GLFW_PRESS);
+        if (action == GLFW_PRESS && editorGUI->gameViewInputActive)
+        {
+            //按点击位置切换游戏输入焦点
+            double mouseX = 0.0;
+            double mouseY = 0.0;
+            glfwGetCursorPos(callbackWindow, &mouseX, &mouseY);
+            const vector2& position = editorGUI->gameViewPosition;
+            const vector2& size = editorGUI->gameViewSize;
+            ImGuiWindow* hovered = nullptr;
+            ImGuiContext& context = *ImGui::GetCurrentContext();
+            ImVec2 mouse(static_cast<float32>(mouseX), static_cast<float32>(mouseY));
+            for (int32 index = context.Windows.Size - 1; index >= 0; --index)
+            {
+                ImGuiWindow* candidate = context.Windows[index];
+                if (!candidate->Active || candidate->Hidden || (candidate->Flags & ImGuiWindowFlags_NoMouseInputs))
+                {
+                    continue;
+                }
+                ImVec2 padding = context.Style.TouchExtraPadding;
+                if (!(candidate->Flags & (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize)))
+                {
+                    padding.x = std::max(padding.x, context.Style.WindowBorderHoverPadding);
+                    padding.y = std::max(padding.y, context.Style.WindowBorderHoverPadding);
+                }
+                if (candidate->OuterRectClipped.ContainsWithPad(mouse, padding))
+                {
+                    hovered = candidate;
+                    break;
+                }
+            }
+            bool focused = mouseX >= position.x && mouseX < position.x + size.x
+                && mouseY >= position.y && mouseY < position.y + size.y
+                && hovered && hovered->ID == editorGUI->gameViewInputWindow
+                && ImGui::GetCurrentContext()->OpenPopupStack.empty();
+            if (focused != editorGUI->gameViewInputFocused)
+            {
+                editorGUI->gameViewInputFocused = focused;
+                if (focused)
+                {
+                    InputManager::SetMousePosition(static_cast<float32>(mouseX), static_cast<float32>(mouseY));
+                }
+                InputManager::SetEnabled(focused);
+            }
+        }
         ImGui::SetCurrentContext(previousContext);
     }
     if (editorGUI && editorGUI->previousMouseButtonCallback)
@@ -2610,15 +2683,51 @@ void EditorGUI::MouseButtonCallback(GLFWwindow* callbackWindow, int32 button, in
 void EditorGUI::ScrollCallback(GLFWwindow* callbackWindow, double x, double y)
 {
     EditorGUI* editorGUI = activeInstance;
+    bool forwardToGame = true;
     if (editorGUI && callbackWindow == editorGUI->glfwWindow)
     {
         ImGuiContext* previousContext = ImGui::GetCurrentContext();
         ImGui::SetCurrentContext(editorGUI->context);
         ImGui::GetIO().AddMouseWheelEvent(static_cast<float32>(x), static_cast<float32>(y));
+        if (editorGUI->gameViewInputActive)
+        {
+            //按上层窗口与画面边界隔离游戏滚轮
+            double mouseX = 0.0;
+            double mouseY = 0.0;
+            glfwGetCursorPos(callbackWindow, &mouseX, &mouseY);
+            ImGuiWindow* hovered = nullptr;
+            ImGuiContext& context = *ImGui::GetCurrentContext();
+            ImVec2 mouse(static_cast<float32>(mouseX), static_cast<float32>(mouseY));
+            for (int32 index = context.Windows.Size - 1; index >= 0; --index)
+            {
+                ImGuiWindow* candidate = context.Windows[index];
+                if (!candidate->Active || candidate->Hidden || (candidate->Flags & ImGuiWindowFlags_NoMouseInputs))
+                {
+                    continue;
+                }
+                ImVec2 padding = context.Style.TouchExtraPadding;
+                if (!(candidate->Flags & (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize)))
+                {
+                    padding.x = std::max(padding.x, context.Style.WindowBorderHoverPadding);
+                    padding.y = std::max(padding.y, context.Style.WindowBorderHoverPadding);
+                }
+                if (candidate->OuterRectClipped.ContainsWithPad(mouse, padding))
+                {
+                    hovered = candidate;
+                    break;
+                }
+            }
+            const vector2& position = editorGUI->gameViewPosition;
+            const vector2& size = editorGUI->gameViewSize;
+            forwardToGame = mouseX >= position.x && mouseX < position.x + size.x
+                && mouseY >= position.y && mouseY < position.y + size.y
+                && hovered && hovered->ID == editorGUI->gameViewInputWindow
+                && ImGui::GetCurrentContext()->OpenPopupStack.empty();
+        }
         ImGui::SetCurrentContext(previousContext);
         editorGUI->sceneMouseWheel += static_cast<float32>(y);
     }
-    if (editorGUI && editorGUI->previousScrollCallback)
+    if (forwardToGame && editorGUI && editorGUI->previousScrollCallback)
     {
         editorGUI->previousScrollCallback(callbackWindow, x, y);
     }

@@ -183,6 +183,7 @@ void RenderSystem::Shutdown()
     ReleaseCameraFrameTextures();
     ReleaseRenderTargets();
     ClearUIEditorPreviewTarget();
+    mainOutputTarget = {};
     forwardPipeline.Shutdown();
     //输出 Pass 必须在后端关闭之前释放它持有的 shader 与顶点缓冲
     outputPass.Shutdown();
@@ -259,28 +260,69 @@ void RenderSystem::SetMainFramebufferRendering(bool value)
     mainFramebufferRendering = value;
 }
 
+//设置游戏默认输出目标并发布显示尺寸
+void RenderSystem::SetMainOutputTarget(RenderTargetID id)
+{
+    mainOutputTarget = id;
+    const ManagedRenderTarget* target = FindRenderTarget(id);
+    int32 width = target ? target->width : framebufferWidth;
+    int32 height = target ? target->height : framebufferHeight;
+    RetainedGuiFrame::SetDisplaySize(width, height);
+    uiRenderer.SetDisplayLogicalSize(target ? vector2(static_cast<float32>(width), static_cast<float32>(height))
+        : vector2(static_cast<float32>(window->GetWidth()), static_cast<float32>(window->GetHeight())));
+    if (target)
+    {
+        //清空新游戏输出目标
+        RenderPassDesc pass;
+        pass.renderTarget = target->renderTarget;
+        pass.width = width;
+        pass.height = height;
+        pass.clearMode = ClearMode::SolidColor;
+        pass.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+        backend->BeginPass(pass);
+        backend->EndPass();
+    }
+}
+
 RenderTargetID RenderSystem::CreateRenderTarget(int32 width, int32 height)
 {
     //验证 RenderTarget 创建参数
     if (!initialized || width <= 0 || height <= 0) return RenderTargetID();
 
-    //创建深度纹理
-    GpuDepthTextureDesc depthDesc;
-    depthDesc.width = width;
-    depthDesc.height = height;
-    GpuDepthTextureID depthTexture = backend->CreateDepthTexture(depthDesc);
-    if (!depthTexture.IsValid()) return RenderTargetID();
-
-    //创建颜色渲染目标
-    GpuRenderTargetDesc targetDesc;
-    targetDesc.width = width;
-    targetDesc.height = height;
-    targetDesc.depthTexture = depthTexture;
-    GpuRenderTargetID renderTarget = backend->CreateRenderTarget(targetDesc);
-    if (!renderTarget.IsValid())
+    GpuDepthTextureID depthTexture;
+    GpuRenderTargetID renderTarget;
+    try
     {
-        backend->DeleteDepthTexture(depthTexture);
-        return RenderTargetID();
+        //创建深度纹理
+        GpuDepthTextureDesc depthDesc;
+        depthDesc.width = width;
+        depthDesc.height = height;
+        depthTexture = backend->CreateDepthTexture(depthDesc);
+        if (!depthTexture.IsValid())
+        {
+            return {};
+        }
+
+        //创建颜色渲染目标
+        GpuRenderTargetDesc targetDesc;
+        targetDesc.width = width;
+        targetDesc.height = height;
+        targetDesc.depthTexture = depthTexture;
+        renderTarget = backend->CreateRenderTarget(targetDesc);
+        if (!renderTarget.IsValid())
+        {
+            backend->DeleteDepthTexture(depthTexture);
+            return {};
+        }
+    }
+    catch (const std::exception& error)
+    {
+        if (depthTexture.IsValid())
+        {
+            backend->DeleteDepthTexture(depthTexture);
+        }
+        Log::Error((std::string("Render target creation failed: ") + error.what()).c_str());
+        return {};
     }
 
     //生成 RenderTarget ID
@@ -448,8 +490,10 @@ void RenderSystem::Render(World& world, float deltaTime)
         }
 
         RenderPassDesc passDesc;
-        passDesc.width = framebufferWidth;
-        passDesc.height = framebufferHeight;
+        const ManagedRenderTarget* target = FindRenderTarget(mainOutputTarget);
+        passDesc.renderTarget = target ? target->renderTarget : GpuRenderTargetID();
+        passDesc.width = target ? target->width : framebufferWidth;
+        passDesc.height = target ? target->height : framebufferHeight;
         passDesc.clearMode = ClearMode::SolidColor;
         passDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
         backend->BeginPass(passDesc);
@@ -620,7 +664,7 @@ void RenderSystem::OnWindowResize(int width, int height)
     framebufferWidth = width;
     framebufferHeight = height;
     //窗口逻辑尺寸跟着变，UI 的命中换算要用它。
-    if (window)
+    if (window && !mainOutputTarget.IsValid())
     {
         uiRenderer.SetDisplayLogicalSize(vector2(static_cast<float32>(window->GetWidth()),
             static_cast<float32>(window->GetHeight())));
@@ -707,8 +751,9 @@ void RenderSystem::PrepareCameraRenderData()
         camera.cameraDepthTexture = GpuDepthTextureID();
 
         //解析相机声明的最终输出目标，0 表示默认窗口帧缓冲
-        const ManagedRenderTarget* target = FindRenderTarget(camera.renderTargetId);
         const bool rendersToMainFramebuffer = !camera.renderTargetId.IsValid();
+        const ManagedRenderTarget* target = FindRenderTarget(rendersToMainFramebuffer
+            ? mainOutputTarget : camera.renderTargetId);
         if (!rendersToMainFramebuffer && !target)
         {
             camera.viewportWidth = 0;
@@ -725,7 +770,7 @@ void RenderSystem::PrepareCameraRenderData()
             continue;
         }
 
-        camera.finalRenderTarget = rendersToMainFramebuffer ? GpuRenderTargetID() : target->renderTarget;
+        camera.finalRenderTarget = target ? target->renderTarget : GpuRenderTargetID();
 
         //视口仍然相对最终输出目标解析
         int32 targetWidth = target ? target->width : framebufferWidth;
@@ -857,13 +902,17 @@ void RenderSystem::PrepareCameraRenderData()
 
 void RenderSystem::RenderOverlayPass()
 {
+    const ManagedRenderTarget* target = FindRenderTarget(mainOutputTarget);
+    int32 width = target ? target->width : framebufferWidth;
+    int32 height = target ? target->height : framebufferHeight;
     //RetainedGUI 画在 ImGui 之前：编辑器界面永远盖在游戏 UI 上。
     //在游戏视图绘制屏幕画布
     if (!hasEditorPreviewTarget && mainFramebufferRendering)
     {
         UIOutputTarget uiTarget;
-        uiTarget.width = framebufferWidth;
-        uiTarget.height = framebufferHeight;
+        uiTarget.renderTarget = target ? target->renderTarget : GpuRenderTargetID();
+        uiTarget.width = width;
+        uiTarget.height = height;
         uiRenderer.RenderOverlay(uiTarget);
     }
 
@@ -871,12 +920,13 @@ void RenderSystem::RenderOverlayPass()
 
     //开始 GUI 覆盖层 Pass
     RenderPassDesc passDesc;
-    passDesc.width = framebufferWidth;
-    passDesc.height = framebufferHeight;
+    passDesc.renderTarget = target ? target->renderTarget : GpuRenderTargetID();
+    passDesc.width = width;
+    passDesc.height = height;
     passDesc.clearMode = ClearMode::None;
     backend->BeginPass(passDesc);
 
-    imguiLayer.BeginFrame();
+    imguiLayer.BeginFrame(vector2(static_cast<float32>(width), static_cast<float32>(height)), target != nullptr);
 
     //绘制运行时 GUI 和调试信息
     if (renderOverlay)

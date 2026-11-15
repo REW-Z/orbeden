@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Defines/types.h"
+#include "Runtime/EngineTypes.h"
 #include "Rendering/ImGuiRenderer.h"
 
 class IWindow;
@@ -22,7 +23,7 @@ public:
     void Shutdown();
 
     //开始一帧 ImGui 绘制
-    void BeginFrame();
+    void BeginFrame(const vector2& displaySize, bool useGameInput);
 
     //绘制左上角 FPS 标签
     void DrawFpsLabel();

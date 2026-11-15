@@ -240,7 +240,7 @@ void WindowsTextInput::PushEvent(uint32 kind, const std::string& text, uint32 ca
     event.device = DeviceKeyboard;
     event.text = text;
     event.caretScalar = caretScalar;
-    event.position = InputManager::MousePos();
+    event.position = InputManager::RawMousePos();
     event.timestamp = static_cast<double>(GetTickCount64()) / 1000.0;
     InputManager::PushEvent(std::move(event));
 }

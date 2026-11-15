@@ -495,6 +495,8 @@ void UIRenderer::DrawCommand(const UIDrawCommand& command, const matrix4x4* matr
     BindCommandProgram(command);
     backend->GetParameters().SetMatrix4("u_Model", matrices[command.matrixIndex]);
     backend->GetParameters().SetInt("u_MaterialKind", static_cast<int32>(command.materialKind));
+    backend->GetParameters().SetInt("u_BitmapPixelSnap",
+        kind == UIMaterialKind::Bitmap && !publishingWorldSpace && !publishingEditorPreview ? 1 : 0);
     backend->GetParameters().SetFloat("u_DistanceRange", command.distanceRange);
     backend->GetParameters().SetColor("u_Tint", command.tint);
     backend->GetParameters().SetInt("u_CoverageEnabled", currentCoverage >= 0 ? 1 : 0);
@@ -776,6 +778,7 @@ bool UIRenderer::IsReservedUniform(const std::string& name)
     static const char* Reserved[] = {
         "u_Model", "u_ViewProjection", "u_Texture", "u_Tint", "u_Coverage", "u_CoverageEnabled",
         "u_DistanceRange", "u_MaterialKind", "u_ViewportSize", "u_ViewportOrigin",
+        "u_BitmapPixelSnap",
     };
     for (const char* candidate : Reserved)
     {

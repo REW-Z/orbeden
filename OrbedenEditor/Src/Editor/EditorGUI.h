@@ -119,11 +119,13 @@ public:
     void* treeRow = nullptr;
     void* inputUInt = nullptr;
     void* inputULong = nullptr;
+    void* gameViewContext = nullptr;
+    void* drawGameView = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 97);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 99);
 
 //Editor ImGui 绑定层
 class EditorGUI
@@ -146,6 +148,11 @@ private:
     double previousTime = 0.0;
     float32 sceneMouseWheel = 0.0f;
     bool initialized = false;
+    bool gameViewInputActive = false;
+    bool gameViewInputFocused = false;
+    ImGuiID gameViewInputWindow = 0;
+    vector2 gameViewPosition;
+    vector2 gameViewSize;
 
     //转换 GLFW 按键
     static ImGuiKey ConvertKey(int32 key);
@@ -237,6 +244,9 @@ public:
 
     //初始化 Editor ImGui
     bool Initialize(IWindow* editorWindow);
+
+    //登记游戏画面的输入区域与分辨率
+    void SetGameViewInput(bool active, const vector2& position, const vector2& size, const vector2& resolution);
 
     //关闭 Editor ImGui
     void Shutdown();

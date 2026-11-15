@@ -501,6 +501,7 @@ FontRasterMode={Bitmap=0,SDF=1,MSDF=2}；Atlas 通道分别为 R8、R8、RGB8，
 字形度量使用未 hint 字体单位；按 fontSize/unitsPerEm 缩放，三模式 advance 相同。
 Bitmap 光栅字号取四舍五入并限于 [1,512]，留白 1 texel，处理正/负 pitch。
 位图字号 = 逻辑字号 × 光栅缩放；Overlay/Offscreen 使用 Canvas scale，WorldSpace 光栅缩放固定为 1。
+屏幕与离屏 Bitmap 的字形显示矩形使用取整后的光栅字号，保持实际字形纹素与输出像素一致；文本测量、换行、字距和命中仍按配置的逻辑字号计算。UIRenderer 对这两种输出的 Bitmap 命令设置 `u_BitmapPixelSnap=1`，Shader 在投影后对齐轴向文字的像素边界，并用 `texelFetch` 读取字形覆盖率。它保留位图原有灰度，不进行阈值二值化；不依赖某个固定屏幕分辨率。旋转文字只按纹素取样，不对顶点取整；SDF/MSDF、WorldSpace 与编辑预览不启用该规则。自定义 UI 材质可参照 `ui_custom_template.orbshader` 接入同名保留参数。
 WorldSpace 的布局、Image/Text 网格、控件附加网格与文字排版均与摄像机无关。
 相机移动、增删与分辨率变化不重建 WorldSpace 几何；需要跨距离保持清晰时使用 SDF/MSDF，shader 按 UV 导数处理边缘。
 每台相机分别发布呈现快照，命中检测使用对应相机矩阵、视口和深度，不生成相机网格变体。

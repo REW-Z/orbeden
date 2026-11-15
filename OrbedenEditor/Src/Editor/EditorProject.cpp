@@ -763,6 +763,28 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
     editorLayout = parsedLayout;
     editorGuiConfig = parsedGuiConfig;
+    //读取游戏视图分辨率
+    gameViewWidth = 0;
+    gameViewHeight = 0;
+    std::size_t gameViewStart = content.find("<EditorGameView");
+    if (gameViewStart != std::string::npos)
+    {
+        std::size_t gameViewEnd = content.find('>', gameViewStart);
+        if (gameViewEnd != std::string::npos)
+        {
+            std::string token = content.substr(gameViewStart, gameViewEnd - gameViewStart + 1);
+            if (GetAttribute(token, "mode") != "Panel")
+            {
+                int32 width = GetIntAttribute(token, "width", 1920);
+                int32 height = GetIntAttribute(token, "height", 1080);
+                if (width >= 1 && width <= 8192 && height >= 1 && height <= 8192)
+                {
+                    gameViewWidth = width;
+                    gameViewHeight = height;
+                }
+            }
+        }
+    }
     lastError.clear();
     worldLoaded = false;
 
@@ -1090,6 +1112,60 @@ bool EditorProject::SaveEditorLayout(const EditorLayoutState& layout)
 const EditorGuiConfigState& EditorProject::GetEditorGuiConfig() const
 {
     return editorGuiConfig;
+}
+
+//读取项目游戏视图分辨率
+std::pair<int32, int32> EditorProject::GetGameViewResolution() const
+{
+    return { gameViewWidth, gameViewHeight };
+}
+
+//保存项目游戏视图分辨率
+bool EditorProject::SaveGameViewResolution(int32 width, int32 height)
+{
+    bool followsPanel = width == 0 && height == 0;
+    if (!HasProject() || (!followsPanel && (width < 1 || width > 8192 || height < 1 || height > 8192)))
+    {
+        lastError = "Game resolution requires an open project and either panel mode or dimensions from 1 to 8192.";
+        return false;
+    }
+
+    //替换游戏视图配置块
+    std::filesystem::path path = InteropText::PathFromUtf8(projectFilePath);
+    std::string content = ReadTextFile(path);
+    std::size_t start = content.find("<EditorGameView");
+    if (start != std::string::npos)
+    {
+        std::size_t end = content.find('>', start);
+        if (end == std::string::npos)
+        {
+            lastError = "EditorGameView configuration is incomplete.";
+            return false;
+        }
+        while (start > 0 && (content[start - 1] == ' ' || content[start - 1] == '\t'))
+        {
+            --start;
+        }
+        ++end;
+        while (end < content.size() && (content[end] == '\r' || content[end] == '\n'))
+        {
+            ++end;
+        }
+        content.erase(start, end - start);
+    }
+    std::string block = followsPanel ? "    <EditorGameView mode=\"Panel\" />\n"
+        : "    <EditorGameView mode=\"Fixed\" width=\"" + std::to_string(width)
+            + "\" height=\"" + std::to_string(height) + "\" />\n";
+    if (!InsertBlockIntoProjectRoot(path, content, block))
+    {
+        lastError = "Game resolution save failed: " + projectFilePath;
+        return false;
+    }
+
+    gameViewWidth = width;
+    gameViewHeight = height;
+    lastError.clear();
+    return true;
 }
 
 //重新读取编辑器 GUI 配置
