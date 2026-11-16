@@ -70,6 +70,7 @@ private:
 
     //内置 Shader，资源失效后重新加载
     Ref<Shader> transmittanceShader;
+    Ref<Shader> multipleScatteringShader;
     Ref<Shader> aerialShader;
     Ref<Shader> skyLutShader;
     Ref<Shader> skyShader;
@@ -77,16 +78,19 @@ private:
 
     //当前资源的 program，随资源失效重新解析
     GpuShaderProgramID transmittancePass;
+    GpuShaderProgramID multipleScatteringPass;
     GpuShaderProgramID aerialPass;
     GpuShaderProgramID skyLutPass;
     GpuShaderProgramID skyPass;
 
-    //四张查找表目标；颜色纹理随目标释放，句柄在创建时取一次
+    //五张查找表目标；颜色纹理随目标释放，句柄在创建时取一次
     GpuRenderTargetID transmittanceTarget;
+    GpuRenderTargetID multipleScatteringTarget;
     GpuRenderTargetID aerialRadianceTarget;
     GpuRenderTargetID aerialOpticalDepthTarget;
     GpuRenderTargetID skyTarget;
     GpuTextureID transmittanceTexture;
+    GpuTextureID multipleScatteringTexture;
     GpuTextureID aerialRadianceTexture;
     GpuTextureID aerialOpticalDepthTexture;
     GpuTextureID skyTexture;
@@ -103,6 +107,8 @@ private:
 
     //透光率缓存键：质量、气溶胶密度与重建时使用的 program
     bool transmittanceValid = false;
+    bool multipleScatteringValid = false;
+    uint32 cachedMultipleScatteringProgram = 0;
     AtmosphereQuality transmittanceQuality = AtmosphereQuality::Low;
     float32 transmittanceDensity = -1.0f;
     float64 transmittanceRadius = -1.0;
@@ -138,6 +144,9 @@ private:
 
     //重建太阳透光率查找表
     bool UpdateTransmittance(const AtmosphereQualityDesc& quality);
+
+    //重建单位太阳辐照度的多次散射查找表
+    bool UpdateMultipleScattering();
 
     //重建空气透视图集
     bool UpdateAerial(const AtmosphereQualityDesc& quality);
@@ -185,7 +194,7 @@ public:
     void BindMaterialUniforms();
 
     //绑定材质实际使用的空气透视纹理槽，负值跳过
-    void BindMaterialTextures(int32 radianceSlot, int32 opticalDepthSlot);
+    void BindMaterialTextures(int32 radianceSlot, int32 opticalDepthSlot, int32 transmittanceSlot, int32 multipleScatteringSlot);
 
     //本帧是否应用空气透视
     bool IsFogActive() const { return frame.fogActive; }

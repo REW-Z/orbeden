@@ -77,6 +77,6 @@ public:
     float32 metersPerWorldUnit = 1.0f;
     //Mie 散射与消光的倍率，0 只关闭 Mie，Rayleigh 保留。
     float32 aerosolDensity = 1.0f;
-    //散射亮度与太阳盘的倍率，不改变消光、表面主光或环境光。
-    float32 sunRadianceScale = 20.0f;
+    //标定后的太阳亮度倍率，1 为中性，不改变消光、表面主光或环境光。
+    float32 sunRadianceScale = 1.0f;
 };

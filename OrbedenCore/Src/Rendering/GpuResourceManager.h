@@ -82,6 +82,8 @@ struct GpuShaderBindings
     int32 environmentSlot = -1;
     int32 atmosphereRadianceSlot = -1;
     int32 atmosphereOpticalDepthSlot = -1;
+    int32 atmosphereTransmittanceSlot = -1;
+    int32 atmosphereMultipleScatteringSlot = -1;
     uint32 textureCount = 0;
     bool useViewProjection = false;
     bool useCameraPosition = false;

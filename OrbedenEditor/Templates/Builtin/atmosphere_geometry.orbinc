@@ -1,0 +1,100 @@
+--------frag
+#ifndef ORBEDEN_ATMOSPHERE_GEOMETRY_INCLUDED
+#define ORBEDEN_ATMOSPHERE_GEOMETRY_INCLUDED
+
+const float AtmospherePi = 3.141592653589793;
+uniform float u_AtmosphereGroundRadiusKm;
+#define AtmosphereGroundRadius u_AtmosphereGroundRadiusKm
+const float AtmosphereTopHeight = 100.0;
+
+//取非零符号，避免求根时出现除以零
+float AtmosphereSignNonzero(float value)
+{
+    return value < 0.0 ? -1.0 : 1.0;
+}
+
+//由起始高度与视线余弦求射线上的局部高度，近地时用该式避免直接相减丢精度
+float ComputeAltitude(float h, float mu, float s)
+{
+    float q = h * (2.0 * AtmosphereGroundRadius + h) + 2.0 * s * (AtmosphereGroundRadius + h) * mu + s * s;
+    return q / (sqrt(max(AtmosphereGroundRadius * AtmosphereGroundRadius + q, 0.0)) + AtmosphereGroundRadius);
+}
+
+//求射线与指定高度球面的两个交点，按 t0<=t1 返回
+bool IntersectAtmosphereBoundary(float h, float mu, float hb, out float t0, out float t1)
+{
+    t0 = 0.0;
+    t1 = 0.0;
+
+    float b = (AtmosphereGroundRadius + h) * mu;
+    float c = (h - hb) * (2.0 * AtmosphereGroundRadius + h + hb);
+    float discriminant = b * b - c;
+    if (discriminant < 0.0) return false;
+
+    float root = -b - AtmosphereSignNonzero(b) * sqrt(max(discriminant, 0.0));
+    float first = root != 0.0 ? root : -b;
+    float second = root != 0.0 ? c / root : -b;
+    t0 = min(first, second);
+    t1 = max(first, second);
+    return true;
+}
+
+//求射线与地球表面的首次交点距离，未命中时返回负值。
+//相机低于参考球面时按海平面处理：模型的地面就是参考球面，球面以下不属于大气，
+//向下看等于站在地面上看脚下，距离为零。这样跨过海平面时不会突然切换行为。
+float IntersectGroundDistance(float h, float mu)
+{
+    float groundHeight = max(h, 0.0);
+
+    //先用地平线余弦判断：近切线时判别式是相近量相减，直接比较余弦更稳
+    float muHorizon = -sqrt(max(groundHeight * (2.0 * AtmosphereGroundRadius + groundHeight), 0.0)) /
+        (AtmosphereGroundRadius + groundHeight);
+    if (mu >= muHorizon) return -1.0;
+
+    //地面就在起点：向下的射线从参考球面出发，没有前方交点
+    if (groundHeight <= 0.0) return 0.0;
+
+    float t0 = 0.0;
+    float t1 = 0.0;
+    if (!IntersectAtmosphereBoundary(groundHeight, mu, 0.0, t0, t1)) return 0.0;
+
+    float ground = t0 >= 0.0 ? t0 : t1;
+    return max(ground, 0.0);
+}
+
+//把视线裁剪到大气内。相机在大气外时起点是入射点，不经过大气时区间为空
+void ClipAtmosphereSegment(float h, float mu, float distance, out float start, out float end)
+{
+    start = 0.0;
+    end = max(distance, 0.0);
+
+    float t0 = 0.0;
+    float t1 = 0.0;
+    if (!IntersectAtmosphereBoundary(h, mu, AtmosphereTopHeight, t0, t1) || t1 <= 0.0)
+    {
+        end = 0.0;
+        return;
+    }
+
+    start = max(t0, 0.0);
+    end = min(end, t1);
+
+    //裁剪地球入口
+    float ground = IntersectGroundDistance(h, mu);
+    if (ground >= 0.0) end = min(end, ground);
+    if (end < start) end = start;
+}
+
+//按统一的平方分布读取近地空气透视距离
+float GetAerialSampleDistance(float fraction, float maximum)
+{
+    return maximum * fraction * fraction;
+}
+
+//把近地空气透视距离转换为统一的距离层比例
+float GetAerialSampleFraction(float distance, float maximum)
+{
+    return sqrt(clamp(distance / maximum, 0.0, 1.0));
+}
+
+#endif

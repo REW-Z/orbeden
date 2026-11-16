@@ -1,11 +1,8 @@
 --------frag
-//球形大气的球面数学、密度与单次散射积分。长度单位统一为 km，方向向量必须已归一化。
+//球形大气的球面数学、密度与散射积分。长度单位统一为 km，方向向量必须已归一化。
 //密度只随距地心的高度变化，地形起伏不参与，因此所有函数都是径向对称的。
 
-const float AtmospherePi = 3.141592653589793;
-uniform float u_AtmosphereGroundRadiusKm;
-#define AtmosphereGroundRadius u_AtmosphereGroundRadiusKm
-const float AtmosphereTopHeight = 100.0;
+#include "Builtin/atmosphere_geometry.orbinc"
 const float AtmosphereRayleighHeight = 8.0;
 const float AtmosphereMieHeight = 1.2;
 const vec3 AtmosphereRayleighScattering = vec3(0.005802, 0.013558, 0.033100);
@@ -19,84 +16,9 @@ const int AtmosphereMaxSteps = 64;
 
 uniform sampler2D u_AtmosphereTransmittanceTexture;
 uniform vec4 u_AtmosphereTransSize;
-
-//取非零符号，避免求根时出现除以零
-float AtmosphereSignNonzero(float value)
-{
-    return value < 0.0 ? -1.0 : 1.0;
-}
-
-//由起始高度与视线余弦求射线上的局部高度，近地时用该式避免直接相减丢精度
-float ComputeAltitude(float h, float mu, float s)
-{
-    float q = h * (2.0 * AtmosphereGroundRadius + h) + 2.0 * s * (AtmosphereGroundRadius + h) * mu + s * s;
-    return q / (sqrt(max(AtmosphereGroundRadius * AtmosphereGroundRadius + q, 0.0)) + AtmosphereGroundRadius);
-}
-
-//求射线与指定高度球面的两个交点，按 t0<=t1 返回
-bool IntersectAtmosphereBoundary(float h, float mu, float hb, out float t0, out float t1)
-{
-    t0 = 0.0;
-    t1 = 0.0;
-
-    float b = (AtmosphereGroundRadius + h) * mu;
-    float c = (h - hb) * (2.0 * AtmosphereGroundRadius + h + hb);
-    float discriminant = b * b - c;
-    if (discriminant < 0.0) return false;
-
-    float root = -b - AtmosphereSignNonzero(b) * sqrt(max(discriminant, 0.0));
-    float first = root != 0.0 ? root : -b;
-    float second = root != 0.0 ? c / root : -b;
-    t0 = min(first, second);
-    t1 = max(first, second);
-    return true;
-}
-
-//求射线与地球表面的首次交点距离，未命中时返回负值。
-//相机低于参考球面时按海平面处理：模型的地面就是参考球面，球面以下不属于大气，
-//向下看等于站在地面上看脚下，距离为零。这样跨过海平面时不会突然切换行为。
-float IntersectGroundDistance(float h, float mu)
-{
-    float groundHeight = max(h, 0.0);
-
-    //先用地平线余弦判断：近切线时判别式是相近量相减，直接比较余弦更稳
-    float muHorizon = -sqrt(max(groundHeight * (2.0 * AtmosphereGroundRadius + groundHeight), 0.0)) /
-        (AtmosphereGroundRadius + groundHeight);
-    if (mu >= muHorizon) return -1.0;
-
-    //地面就在起点：向下的射线从参考球面出发，没有前方交点
-    if (groundHeight <= 0.0) return 0.0;
-
-    float t0 = 0.0;
-    float t1 = 0.0;
-    if (!IntersectAtmosphereBoundary(groundHeight, mu, 0.0, t0, t1)) return 0.0;
-
-    float ground = t0 >= 0.0 ? t0 : t1;
-    return max(ground, 0.0);
-}
-
-//把视线裁剪到大气内。相机在大气外时起点是入射点，不经过大气时区间为空
-void ClipAtmosphereSegment(float h, float mu, float distance, out float start, out float end)
-{
-    start = 0.0;
-    end = max(distance, 0.0);
-
-    float t0 = 0.0;
-    float t1 = 0.0;
-    if (!IntersectAtmosphereBoundary(h, mu, AtmosphereTopHeight, t0, t1) || t1 <= 0.0)
-    {
-        end = 0.0;
-        return;
-    }
-
-    start = max(t0, 0.0);
-    end = min(end, t1);
-
-    //地球首次入口同样参与截断
-    float ground = IntersectGroundDistance(h, mu);
-    if (ground >= 0.0) end = min(end, ground);
-    if (end < start) end = start;
-}
+#ifndef ORBEDEN_ATMOSPHERE_NO_MULTIPLE_SCATTERING
+uniform sampler2D u_AtmosphereMultipleScatteringTexture;
+#endif
 
 //按高度取 Rayleigh 与 Mie 密度
 vec2 EvaluateDensity(float h)
@@ -136,6 +58,16 @@ vec3 SampleSunOpticalDepth(float h, float mu)
 
     //反算查找表坐标：高度取平方分布，视线余弦在地平线到天顶之间取平方分布
     float altitude = clamp(h, 0.0, AtmosphereTopHeight);
+    if (h > AtmosphereTopHeight)
+    {
+        float entry = 0.0;
+        float exit = 0.0;
+        if (!IntersectAtmosphereBoundary(h, mu, AtmosphereTopHeight, entry, exit) || exit <= 0.0)
+        {
+            return vec3(0.0);
+        }
+        mu = clamp(((AtmosphereGroundRadius + h) * mu + max(entry, 0.0)) / (AtmosphereGroundRadius + altitude), -1.0, 1.0);
+    }
     float v = sqrt(altitude / AtmosphereTopHeight);
     float muHorizon = -sqrt(max(altitude * (2.0 * AtmosphereGroundRadius + altitude), 0.0)) /
         (AtmosphereGroundRadius + altitude);
@@ -143,25 +75,51 @@ vec3 SampleSunOpticalDepth(float h, float mu)
 
     vec2 uv = vec2(0.5 + u * (u_AtmosphereTransSize.x - 1.0), 0.5 + v * (u_AtmosphereTransSize.y - 1.0)) /
         u_AtmosphereTransSize.xy;
-    return texture(u_AtmosphereTransmittanceTexture, uv).rgb;
+    return textureLod(u_AtmosphereTransmittanceTexture, uv, 0.0).rgb;
 }
 
-//采样太阳透光率，太阳射线穿过地球时返回零
+//查询太阳圆盘内可见射线的透光率
+vec3 SampleSunDiskTransmittance(float h, float mu)
+{
+    float altitude = max(h, 0.0);
+    float horizon = -sqrt(altitude * (2.0 * AtmosphereGroundRadius + altitude)) / (AtmosphereGroundRadius + altitude);
+    return exp(-SampleSunOpticalDepth(h, max(mu, horizon)));
+}
+
+//按太阳圆盘可见面积采样直接透光率
 vec3 SampleSunTransmittance(float h, float mu)
 {
-    return exp(-SampleSunOpticalDepth(h, mu));
+    float altitude = max(h, 0.0);
+    float radius = AtmosphereGroundRadius + altitude;
+    float horizon = -sqrt(altitude * (2.0 * AtmosphereGroundRadius + altitude)) / radius;
+    float width = AtmosphereSunAngularRadius * AtmosphereGroundRadius / radius;
+    if (mu >= horizon + width)
+    {
+        return exp(-SampleSunOpticalDepth(h, mu));
+    }
+    if (mu <= horizon - width)
+    {
+        return vec3(0.0);
+    }
+    float distance = clamp((mu - horizon) / width, -1.0, 1.0);
+    float visibility = (acos(-distance) + distance * sqrt(max(1.0 - distance * distance, 0.0))) / AtmospherePi;
+    if (visibility <= 0.0)
+    {
+        return vec3(0.0);
+    }
+    return SampleSunDiskTransmittance(h, mu) * visibility;
 }
 
-//天空查找表的地平线相对仰角映射：v = 0.5 对应地平线，两侧各占一半，
-//靠地平线一端按平方加密。行数取偶数时地平线恰好落在节点行边界上，
-//掠过地平线的陡变不会被双线性抹成跨越两行的一段斜坡
+//按地平线两侧的平方仰角分布重建天空方向
 float AtmosphereSkyZenithCosFromUv(float v, float cameraHeightKm)
 {
     float h = max(cameraHeightKm, 0.0);
     float muHorizon = -sqrt(max(h * (2.0 * AtmosphereGroundRadius + h), 0.0)) / (AtmosphereGroundRadius + h);
+    float horizonAngle = acos(clamp(muHorizon, -1.0, 1.0));
     float t = clamp(v * 2.0 - 1.0, -1.0, 1.0);
-    float span = t >= 0.0 ? 1.0 - muHorizon : muHorizon + 1.0;
-    return muHorizon + sign(t) * span * t * t;
+    float angle = t >= 0.0 ? horizonAngle * (1.0 - t * t)
+        : horizonAngle + (AtmospherePi - horizonAngle) * t * t;
+    return cos(angle);
 }
 
 //上面映射的反函数，天空着色器按像素的视线仰角反算表坐标
@@ -169,11 +127,28 @@ float AtmosphereSkyUvFromZenithCos(float mu, float cameraHeightKm)
 {
     float h = max(cameraHeightKm, 0.0);
     float muHorizon = -sqrt(max(h * (2.0 * AtmosphereGroundRadius + h), 0.0)) / (AtmosphereGroundRadius + h);
-    float offset = mu - muHorizon;
-    float span = offset >= 0.0 ? 1.0 - muHorizon : muHorizon + 1.0;
-    float t = sqrt(clamp(abs(offset) / max(span, 1.0e-6), 0.0, 1.0));
-    return 0.5 + 0.5 * sign(offset) * t;
+    float horizonAngle = acos(clamp(muHorizon, -1.0, 1.0));
+    float angle = acos(clamp(mu, -1.0, 1.0));
+    if (mu >= muHorizon)
+    {
+        return 0.5 + 0.5 * sqrt(clamp(1.0 - angle / horizonAngle, 0.0, 1.0));
+    }
+    return 0.5 - 0.5 * sqrt(clamp((angle - horizonAngle) / max(AtmospherePi - horizonAngle, 1.0e-6), 0.0, 1.0));
 }
+
+#ifndef ORBEDEN_ATMOSPHERE_NO_MULTIPLE_SCATTERING
+//查询单位太阳辐照度下的各向同性多次散射亮度
+vec3 SampleMultipleScattering(float height, float sunCosine)
+{
+    if (height > AtmosphereTopHeight)
+    {
+        return vec3(0.0);
+    }
+    vec2 coordinate = vec2(clamp(sunCosine * 0.5 + 0.5, 0.0, 1.0), sqrt(clamp(height / AtmosphereTopHeight, 0.0, 1.0)));
+    vec2 size = vec2(textureSize(u_AtmosphereMultipleScatteringTexture, 0));
+    return textureLod(u_AtmosphereMultipleScatteringTexture, (0.5 + coordinate * (size - 1.0)) / size, 0.0).rgb;
+}
+#endif
 
 //沿一段视线距离积分，起点靠近相机、终点更远，步长在靠近最近点的那一端最小
 void AccumulateSegment(float h, vec3 up, vec3 ray, float start, float end, int steps, bool denseAtStart,
@@ -214,6 +189,10 @@ void AccumulateSegment(float h, vec3 up, vec3 ray, float start, float end, int s
             vec3 sunTransmittance = SampleSunTransmittance(ComputeAltitude(h, mu, sampleDistance), dot(localUp, sunDirection));
             vec3 inscatter = sunRadiance * sunTransmittance *
                 (scatteringRayleigh * phase.x + scatteringMie * phase.y);
+#ifndef ORBEDEN_ATMOSPHERE_NO_MULTIPLE_SCATTERING
+            inscatter += sunRadiance * (scatteringRayleigh + scatteringMie)
+                * SampleMultipleScattering(ComputeAltitude(h, mu, sampleDistance), dot(localUp, sunDirection));
+#endif
             radiance += transmittance * inscatter * weight;
         }
 
@@ -222,7 +201,7 @@ void AccumulateSegment(float h, vec3 up, vec3 ray, float start, float end, int s
     }
 }
 
-//沿视线积分单次散射，outputKind 为 0 输出散射亮度、为 1 只输出光学厚度
+//沿视线积分散射亮度与光学厚度，outputKind 为 1 时只积分光学厚度
 void IntegrateAtmosphere(float h, vec3 up, vec3 ray, float distance, int stepCount, int outputKind,
     float aerosolDensity, vec3 sunRadiance, vec3 sunDirection, out vec3 outRadiance, out vec3 outTau)
 {
@@ -239,7 +218,7 @@ void IntegrateAtmosphere(float h, vec3 up, vec3 ray, float distance, int stepCou
     float closest = clamp(-(AtmosphereGroundRadius + h) * mu, start, end);
     int leftSteps = 0;
     int rightSteps = 0;
-    if (closest <= 0.0) rightSteps = stepCount;
+    if (closest <= start) rightSteps = stepCount;
     else if (closest >= end) leftSteps = stepCount;
     else
     {

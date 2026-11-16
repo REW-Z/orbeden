@@ -868,8 +868,12 @@ bool ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& s
         parameters.SetInt("u_CameraDepthTexture", bindings.cameraDepthSlot);
         backend->BindDepthTexture(static_cast<uint32>(bindings.cameraDepthSlot), useCameraTextures ? camera.cameraDepthTexture : GpuDepthTextureID());
     }
-    if (bindings.atmosphereRadianceSlot >= 0 || bindings.atmosphereOpticalDepthSlot >= 0)
-        atmosphere.BindMaterialTextures(bindings.atmosphereRadianceSlot, bindings.atmosphereOpticalDepthSlot);
+    if (bindings.atmosphereRadianceSlot >= 0 || bindings.atmosphereOpticalDepthSlot >= 0
+        || bindings.atmosphereTransmittanceSlot >= 0 || bindings.atmosphereMultipleScatteringSlot >= 0)
+    {
+        atmosphere.BindMaterialTextures(bindings.atmosphereRadianceSlot, bindings.atmosphereOpticalDepthSlot,
+            bindings.atmosphereTransmittanceSlot, bindings.atmosphereMultipleScatteringSlot);
+    }
     boundMaterial = &material;
     boundMaterialRevision = material.bindingRevision;
     boundMaterialProgram = programId;

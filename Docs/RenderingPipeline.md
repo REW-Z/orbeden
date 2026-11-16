@@ -227,7 +227,7 @@ environment.atmosphere.upDirection = new vector3(0, 1, 0);
 environment.atmosphere.quality = AtmosphereQuality.Balanced;
 environment.atmosphere.fogEnabled = true;
 environment.atmosphere.aerosolDensity = 0.2f;
-environment.atmosphere.sunRadianceScale = 20;
+environment.atmosphere.sunRadianceScale = 1;
 environment.atmosphere.metersPerWorldUnit = 1;
 environment.atmosphere.denseFog.enabled = true;
 environment.atmosphere.denseFog.mode = DenseFogMode.Height;
@@ -238,6 +238,8 @@ environment.atmosphere.denseFog.scatteringScale = 1;
 environment.atmosphere.denseFog.sunScatteringScale = 1;
 Ens.renderSettings = environment;
 ```
+
+大气太阳输入按美术主光约定换算为 `π × lightColor × intensity × sunRadianceScale`，倍率默认1；只调整大气亮度，不调整雾密度或地表主光。
 
 太阳方向与颜色、强度仍自动取自场景主方向光，优先使用第一个开启阴影的方向光；没有主方向光时散射亮度为零。海拔不乘 `metersPerWorldUnit`；该比例只换算场景内的相对距离。
 

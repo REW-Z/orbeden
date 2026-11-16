@@ -15,12 +15,15 @@ namespace
 {
     //内置 Shader 的固定资源 Key
     constexpr const char* TransmittanceShaderKey = "Builtin/Shaders/atmosphere_transmittance.orbshader";
+    constexpr const char* MultipleScatteringShaderKey = "Builtin/Shaders/atmosphere_multiple_scattering.orbshader";
     constexpr const char* AerialShaderKey = "Builtin/Shaders/atmosphere_aerial.orbshader";
     constexpr const char* SkyLutShaderKey = "Builtin/Shaders/atmosphere_sky_lut.orbshader";
     constexpr const char* SkyShaderKey = "Builtin/Shaders/atmosphere_sky.orbshader";
 
-    //地球半径与大气顶高度，与 Shader 内的常数一致
-    //MOR 的 5% 透射阈值，浓雾能见度按它换算消光系数
+    //将单位漫反射美术强度换算为太阳辐照度
+    constexpr float32 DirectionalLightToIrradiance = 3.14159265358979323846f;
+
+    //按MOR的5%透射阈值换算浓雾消光系数
     constexpr float64 VisibilityExtinctionFactor = 2.995732273553991;
 
     //大气要求的最低片元纹理槽数量：材质纹理之外还要放阴影、相机纹理、环境反射与两张图集
@@ -46,7 +49,7 @@ AtmosphereQualityDesc AtmosphereRenderer::GetQualityDesc(AtmosphereQuality quali
         desc.atlasColumns = 6;
         desc.skyWidth = 192;
         desc.skyHeight = 96;
-        desc.viewSteps = 24;
+        desc.viewSteps = 48;
         desc.skySteps = 48;
         return desc;
     }
@@ -59,7 +62,7 @@ AtmosphereQualityDesc AtmosphereRenderer::GetQualityDesc(AtmosphereQuality quali
     desc.atlasColumns = 4;
     desc.skyWidth = 96;
     desc.skyHeight = 48;
-    desc.viewSteps = 12;
+    desc.viewSteps = 24;
     desc.skySteps = 24;
     return desc;
 }
@@ -119,21 +122,25 @@ void AtmosphereRenderer::ReleaseTargets()
     if (backend)
     {
         backend->DeleteRenderTarget(transmittanceTarget);
+        backend->DeleteRenderTarget(multipleScatteringTarget);
         backend->DeleteRenderTarget(aerialRadianceTarget);
         backend->DeleteRenderTarget(aerialOpticalDepthTarget);
         backend->DeleteRenderTarget(skyTarget);
     }
 
     transmittanceTarget = GpuRenderTargetID();
+    multipleScatteringTarget = GpuRenderTargetID();
     aerialRadianceTarget = GpuRenderTargetID();
     aerialOpticalDepthTarget = GpuRenderTargetID();
     skyTarget = GpuRenderTargetID();
     transmittanceTexture = GpuTextureID();
+    multipleScatteringTexture = GpuTextureID();
     aerialRadianceTexture = GpuTextureID();
     aerialOpticalDepthTexture = GpuTextureID();
     skyTexture = GpuTextureID();
     targetsCreated = false;
     transmittanceValid = false;
+    multipleScatteringValid = false;
     aerialValid = false;
     skyValid = false;
 }
@@ -142,15 +149,18 @@ void AtmosphereRenderer::InvalidateResources()
 {
     ReleaseTargets();
     transmittanceShader.Set(nullptr);
+    multipleScatteringShader.Set(nullptr);
     aerialShader.Set(nullptr);
     skyLutShader.Set(nullptr);
     skyShader.Set(nullptr);
     shadersResolved = false;
     transmittancePass = GpuShaderProgramID();
+    multipleScatteringPass = GpuShaderProgramID();
     aerialPass = GpuShaderProgramID();
     skyLutPass = GpuShaderProgramID();
     skyPass = GpuShaderProgramID();
     cachedTransmittanceProgram = 0;
+    cachedMultipleScatteringProgram = 0;
     cachedAerialProgram = 0;
     cachedSkyProgram = 0;
     aerialKey = AtmosphereFrame();
@@ -205,6 +215,7 @@ bool AtmosphereRenderer::PrepareResources(GpuResourceManager& gpuResourceManager
     {
         shadersResolved = true;
         transmittanceShader.Set(ResourceManager::Load<Shader>(TransmittanceShaderKey));
+        multipleScatteringShader.Set(ResourceManager::Load<Shader>(MultipleScatteringShaderKey));
         aerialShader.Set(ResourceManager::Load<Shader>(AerialShaderKey));
         skyLutShader.Set(ResourceManager::Load<Shader>(SkyLutShaderKey));
         skyShader.Set(ResourceManager::Load<Shader>(SkyShaderKey));
@@ -218,6 +229,14 @@ bool AtmosphereRenderer::PrepareResources(GpuResourceManager& gpuResourceManager
         return false;
     }
     transmittancePass = transmittance->passes[0].shaderProgram;
+    const GpuShader* multiple = gpuResourceManager.GetShader(multipleScatteringShader.Get());
+    if (!multiple || multiple->passes.empty() || !multiple->passes[0].shaderProgram.IsValid())
+    {
+        ReportResourceError(std::string("Atmosphere shader is unavailable: ") + MultipleScatteringShaderKey);
+        return false;
+    }
+    multipleScatteringPass = multiple->passes[0].shaderProgram;
+
 
     if (needFog)
     {
@@ -263,6 +282,12 @@ bool AtmosphereRenderer::PrepareResources(GpuResourceManager& gpuResourceManager
         !CreateLutTarget(quality.transWidth, quality.transHeight, transmittanceTarget, transmittanceTexture))
     {
         ReportResourceError("Atmosphere transmittance target creation failed.");
+        return false;
+    }
+    if (!multipleScatteringTarget.IsValid()
+        && !CreateLutTarget(32, 32, multipleScatteringTarget, multipleScatteringTexture))
+    {
+        ReportResourceError("Atmosphere multiple scattering target creation failed.");
         return false;
     }
     if (needFog && !aerialRadianceTarget.IsValid() &&
@@ -336,6 +361,7 @@ bool AtmosphereRenderer::RenderLut(GpuRenderTargetID target, int32 width, int32 
     backend->BindShaderProgram(program);
     backend->GetParameters().SetInt("u_AtmosphereStepCount", stepCount);
     backend->GetParameters().SetInt("u_AtmosphereOutputKind", outputKind);
+    backend->GetParameters().SetInt("u_AtmosphereMultipleDirections", frame.quality == AtmosphereQuality::Balanced ? 64 : 32);
     BindLutUniforms();
 
     //太阳透光率供图集与天空查询；生成它自己的那一趟不能采样自身
@@ -345,6 +371,11 @@ bool AtmosphereRenderer::RenderLut(GpuRenderTargetID target, int32 width, int32 
         backend->BindTexture(0, transmittanceTexture);
     }
 
+    if (target.id != multipleScatteringTarget.id && target.id != transmittanceTarget.id)
+    {
+        backend->GetParameters().SetInt("u_AtmosphereMultipleScatteringTexture", 1);
+        backend->BindTexture(1, multipleScatteringTexture);
+    }
     backend->BindVertexInput(quad.GetVertexInput());
     backend->DrawIndexed(0, 6);
 
@@ -372,10 +403,33 @@ bool AtmosphereRenderer::UpdateTransmittance(const AtmosphereQualityDesc& qualit
     }
 
     transmittanceValid = true;
+    multipleScatteringValid = false;
+    aerialValid = false;
+    skyValid = false;
     cachedTransmittanceProgram = transmittancePass.id;
     transmittanceQuality = frame.quality;
     transmittanceDensity = frame.settings.aerosolDensity;
     transmittanceRadius = frame.settings.planetRadiusMeters;
+    return true;
+}
+
+//按大气介质参数缓存多次散射查找表
+bool AtmosphereRenderer::UpdateMultipleScattering()
+{
+    PROFILE("Render/Atmosphere/UpdateMultipleScattering");
+    if (multipleScatteringValid && cachedMultipleScatteringProgram == multipleScatteringPass.id)
+    {
+        return true;
+    }
+    const int32 steps = frame.quality == AtmosphereQuality::Balanced ? 24 : 16;
+    if (!RenderLut(multipleScatteringTarget, 32, 32, multipleScatteringPass, steps, 0))
+    {
+        return false;
+    }
+    multipleScatteringValid = true;
+    cachedMultipleScatteringProgram = multipleScatteringPass.id;
+    aerialValid = false;
+    skyValid = false;
     return true;
 }
 
@@ -528,7 +582,7 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
     outFrame.viewportWidth = camera.viewportWidth;
     outFrame.viewportHeight = camera.viewportHeight;
     outFrame.groundBackground = camera.clearColor;
-    outFrame.maxDistanceKm = std::clamp(camera.farPlane * atmosphere.metersPerWorldUnit / 1000.0f, 1.0f, 2500.0f);
+    outFrame.maxDistanceKm = std::clamp(camera.farPlane * atmosphere.metersPerWorldUnit / 1000.0f, 1.0f, 128.0f);
 
     //太阳方向取主光传播方向的反向，无主光时散射亮度为零
     if (mainLight)
@@ -538,9 +592,11 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
         const float32 length = std::sqrt(sunDirection.x * sunDirection.x + sunDirection.y * sunDirection.y +
             sunDirection.z * sunDirection.z);
         outFrame.sunDirection = length > 0.5f ? sunDirection : vector3{ 0.0f, -1.0f, 0.0f };
-        const float32 scale = std::max(mainLight->intensity, 0.0f) * atmosphere.sunRadianceScale;
-        outFrame.sunRadiance = { mainLight->color.r * scale, mainLight->color.g * scale,
-            mainLight->color.b * scale, 1.0f };
+        //换算主方向光的辐照度并应用大气亮度倍率
+        const float32 irradiance = std::max(mainLight->intensity, 0.0f)
+            * DirectionalLightToIrradiance * atmosphere.sunRadianceScale;
+        outFrame.sunRadiance = { mainLight->color.r * irradiance, mainLight->color.g * irradiance,
+            mainLight->color.b * irradiance, 1.0f };
     }
     else
     {
@@ -601,11 +657,12 @@ bool AtmosphereRenderer::PrepareCamera(const RenderScene& scene, const RenderCam
         reportedFrameState = true;
         char line[512];
         snprintf(line, sizeof(line),
-            "Atmosphere frame: fog=%d sky=%d height=%.3f km maxDistance=%.1f km "
-            "denseFog=%d extinction=%.1f/km profile=(top=%.4f) topFade=%.4f km",
+            "Atmosphere frame: model=hillaire-hybrid fog=%d sky=%d height=%.3f km nearDistance=%.1f km "
+            "denseFog=%d extinction=%.1f/km profile=(top=%.4f) topFade=%.4f km sunMultiplier=%.3f solarRgb=(%.3f,%.3f,%.3f)",
             frame.fogActive ? 1 : 0, frame.skyActive ? 1 : 0, frame.cameraHeightKm, frame.maxDistanceKm,
             frame.denseFogExtinction > 0.0f ? 1 : 0, frame.denseFogExtinction,
-            frame.denseFogProfile.r, frame.denseFogTopFadeKm);
+            frame.denseFogProfile.r, frame.denseFogTopFadeKm, frame.settings.sunRadianceScale,
+            frame.sunRadiance.r, frame.sunRadiance.g, frame.sunRadiance.b);
         Log::Info(line);
     }
 
@@ -615,8 +672,9 @@ bool AtmosphereRenderer::PrepareCamera(const RenderScene& scene, const RenderCam
     //透光率服务于图集、天空与太阳盘，只要有一项启用就要更新
     const bool ready = PrepareResources(gpuResourceManager, quality, frame.fogActive, frame.skyActive)
         && UpdateTransmittance(quality)
-        && (!frame.fogActive || UpdateAerial(quality))
-        && (!frame.skyActive || UpdateSky(quality));
+        && UpdateMultipleScattering()
+        && (!frame.fogActive || frame.cameraHeightKm >= 16.0f || UpdateAerial(quality))
+        && (!frame.skyActive || frame.cameraHeightKm >= 16.0f || UpdateSky(quality));
     if (ready) return true;
 
     //查找表失败只停用空气透视与程序化天空，背景退回原天空盒路径；浓雾不依赖查找表，不被连坐
@@ -630,11 +688,18 @@ void AtmosphereRenderer::BindMaterialUniforms()
     if (!backend) return;
 
     const AtmosphereQualityDesc quality = GetQualityDesc(frame.quality);
+    backend->GetParameters().SetMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
     backend->GetParameters().SetInt("u_AtmosphereFogEnabled", frame.fogActive ? 1 : 0);
     backend->GetParameters().SetFloat("u_AtmosphereMaxDistanceKm", frame.maxDistanceKm);
     backend->GetParameters().SetFloat("u_AtmosphereMetersPerWorldUnit", frame.settings.metersPerWorldUnit);
     backend->GetParameters().SetFloat("u_AtmosphereGroundRadiusKm", static_cast<float32>(frame.settings.planetRadiusMeters / 1000.0));
     backend->GetParameters().SetFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
+    backend->GetParameters().SetVector3("u_AtmosphereSunDirection", frame.sunDirection);
+    backend->GetParameters().SetColor("u_AtmosphereSunRadiance", frame.sunRadiance);
+    backend->GetParameters().SetFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
+    backend->GetParameters().SetInt("u_AtmosphereTraceStepCount", quality.skySteps);
+    backend->GetParameters().SetColor("u_AtmosphereTransSize",
+        { static_cast<float32>(quality.transWidth), static_cast<float32>(quality.transHeight), 0.0f, 0.0f });
     backend->GetParameters().SetVector3("u_AtmosphereCameraUp", frame.cameraUp);
     backend->GetParameters().SetInt("u_AtmosphereDenseFogEnabled", frame.denseFogExtinction > 0.0f ? 1 : 0);
     backend->GetParameters().SetInt("u_AtmosphereDenseFogMode", frame.denseFogDistanceMode ? 1 : 0);
@@ -649,7 +714,7 @@ void AtmosphereRenderer::BindMaterialUniforms()
           static_cast<float32>(quality.aerialSlices), static_cast<float32>(quality.atlasColumns) });
 }
 
-void AtmosphereRenderer::BindMaterialTextures(int32 radianceSlot, int32 opticalDepthSlot)
+void AtmosphereRenderer::BindMaterialTextures(int32 radianceSlot, int32 opticalDepthSlot, int32 transmittanceSlot, int32 multipleScatteringSlot)
 {
     if (!backend) return;
 
@@ -669,13 +734,23 @@ void AtmosphereRenderer::BindMaterialTextures(int32 radianceSlot, int32 opticalD
         backend->GetParameters().SetInt("u_AtmosphereOpticalDepthTexture", opticalDepthSlot);
         backend->BindTexture(static_cast<uint32>(opticalDepthSlot), opticalDepth);
     }
+    if (transmittanceSlot >= 0)
+    {
+        backend->GetParameters().SetInt("u_AtmosphereTransmittanceTexture", transmittanceSlot);
+        backend->BindTexture(static_cast<uint32>(transmittanceSlot), frame.fogActive ? transmittanceTexture : neutralTexture);
+    }
+    if (multipleScatteringSlot >= 0)
+    {
+        backend->GetParameters().SetInt("u_AtmosphereMultipleScatteringTexture", multipleScatteringSlot);
+        backend->BindTexture(static_cast<uint32>(multipleScatteringSlot), frame.fogActive ? multipleScatteringTexture : neutralTexture);
+    }
 }
 
 bool AtmosphereRenderer::RenderSky()
 {
     PROFILE("Render/Atmosphere/RenderSky");
     if (!backend || !frame.skyActive || !skyPass.IsValid()) return false;
-    if (!skyTexture.IsValid() || !transmittanceTexture.IsValid()) return false;
+    if (!skyTexture.IsValid() || !transmittanceTexture.IsValid() || !multipleScatteringTexture.IsValid()) return false;
 
     const AtmosphereQualityDesc quality = GetQualityDesc(frame.quality);
 
@@ -685,6 +760,10 @@ bool AtmosphereRenderer::RenderSky()
     backend->GetPipelineState().blend = false;
     backend->BindShaderProgram(skyPass);
     backend->GetParameters().SetFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
+    backend->GetParameters().SetInt("u_AtmosphereStepCount", quality.skySteps);
+    backend->GetParameters().SetColor("u_AtmosphereAtlas",
+        { static_cast<float32>(quality.aerialWidth), static_cast<float32>(quality.aerialHeight),
+          static_cast<float32>(quality.aerialSlices), static_cast<float32>(quality.atlasColumns) });
     backend->GetParameters().SetMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
     backend->GetParameters().SetMatrix4("u_AtmosphereCameraWorldRotation", frame.cameraWorldRotation);
     backend->GetParameters().SetFloat("u_AtmosphereGroundRadiusKm", static_cast<float32>(frame.settings.planetRadiusMeters / 1000.0));
@@ -709,6 +788,8 @@ bool AtmosphereRenderer::RenderSky()
     backend->BindTexture(0, skyTexture);
     backend->GetParameters().SetInt("u_AtmosphereTransmittanceTexture", 1);
     backend->BindTexture(1, transmittanceTexture);
+    backend->GetParameters().SetInt("u_AtmosphereMultipleScatteringTexture", 2);
+    backend->BindTexture(2, multipleScatteringTexture);
     backend->BindVertexInput(quad.GetVertexInput());
     {
         PROFILE("Render/Atmosphere/SubmitSkyDraw");

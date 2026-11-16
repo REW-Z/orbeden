@@ -1,0 +1,82 @@
+--------queue Opaque
+--------geometry Standard
+--------expandedGeometry off
+
+--------vert
+#version 430 core
+layout(location = 0) in vec3 a_Position;
+out vec2 v_Uv;
+void main()
+{
+    v_Uv = a_Position.xy * 0.5 + 0.5;
+    gl_Position = vec4(a_Position.xy, 0.0, 1.0);
+}
+
+--------frag
+#version 430 core
+in vec2 v_Uv;
+uniform float u_AtmosphereAerosolDensity;
+uniform int u_AtmosphereStepCount;
+uniform int u_AtmosphereMultipleDirections;
+#define ORBEDEN_ATMOSPHERE_NO_MULTIPLE_SCATTERING
+#include "Builtin/atmosphere_common.orbinc"
+out vec4 FragColor;
+
+void main()
+{
+    //读取查找表节点的高度与太阳天顶角
+    vec2 coordinate = clamp((v_Uv * 32.0 - 0.5) / 31.0, 0.0, 1.0);
+    float height = AtmosphereTopHeight * coordinate.y * coordinate.y;
+    float sunCosine = coordinate.x * 2.0 - 1.0;
+    vec3 sun = vec3(sqrt(max(1.0 - sunCosine * sunCosine, 0.0)), sunCosine, 0.0);
+    vec3 source = vec3(0.0);
+    vec3 feedback = vec3(0.0);
+
+    //在球面均匀方向上积分单次入射与散射反馈
+    for (int directionIndex = 0; directionIndex < 64; directionIndex++)
+    {
+        if (directionIndex >= u_AtmosphereMultipleDirections)
+        {
+            break;
+        }
+        float mu = 1.0 - 2.0 * (float(directionIndex) + 0.5) / float(u_AtmosphereMultipleDirections);
+        float angle = float(directionIndex) * 2.399963229728653;
+        float horizontal = sqrt(max(1.0 - mu * mu, 0.0));
+        vec3 ray = vec3(horizontal * cos(angle), mu, horizontal * sin(angle));
+        float start = 0.0;
+        float end = 0.0;
+        ClipAtmosphereSegment(height, mu, 1000000.0, start, end);
+        vec3 transmittance = vec3(1.0);
+        float previous = start;
+        for (int stepIndex = 1; stepIndex <= AtmosphereMaxSteps; stepIndex++)
+        {
+            if (stepIndex > u_AtmosphereStepCount)
+            {
+                break;
+            }
+            float fraction = float(stepIndex) / float(u_AtmosphereStepCount);
+            float boundary = mix(start, end, fraction);
+            float distance = (previous + boundary) * 0.5;
+            float stepLength = boundary - previous;
+            previous = boundary;
+            float altitude = ComputeAltitude(height, mu, distance);
+            vec3 rayleigh;
+            vec3 mie;
+            vec3 extinction;
+            EvaluateScattering(altitude, u_AtmosphereAerosolDensity, rayleigh, mie, extinction);
+            vec3 scattering = rayleigh + mie;
+            vec3 attenuation = exp(-extinction * stepLength);
+            vec3 weight = (vec3(1.0) - attenuation) / max(extinction, vec3(1.0e-8));
+            vec3 localUp = normalize(vec3(0.0, AtmosphereGroundRadius + height, 0.0) + distance * ray);
+            vec3 sunlight = SampleSunTransmittance(altitude, dot(localUp, sun));
+            source += transmittance * weight * scattering * sunlight / (4.0 * AtmospherePi);
+            feedback += transmittance * weight * scattering;
+            transmittance *= attenuation;
+        }
+    }
+
+    //闭合各向同性后续散射级数并保存单位太阳辐照度亮度
+    source /= float(u_AtmosphereMultipleDirections);
+    feedback /= float(u_AtmosphereMultipleDirections);
+    FragColor = vec4(source / max(vec3(1.0) - feedback, vec3(1.0e-4)), 1.0);
+}

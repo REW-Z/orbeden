@@ -31,6 +31,8 @@ uniform vec4 u_AtmosphereGroundBackground;
 uniform vec4 u_AtmosphereSkySize;
 uniform sampler2D u_AtmosphereSkyTexture;
 uniform float u_AtmosphereAerosolDensity;
+uniform vec4 u_AtmosphereAtlas;
+uniform int u_AtmosphereStepCount;
 #include "Builtin/atmosphere_common.orbinc"
 #include "Builtin/dense_fog.orbinc"
 
@@ -40,7 +42,7 @@ const int GroundSegmentSteps = 4;
 
 //解析地球底板：覆盖率由视线与地平线的相对位置逐像素求出，
 //透光率是地面到相机那一段自己的，不含地面之外的大气
-void EvaluateGroundLayer(vec3 ray, out float coverage, out vec3 transmittance)
+void EvaluateGroundLayer(vec3 ray, bool sampleTransmittance, out float coverage, out vec3 transmittance)
 {
     float h = max(u_AtmosphereCameraHeightKm, 0.0);
     float r = AtmosphereGroundRadius + h;
@@ -56,7 +58,7 @@ void EvaluateGroundLayer(vec3 ray, out float coverage, out vec3 transmittance)
     transmittance = vec3(1.0);
 
     //覆盖率恰好为零的像素（明显在地平线之上）不参与底板合成，透光率取什么值都无所谓
-    if (coverage <= 0.0) return;
+    if (coverage <= 0.0 || !sampleTransmittance) return;
 
     //抗锯齿带里落在地平线外侧的像素没有交点。底板那一侧的透光率必须取它在地平线上的极限：
     //直接拿 mu 查会提前返回、让 transmittance 停在初始的 1.0，合成时底板就按"无衰减"
@@ -102,32 +104,81 @@ void main()
     float muSun = dot(viewRay, u_AtmosphereSunDirection);
     float mu = dot(u_AtmosphereCameraUp, viewRay);
 
-    //按方向查询天空查找表：列是视线与太阳方向的夹角余弦，行是地平线相对仰角。
-    //地平线两侧的值分开取，不让表自己跨边界混合：以上是太空（掠射、亮），
-    //以下是最多几公里的近地散射（很暗，相机低于海平面时恰好为零）。
-    //混合出来的值哪一侧都不代表，贴着地平线的那一像素就会因此变暗——
-    //相机低于海平面时下面那行是 0，偏差最大；转动视角时偏差还随雾和太阳方位变化，
-    //看起来就是那条线在亮暗之间闪。这里把两个采样坐标夹到地平线的两侧行，
-    //再由地面覆盖率在"地面（含底板）"与"天空"之间混合
-    float skyV = AtmosphereSkyUvFromZenithCos(mu, u_AtmosphereCameraHeightKm);
-    float rowStep = 0.5 / max(u_AtmosphereSkySize.y, 1.0);
-    float skyU = muSun * 0.5 + 0.5;
-    vec3 skyBelow = texture(u_AtmosphereSkyTexture, vec2(skyU, min(skyV, 0.5 - rowStep))).rgb;
-    vec3 skyAbove = texture(u_AtmosphereSkyTexture, vec2(skyU, max(skyV, 0.5 + rowStep))).rgb;
+    //按高度与地平线邻域选择天空积分路径
+    float height = max(u_AtmosphereCameraHeightKm, 0.0);
+    float horizon = -sqrt(height * (2.0 * AtmosphereGroundRadius + height)) / (AtmosphereGroundRadius + height);
+    vec2 nodeAngle = 2.0 * vec2(abs(u_AtmosphereInverseProjection[0][0]), abs(u_AtmosphereInverseProjection[1][1]))
+        / (u_AtmosphereAtlas.xy - 1.0);
+    float band = max(nodeAngle.x, nodeAngle.y);
+    float horizonOffset = abs(asin(clamp(mu, -1.0, 1.0)) - asin(horizon));
+    float traceWeight = max(smoothstep(8.0, 16.0, height),
+        1.0 - smoothstep(band, 2.0 * band, horizonOffset));
 
-    //地球底板按像素解析合成：逐像素判交，边界与查找表分辨率无关
-    float groundCoverage = 0.0;
-    vec3 groundTransmittance = vec3(1.0);
-    EvaluateGroundLayer(viewRay, groundCoverage, groundTransmittance);
-    vec3 groundColor = skyBelow + groundTransmittance * u_AtmosphereGroundBackground.rgb;
-    vec3 color = mix(groundColor, skyAbove, 1.0 - groundCoverage);
+    //逐像素计算地球轮廓覆盖率
+    float groundCoverage;
+    vec3 groundTransmittance;
+    EvaluateGroundLayer(viewRay, traceWeight < 1.0, groundCoverage, groundTransmittance);
+    vec3 color = vec3(0.0);
+    if (traceWeight < 1.0)
+    {
+        //按太阳相对方位角查询近地天空
+        float sunZenith = dot(u_AtmosphereCameraUp, u_AtmosphereSunDirection);
+        float viewHorizontal = sqrt(max(1.0 - mu * mu, 0.0));
+        float sunHorizontal = sqrt(max(1.0 - sunZenith * sunZenith, 0.0));
+        float cosine = viewHorizontal * sunHorizontal > 1.0e-6
+            ? clamp((muSun - mu * sunZenith) / (viewHorizontal * sunHorizontal), -1.0, 1.0) : 1.0;
+        float skyU = sqrt(clamp((1.0 - cosine) * 0.5, 0.0, 1.0));
+        float skyV = AtmosphereSkyUvFromZenithCos(mu, u_AtmosphereCameraHeightKm);
+        vec2 lookupUv = (vec2(0.5) + vec2(skyU, skyV) * (u_AtmosphereSkySize.xy - 1.0)) / u_AtmosphereSkySize.xy;
+        float rowStep = 0.5 / u_AtmosphereSkySize.y;
+        vec3 skyBelow = textureLod(u_AtmosphereSkyTexture, vec2(lookupUv.x, min(lookupUv.y, 0.5 - rowStep)), 0.0).rgb;
+        vec3 skyAbove = textureLod(u_AtmosphereSkyTexture, vec2(lookupUv.x, max(lookupUv.y, 0.5 + rowStep)), 0.0).rgb;
+        color = mix(skyAbove, skyBelow + groundTransmittance * u_AtmosphereGroundBackground.rgb, groundCoverage);
+    }
+
+    //沿真实像素视线积分并覆盖轮廓的两侧
+    if (traceWeight > 0.0)
+    {
+        vec3 tracedColor = vec3(0.0);
+        vec3 tangent = viewRay - mu * u_AtmosphereCameraUp;
+        float tangentLength = length(tangent);
+        if (tangentLength > 0.0)
+        {
+            tangent /= tangentLength;
+        }
+        if (groundCoverage > 0.0)
+        {
+            float groundMu = min(mu, horizon - 1.0e-6);
+            vec3 groundRay = groundCoverage >= 1.0 ? viewRay
+                : groundMu * u_AtmosphereCameraUp + sqrt(max(1.0 - groundMu * groundMu, 0.0)) * tangent;
+            vec3 radiance;
+            vec3 tau;
+            IntegrateAtmosphere(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, groundRay, 1000000.0,
+                u_AtmosphereStepCount, 0, u_AtmosphereAerosolDensity,
+                u_AtmosphereSunRadiance.rgb, u_AtmosphereSunDirection, radiance, tau);
+            tracedColor += groundCoverage * (radiance + exp(-tau) * u_AtmosphereGroundBackground.rgb);
+        }
+        if (groundCoverage < 1.0)
+        {
+            float skyMu = max(mu, horizon + 1.0e-6);
+            vec3 skyRay = groundCoverage <= 0.0 ? viewRay
+                : skyMu * u_AtmosphereCameraUp + sqrt(max(1.0 - skyMu * skyMu, 0.0)) * tangent;
+            vec3 radiance;
+            vec3 tau;
+            IntegrateAtmosphere(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, skyRay, 1000000.0,
+                u_AtmosphereStepCount, 0, u_AtmosphereAerosolDensity,
+                u_AtmosphereSunRadiance.rgb, u_AtmosphereSunDirection, radiance, tau);
+            tracedColor += (1.0 - groundCoverage) * radiance;
+        }
+        color = mix(color, tracedColor, traceWeight);
+    }
 
     //太阳盘边缘按像素覆盖宽度抗锯齿，落到地球上的部分按地面覆盖率淡出
     float cosRadius = cos(AtmosphereSunAngularRadius);
     float sunCoverage = smoothstep(cosRadius - max(fwidth(muSun), 1.0e-7), cosRadius, muSun);
     float solidAngle = AtmospherePi * sin(AtmosphereSunAngularRadius) * sin(AtmosphereSunAngularRadius);
-    vec3 sunTransmittance = SampleSunTransmittance(u_AtmosphereCameraHeightKm,
-        dot(u_AtmosphereCameraUp, u_AtmosphereSunDirection));
+    vec3 sunTransmittance = SampleSunDiskTransmittance(u_AtmosphereCameraHeightKm,
+        mu);
     color += u_AtmosphereSunRadiance.rgb * sunTransmittance * sunCoverage * (1.0 - groundCoverage) / solidAngle;
 
     //浓雾遮蔽天空，视线取天空方向，整幅天空只算一次

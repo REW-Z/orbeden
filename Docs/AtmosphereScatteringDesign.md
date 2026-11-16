@@ -71,7 +71,7 @@
 - `enum class AtmosphereQuality : uint32 { Low=0, Balanced=1 }`；所有平台默认 Low。
 - `AtmosphereSettings` 字段按顺序：bool fogEnabled=false；AtmosphereQuality quality=Low。
 - 接续三个 float64：planetCenterX=0、planetCenterY=-6371000、planetCenterZ=0，单位为米，表示当前世界原点坐标系内的地心。
-- 接续三个 float32：metersPerWorldUnit=1、aerosolDensity=1、sunRadianceScale=20。
+- 接续三个 float32：metersPerWorldUnit=1、aerosolDensity=1、sunRadianceScale=1。
 - RenderSettings 新增 `AtmosphereSettings atmosphere`；数值范围：metersPerWorldUnit 为 [0.0001,10000]，aerosolDensity 为 [0,8]，sunRadianceScale 为 [0,100]。
 - aerosolDensity=0 只关闭 Mie，保留 Rayleigh；sunRadianceScale 只缩放散射亮度与太阳盘，不改变消光、表面主光或环境光。
 - 地球半径 R=6371 km，大气顶 H=100 km；Rayleigh 高度 HR=8 km，Mie 高度 HM=1.2 km。
@@ -81,7 +81,7 @@
 - `AtmosphereFrame` 保存 bool fogActive、skyActive；quality；float32 cameraHeightKm、maxDistanceKm；vector3 cameraUp、sunDirection；color sunRadiance。
 - 接续 matrix4x4 inverseProjection、cameraWorldRotation；int32 viewportWidth、viewportHeight；color groundBackground；AtmosphereSettings settings。
 - fogActive=settings.fogEnabled；skyActive=renderSettings.skyboxEnabled && skyMode==Atmosphere && camera.clearMode==SolidColor；非法配置或阴影调试使两者同时为 false。
-- sunDirection=-mainLight.direction；sunRadiance.rgb=mainLight.color.rgb×max(intensity,0)×sunRadianceScale；alpha=1；无主光时 RGB=0。
+- sunDirection=-mainLight.direction；sunRadiance.rgb=mainLight.color.rgb×max(intensity,0)×π×sunRadianceScale；alpha=1；无主光时 RGB=0。
 - cameraWorldRotation 取相机 worldMatrix 的归一化旋转基，平移置零；拒绝退化基与非透视投影，本相机本帧停用大气并只记录一次错误。
 - 非有限设置、非法枚举、非正单位比例属于非法配置：编辑器拒绝提交、XML 读取失败；运行时快照停用本相机大气并记录一次错误。
 
@@ -113,7 +113,7 @@
 - J=sunRadiance×Tsun×(sigmaS_R×PR+sigmaS_M×PM)；执行 L+=T×J×w、T*=e、Tau+=sigmaT×ds。
 - outputKind=OpticalDepth 时只累积 Tau；两种输出必须使用相同采样区间。存储 Tau 时逐通道钳制到 20。
 - 不使用提前终止，确保固定工作量与 L/Tau 一致；输出 L.rgb 或 Tau.rgb，alpha 固定为 1。
-- 这是基于物理的单次散射近似，不将 sunRadianceScale 当作 lux，不保证与现有美术灯光的绝对能量一致。
+- 太阳输入按现有美术主光的单位漫反射响应换算辐照度 E=πI，sunRadianceScale=1 为中性。该倍率不表示 lux，也不代表绝对太阳辐照度的实测标定；多次散射、地表照明与色调映射仍有各自的模型近似。
 
 ## 8. 太阳透光率 LUT
 

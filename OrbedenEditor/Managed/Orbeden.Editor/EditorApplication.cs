@@ -168,7 +168,7 @@ public static unsafe class EditorApplication
             UpDirection = new vector3(0, 1, 0),
             MetersPerWorldUnit = 1.0f,
             AerosolDensity = 1.0f,
-            SunRadianceScale = 20.0f,
+            SunRadianceScale = 1.0f,
         };
         if (api.GetWorldRenderSettings == null) return false;
 

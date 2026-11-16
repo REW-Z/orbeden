@@ -234,6 +234,8 @@ namespace
         bindings.environmentSlot = textureSlot("u_EnvironmentTexture");
         bindings.atmosphereRadianceSlot = textureSlot("u_AtmosphereRadianceTexture");
         bindings.atmosphereOpticalDepthSlot = textureSlot("u_AtmosphereOpticalDepthTexture");
+        bindings.atmosphereTransmittanceSlot = textureSlot("u_AtmosphereTransmittanceTexture");
+        bindings.atmosphereMultipleScatteringSlot = textureSlot("u_AtmosphereMultipleScatteringTexture");
         bindings.textureCount = static_cast<uint32>(nextSlot);
 
         //记录公共常量需求

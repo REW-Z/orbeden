@@ -22,6 +22,7 @@ void main()
 in vec2 v_Uv;
 
 uniform float u_AtmosphereAerosolDensity;
+#define ORBEDEN_ATMOSPHERE_NO_MULTIPLE_SCATTERING
 #include "Builtin/atmosphere_common.orbinc"
 
 out vec4 FragColor;

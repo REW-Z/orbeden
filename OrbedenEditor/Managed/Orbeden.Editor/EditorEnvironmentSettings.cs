@@ -46,7 +46,7 @@ internal static class EditorEnvironmentSettings
     private static bool atmosphereFogEnabled;
     private static AtmosphereQuality atmosphereQuality = AtmosphereQuality.Low;
     private static float aerosolDensity = 1.0f;
-    private static float sunRadianceScale = 20.0f;
+    private static float sunRadianceScale = 1.0f;
     private static float metersPerWorldUnit = 1.0f;
     private static double planetRadiusMeters = 6371000.0;
     private static double altitudeMeters;
@@ -87,7 +87,7 @@ internal static class EditorEnvironmentSettings
             atmosphereFogEnabled = false;
             atmosphereQuality = AtmosphereQuality.Low;
             aerosolDensity = 1.0f;
-            sunRadianceScale = 20.0f;
+            sunRadianceScale = 1.0f;
             metersPerWorldUnit = 1.0f;
             SetPlanetParameters(draft.PlanetRadiusMeters, draft.AltitudeMeters);
             upDirection = draft.UpDirection;
@@ -336,6 +336,7 @@ internal static class EditorEnvironmentSettings
                         sunRadianceScale = Math.Clamp(sunRadianceScale, 0.0f, 100.0f);
                         dirty = true;
                     }
+                    EditorGUI.Label("Sun scale 1 is calibrated to the main light. It changes brightness, not haze density.");
                     EditorGUI.Label("Aerial perspective is thin haze over kilometres. Shared with the Atmosphere sky mode.");
                 }
 

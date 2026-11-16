@@ -42,7 +42,7 @@ void main()
     vec2 tileSize = u_AtmosphereAtlas.xy;
     float columns = u_AtmosphereAtlas.w;
     vec2 atlasSize = vec2(tileSize.x * columns, tileSize.y * (u_AtmosphereAtlas.z / columns));
-    vec2 pixel = v_Uv * atlasSize - 0.5;
+    vec2 pixel = floor(v_Uv * atlasSize);
     vec2 tileIndex = floor(pixel / tileSize);
     vec2 node = pixel - tileIndex * tileSize;
     float layer = tileIndex.y * columns + tileIndex.x;
@@ -59,19 +59,32 @@ void main()
     vec4 viewPosition = u_AtmosphereInverseProjection * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
     vec3 viewRay = normalize((u_AtmosphereCameraWorldRotation * viewPosition).xyz);
 
-    //距离层按指数分布铺开，最远一层等于上限
-    float distanceKm = u_AtmosphereMaxDistanceKm;
-    if (layer < u_AtmosphereAtlas.z - 1.0)
+    //按统一距离层构造积分终点
+    float distanceKm = GetAerialSampleDistance(layer / (u_AtmosphereAtlas.z - 1.0), u_AtmosphereMaxDistanceKm);
+    float height = u_AtmosphereCameraHeightKm;
+    vec3 origin = (AtmosphereGroundRadius + height) * u_AtmosphereCameraUp;
+    float endpointHeight = ComputeAltitude(height, dot(u_AtmosphereCameraUp, viewRay), distanceKm);
+    if (endpointHeight < 0.01)
     {
-        distanceKm = 0.01 * (exp(layer / (u_AtmosphereAtlas.z - 1.0) *
-            log(1.0 + u_AtmosphereMaxDistanceKm / 0.01)) - 1.0);
+        //将地下终点投到参考地表外
+        float offsetHeight = min(0.01, max(height, 0.0) * 0.5);
+        vec3 endpoint = normalize(origin + distanceKm * viewRay) * (AtmosphereGroundRadius + offsetHeight);
+        vec3 offset = endpoint - origin;
+        distanceKm = length(offset);
+        if (distanceKm <= 0.0)
+        {
+            FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            return;
+        }
+        viewRay = offset / distanceKm;
     }
 
-    vec3 radiance = vec3(0.0);
-    vec3 tau = vec3(0.0);
-    IntegrateAtmosphere(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, viewRay, distanceKm,
-        u_AtmosphereStepCount, u_AtmosphereOutputKind, u_AtmosphereAerosolDensity,
+    //沿相机到终点的有效大气区间积分
+    vec3 radiance;
+    vec3 tau;
+    int steps = min(max(int(layer) * 2, 1), u_AtmosphereStepCount);
+    IntegrateAtmosphere(height, u_AtmosphereCameraUp, viewRay, distanceKm, steps,
+        u_AtmosphereOutputKind, u_AtmosphereAerosolDensity,
         u_AtmosphereSunRadiance.rgb, u_AtmosphereSunDirection, radiance, tau);
-
     FragColor = vec4(u_AtmosphereOutputKind == 0 ? radiance : tau, 1.0);
 }

@@ -82,9 +82,13 @@ direct = albedo · nDotL · lightColor · intensity
 
 ## 大气与空气透视
 
+2026-11-16：`sunRadianceScale` 默认值和项目预设改为 `1`。按引擎已有的单位漫反射美术刻度，白色 Lambert 面正对主光时输出 I；物理模型输出为 E/π，故大气太阳输入使用 E=πI。这个 π 是固定单位换算，倍率1才是中性。旧场景里写死的20需要显式调整，不自动把任意用户设置视作旧格式。
+
+该改动只缩放散射亮度和太阳盘，不改变密度、消光、透射率或地表照明。原20倍场景改为1后，线性散射亮度为原来的π/20，约15.7%，显示亮度还受曝光和色调映射影响。
+
 大气查找表存的是线性量：太阳透光率、散射亮度与光学厚度都不做任何编码转换，图集与天空查找表用 `RGBA16F`、线性过滤、无 mip。表面合成 `rgb × T + L` 在线性场景缓冲内完成，因此空气透视与场景光照共用同一条曝光与色调映射路径；输出 Pass 不需要为它做任何处理。
 
-大气参数里的太阳辐射按 `mainLight.color × intensity × sunRadianceScale` 在线性空间合成，`sunRadianceScale` 不改变消光、表面主光与环境光，也不表示 lux。地面的颜色底板取自相机已线性化的清屏色，不是实体地面。
+大气参数里的太阳辐射按 `mainLight.color × intensity × π × sunRadianceScale` 在线性空间合成，`sunRadianceScale` 不改变消光、表面主光与环境光，也不表示 lux。地面的颜色底板取自相机已线性化的清屏色，不是实体地面。
 
 浓雾的散射亮度是两项之和：世界环境光（已含 `ambientIntensity`）乘 `fogScatteringScale`，加上主方向光的 `color × intensity` 乘 `fogSunScatteringScale`；再按 `散射色 × (1 − 透光率)` 计入，全程在线性空间。
 

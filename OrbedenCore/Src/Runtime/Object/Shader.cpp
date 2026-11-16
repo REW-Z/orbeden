@@ -100,6 +100,7 @@ namespace
             || uniformName == "u_AtmosphereRadianceTexture"
             || uniformName == "u_AtmosphereOpticalDepthTexture"
             || uniformName == "u_AtmosphereTransmittanceTexture"
+            || uniformName == "u_AtmosphereMultipleScatteringTexture"
             || uniformName == "u_AtmosphereSkyTexture";
     }
 
