@@ -273,18 +273,13 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
         {
             StaticMeshRenderer* renderer = source.renderer;
             {
-                PROFILE("Render/Batching/Collect/FilterRenderer");
                 if (!renderer || !source.mesh || !source.material) continue;
                 //drawLayer 在剔除前已经按渲染器过滤过一次，这里覆盖子网格声明的层
                 if ((source.drawLayer & camera.drawLayerMask) == 0) continue;
                 if (!source.worldBounds.valid) continue;
                 if (!IsFiniteMatrix(source.localToWorld)) continue;
             }
-            const GpuMaterial* material;
-            {
-                PROFILE("Render/Batching/Collect/GetMaterial");
-                material = gpuResources->GetMaterial(source.material);
-            }
+            const GpuMaterial* material = gpuResources->GetMaterial(source.material);
             if (!material || !material->shader || material->shader->passes.empty())
             {
                 Log::Error("DrawBatchBuilder skipped a draw item: the material GPU resources are invalid.");
@@ -293,13 +288,11 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
 
             if (staticBatches)
             {
-                PROFILE("Render/Batching/Collect/StaticMembership");
                 if (staticBatches->ContainsRenderer(renderer->GetObjectId())) continue;
             }
 
             DrawItem item;
             {
-                PROFILE("Render/Batching/Collect/BuildItem");
                 item.source = DrawSource::StaticMesh;
                 item.geometry = DrawGeometry::Mesh;
                 item.owner = source.ens;
@@ -326,7 +319,6 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
             }
             //重排只允许单 Pass Standard、且最终状态为深度测试开、深度写开、混合关的不透明项
             {
-                PROFILE("Render/Batching/Collect/ResolveState");
                 const GpuShaderPass& pass = material->shader->passes[0];
                 bool alphaBlended = item.queue != DrawQueue::Opaque;
                 bool resolvedDepthTest = pass.state.depthTest != ShaderPassToggle::Off;
@@ -340,10 +332,7 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
                     && pass.geometryContract == ShaderGeometryContract::Standard
                     && resolvedDepthTest && resolvedDepthWrite && !resolvedBlend;
             }
-            {
-                PROFILE("Render/Batching/Collect/AppendItem");
-                items.push_back(item);
-            }
+            items.push_back(item);
         }
     }
     //显式实例提交：逐实例展开，引用与内容 revision 在消费时重新验证
@@ -365,11 +354,7 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
             if ((submission.options.drawLayer & camera.drawLayerMask) == 0) continue;
             if (submission.subMeshIndex >= mesh->subMeshes.size()) continue;
 
-            const GpuMaterial* gpuMaterial;
-            {
-                PROFILE("Render/Batching/Collect/InstanceMaterial");
-                gpuMaterial = gpuResources->GetMaterial(material);
-            }
+            const GpuMaterial* gpuMaterial = gpuResources->GetMaterial(material);
             if (!gpuMaterial || !gpuMaterial->shader || gpuMaterial->shader->passes.size() != 1) continue;
 
             const SubMesh& subMesh = mesh->subMeshes[submission.subMeshIndex];
@@ -380,7 +365,6 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
             const bounds3& localBounds = mesh->GetLocalBounds();
             DrawQueue queue = material->GetDrawQueue();
             {
-                PROFILE("Render/Batching/Collect/ExpandInstances");
                 for (usize index = 0; index < submission.instances.size(); ++index)
                 {
                     const MeshInstanceData& instance = submission.instances[index];
@@ -461,6 +445,7 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
         });
     }
 
+    PROFILE("Render/Batching/Sort/Regroup");
     //在不透明的连续可重排区间内按批次键分组
     List<DrawItem> groupScratch;
     usize begin = 0;
@@ -471,13 +456,10 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
             ++begin;
             continue;
         }
-
-        PROFILE("Render/Batching/Sort/Regroup");
         usize end = begin;
         while (end < items.size() && items[end].reorderable) ++end;
 
         {
-            PROFILE("Render/Batching/Sort/ByKey");
             groupScratch.assign(items.begin() + static_cast<isize>(begin), items.begin() + static_cast<isize>(end));
             std::stable_sort(groupScratch.begin(), groupScratch.end(), KeyContentLess);
         }
@@ -494,7 +476,6 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
         List<List<uint32>> groupMembers;
         usize cursor = 0;
         {
-            PROFILE("Render/Batching/Sort/BuildGroups");
             while (cursor < groupScratch.size())
             {
                 usize groupEnd = cursor;
@@ -520,11 +501,9 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
         }
 
         //按程序和材质聚集组，同材质的网格组按距离升序
-        PROFILE("Render/Batching/Sort/ReorderGroups");
         List<uint32> order(groups.size());
         for (uint32 index = 0; index < order.size(); ++index) order[index] = index;
         {
-            PROFILE("Render/Batching/Sort/ByMaterial");
             std::stable_sort(order.begin(), order.end(), [&](uint32 a, uint32 b)
             {
                 if (groups[a].programId != groups[b].programId) return groups[a].programId < groups[b].programId;

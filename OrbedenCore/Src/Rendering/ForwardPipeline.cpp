@@ -246,8 +246,13 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     //选择相机和主方向光
     backend->ProfileGpuStage("Render/GpuStage/CameraSetup");
     const RenderCamera& camera = visibleSet.camera;
-    const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
-    const RenderDirectionalLight* mainLight = shadowLight ? shadowLight : FindMainLight(scene);
+    const RenderDirectionalLight* shadowLight;
+    const RenderDirectionalLight* mainLight;
+    {
+        PROFILE("Render/CameraSetup");
+        shadowLight = FindShadowLight(scene);
+        mainLight = shadowLight ? shadowLight : FindMainLight(scene);
+    }
 
     //生成当前相机的级联阴影
     if (shadowLight)
@@ -279,30 +284,36 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     passDesc.reversedDepth = camera.reversedDepth;
     passDesc.clearMode = camera.clearMode;
     passDesc.clearColor = camera.clearColor;
-    //输出当前采集里每个相机目标的实际配置
-    if (!Profiler::IsCapturing()) reportedCaptureTargets.clear();
-    else if (reportedCaptureTargets.insert(camera.renderTarget.id).second)
     {
-        char message[512];
-        snprintf(message, sizeof(message),
-            "Main pass diagnostic: target=%u viewport=%dx%d clearMode=%u skyEnabled=%d skyMode=%u "
-            "atmosphereFog=%d denseFog=%d. BeginPass separates framebuffer binding, viewport and attachment clear waits.",
-            camera.renderTarget.id, camera.viewportWidth, camera.viewportHeight, static_cast<uint32>(camera.clearMode),
-            scene.renderSettings.skyboxEnabled ? 1 : 0, static_cast<uint32>(scene.renderSettings.skyMode),
-            scene.renderSettings.atmosphere.fogEnabled ? 1 : 0, scene.renderSettings.atmosphere.denseFog.enabled ? 1 : 0);
-        Log::Info(message);
+        PROFILE("Render/MainPass/Begin");
+        //输出当前采集里每个相机目标的实际配置
+        if (!Profiler::IsCapturing()) reportedCaptureTargets.clear();
+        else if (reportedCaptureTargets.insert(camera.renderTarget.id).second)
+        {
+            char message[512];
+            snprintf(message, sizeof(message),
+                "Main pass diagnostic: target=%u viewport=%dx%d clearMode=%u skyEnabled=%d skyMode=%u "
+                "atmosphereFog=%d denseFog=%d. BeginPass separates framebuffer binding, viewport and attachment clear waits.",
+                camera.renderTarget.id, camera.viewportWidth, camera.viewportHeight, static_cast<uint32>(camera.clearMode),
+                scene.renderSettings.skyboxEnabled ? 1 : 0, static_cast<uint32>(scene.renderSettings.skyMode),
+                scene.renderSettings.atmosphere.fogEnabled ? 1 : 0, scene.renderSettings.atmosphere.denseFog.enabled ? 1 : 0);
+            Log::Info(message);
+        }
+        backend->BeginPass(passDesc);
+        backend->GetPipelineState().depthTest = true;
+        backend->GetPipelineState().depthWrite = true;
+        backend->GetPipelineState().blend = false;
+        backend->GetPipelineState().cull = CullMode::None;
     }
-    backend->BeginPass(passDesc);
-    backend->GetPipelineState().depthTest = true;
-    backend->GetPipelineState().depthWrite = true;
-    backend->GetPipelineState().blend = false;
-    backend->GetPipelineState().cull = CullMode::None;
     backend->ProfileGpuStage("Render/GpuStage/MainPassState");
 
     //绘制 [天空盒或程序化天空]，程序化天空不可用时退回天空盒
-    if (camera.clearMode == ClearMode::SolidColor)
     {
-        if (!atmosphere.RenderSky()) RenderSkybox(scene, camera, gpuResourceManager);
+        PROFILE("Render/MainPass/Sky");
+        if (camera.clearMode == ClearMode::SolidColor)
+        {
+            if (!atmosphere.RenderSky()) RenderSkybox(scene, camera, gpuResourceManager);
+        }
     }
 
     //合并本相机的可见项为统一绘制项与批次
@@ -318,7 +329,10 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->ProfileGpuStage("Render/GpuStage/Transparent");
 
     //结束透明渲染阶段
-    backend->EndPass();
+    {
+        PROFILE("Render/MainPass/End");
+        backend->EndPass();
+    }
 
     //复制相机颜色和深度纹理
     bool cameraTexturesReady = false;
@@ -338,25 +352,31 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
 
     //绘制 [折射队列]
     backend->ProfileGpuStage("Render/GpuStage/CopyCameraTextures");
-    bool hasRefraction = std::any_of(cameraBatches.begin(), cameraBatches.end(),
-        [](const DrawBatch& batch) { return batch.key.queue == DrawQueue::Refraction; });
-    if (hasRefraction)
     {
-        passDesc.clearMode = ClearMode::None;
-        backend->BeginPass(passDesc);
-        ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
-        backend->EndPass();
+        PROFILE("Render/RefractionPass");
+        bool hasRefraction = std::any_of(cameraBatches.begin(), cameraBatches.end(),
+            [](const DrawBatch& batch) { return batch.key.queue == DrawQueue::Refraction; });
+        if (hasRefraction)
+        {
+            passDesc.clearMode = ClearMode::None;
+            backend->BeginPass(passDesc);
+            ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
+            backend->EndPass();
+        }
     }
     backend->ProfileGpuStage("Render/GpuStage/Refraction");
 
-    //结束相机主 Pass
-    backend->GetPipelineState().blend = false;
-    backend->GetPipelineState().depthWrite = true;
-    backend->GetPipelineState().depthTest = true;
-    backend->GetPipelineState().cull = CullMode::None;
-    backend->BindVertexInput(GpuVertexInputID());
-    backend->BindShaderProgram(GpuShaderProgramID());
-    if (cameraTexturesReady) shadows.CaptureDepth(camera);
+    {
+        PROFILE("Render/FinishCamera");
+        //结束相机主 Pass
+        backend->GetPipelineState().blend = false;
+        backend->GetPipelineState().depthWrite = true;
+        backend->GetPipelineState().depthTest = true;
+        backend->GetPipelineState().cull = CullMode::None;
+        backend->BindVertexInput(GpuVertexInputID());
+        backend->BindShaderProgram(GpuShaderProgramID());
+        if (cameraTexturesReady) shadows.CaptureDepth(camera);
+    }
     backend->ProfileGpuStage("Render/GpuStage/DepthDistribution");
 }
 
@@ -378,7 +398,10 @@ void ForwardPipeline::BuildFrameBatches(const RenderScene& scene, const VisibleS
         PROFILE("Render/Batching/EmitBatches");
         batchBuilder.BuildBatches(cameraItems, cameraBatches, batchStats);
     }
-    batchBuilder.Clear();
+    {
+        PROFILE("Render/Batching/Clear");
+        batchBuilder.Clear();
+    }
 }
 
 //按指定队列执行已经排好序的批次
@@ -405,10 +428,6 @@ void ForwardPipeline::ExecuteBatch(const DrawBatch& batch, const RenderScene& sc
     std::unordered_set<uint32>& configuredPrograms)
 {
     if (batch.items.empty()) return;
-    PROFILE(batch.key.mode == GeometryMode::Instanced ? "Render/DrawBatches/Instanced"
-        : batch.key.mode == GeometryMode::Expanded ? "Render/DrawBatches/Expanded"
-        : batch.key.mode == GeometryMode::TrailInstanced ? "Render/DrawBatches/TrailInstanced"
-        : "Render/DrawBatches/Uniform");
 
     const GpuMaterial* material = gpuResourceManager.GetMaterial(cameraItems[batch.items[0]].material);
     if (!material || !material->shader || material->shader->passes.empty())
@@ -513,14 +532,10 @@ bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderS
 
     if (!PrepareDrawStream()) return false;
 
-    {
-        PROFILE("Render/ExpandParticles");
-        particleRenderer.ExpandBatch(batch, cameraItems, expandedChunks, gpuResourceManager);
-    }
+    particleRenderer.ExpandBatch(batch, cameraItems, expandedChunks, gpuResourceManager);
     if (expandedChunks.empty()) return false;
 
     {
-        PROFILE("Render/Expanded/BindState");
         if (!BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
             shaderPass.expandedProgram.id, configuredPrograms))
         {
@@ -535,7 +550,6 @@ bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderS
     {
         if (chunk.vertices.empty() || chunk.indices.empty()) continue;
         {
-            PROFILE("Render/UploadInstances");
             if (!drawStream.UploadExpanded(chunk.vertices, chunk.indices))
             {
                 ++batchStats.failedUploads;
@@ -548,10 +562,7 @@ bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderS
             static_cast<uint64>(chunk.indices.size()) * sizeof(uint32);
         batchStats.expandedVertices += chunk.vertices.size();
         batchStats.expandedIndices += chunk.indices.size();
-        {
-            PROFILE("Render/Expanded/Draw");
-            backend->DrawIndexed(0, static_cast<uint32>(chunk.indices.size()));
-        }
+        backend->DrawIndexed(0, static_cast<uint32>(chunk.indices.size()));
         ++batchStats.dynamicBatchDraws;
         drew = true;
     }
@@ -581,7 +592,6 @@ bool ForwardPipeline::ExecuteTrailInstancedBatch(const DrawBatch& batch, const R
     if (trailInstanceScratch.empty()) return false;
 
     {
-        PROFILE("Render/UploadInstances");
         if (!drawStream.UploadTrailInstances(trailInstanceScratch))
         {
             ++batchStats.failedUploads;
@@ -641,7 +651,6 @@ bool ForwardPipeline::ExecuteUniformBatch(const DrawBatch& batch, const RenderSc
                 return drew;
             }
             {
-                PROFILE("Render/DrawParameters/Uniform");
                 std::span<const DrawParameterData> parameters = item.hasDrawParameters
                     ? std::span<const DrawParameterData>(&item.drawParameters, 1) : std::span<const DrawParameterData>();
                 usize uploadedBytes = 0;
@@ -706,7 +715,6 @@ bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const Render
         first.hasDrawParameters ? &drawParameterScratch : nullptr);
     if (instanceScratch.empty()) return false;
     {
-        PROFILE("Render/UploadInstances");
         if (!drawStream.UploadMeshInstances(instanceScratch))
         {
             ++batchStats.failedUploads;
@@ -732,7 +740,6 @@ bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const Render
     }
 
     {
-        PROFILE("Render/DrawParameters/Instanced");
         std::span<const DrawParameterData> parameters = first.hasDrawParameters
             ? std::span<const DrawParameterData>(drawParameterScratch) : std::span<const DrawParameterData>();
         usize uploadedBytes = 0;
