@@ -689,6 +689,10 @@ void AtmosphereRenderer::BindMaterialUniforms()
 
     const AtmosphereQualityDesc quality = GetQualityDesc(frame.quality);
     backend->GetParameters().SetMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
+    //提交材质可用的大气照明状态
+    const bool lightingReady = (frame.fogActive || frame.skyActive)
+        && transmittanceValid && multipleScatteringValid;
+    backend->GetParameters().SetInt("u_AtmosphereLightingEnabled", lightingReady ? 1 : 0);
     backend->GetParameters().SetInt("u_AtmosphereFogEnabled", frame.fogActive ? 1 : 0);
     backend->GetParameters().SetFloat("u_AtmosphereMaxDistanceKm", frame.maxDistanceKm);
     backend->GetParameters().SetFloat("u_AtmosphereMetersPerWorldUnit", frame.settings.metersPerWorldUnit);
@@ -734,15 +738,18 @@ void AtmosphereRenderer::BindMaterialTextures(int32 radianceSlot, int32 opticalD
         backend->GetParameters().SetInt("u_AtmosphereOpticalDepthTexture", opticalDepthSlot);
         backend->BindTexture(static_cast<uint32>(opticalDepthSlot), opticalDepth);
     }
+    //向材质共享天空与空气透视使用的有效散射表
+    const bool lightingReady = (frame.fogActive || frame.skyActive)
+        && transmittanceValid && multipleScatteringValid;
     if (transmittanceSlot >= 0)
     {
         backend->GetParameters().SetInt("u_AtmosphereTransmittanceTexture", transmittanceSlot);
-        backend->BindTexture(static_cast<uint32>(transmittanceSlot), frame.fogActive ? transmittanceTexture : neutralTexture);
+        backend->BindTexture(static_cast<uint32>(transmittanceSlot), lightingReady ? transmittanceTexture : neutralTexture);
     }
     if (multipleScatteringSlot >= 0)
     {
         backend->GetParameters().SetInt("u_AtmosphereMultipleScatteringTexture", multipleScatteringSlot);
-        backend->BindTexture(static_cast<uint32>(multipleScatteringSlot), frame.fogActive ? multipleScatteringTexture : neutralTexture);
+        backend->BindTexture(static_cast<uint32>(multipleScatteringSlot), lightingReady ? multipleScatteringTexture : neutralTexture);
     }
 }
 

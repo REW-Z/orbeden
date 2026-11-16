@@ -260,7 +260,7 @@ namespace
         bindings.useShadowMap = uses("u_UseShadowMap");
         bindings.useShadowUniforms = usesAny({ "u_ShadowCascadeCount", "u_ShadowView", "u_ShadowBias",
             "u_ShadowNormalBias", "u_ShadowMatrices[0]", "u_ShadowRects[0]", "u_ShadowParams[0]" });
-        bindings.useAtmosphereUniforms = usesAny({ "u_AtmosphereFogEnabled", "u_AtmosphereMaxDistanceKm",
+        bindings.useAtmosphereUniforms = usesAny({ "u_AtmosphereLightingEnabled", "u_AtmosphereFogEnabled", "u_AtmosphereMaxDistanceKm",
             "u_AtmosphereMetersPerWorldUnit", "u_AtmosphereCameraHeightKm", "u_AtmosphereCameraUp",
             "u_AtmosphereDenseFogEnabled", "u_AtmosphereDenseFogMode", "u_AtmosphereDenseFogExtinction",
             "u_AtmosphereDenseFogScattering", "u_AtmosphereDenseFogProfile", "u_AtmosphereDenseFogTopFade",
