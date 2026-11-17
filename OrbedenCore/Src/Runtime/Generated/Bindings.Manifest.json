@@ -49109,6 +49109,25 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "drawCallCount",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []
@@ -49767,6 +49786,25 @@
               "DefaultValue": ""
             }
           ]
+        },
+        {
+          "Name": "RecordDrawCall",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         },
         {
           "Name": "SetCapturing",

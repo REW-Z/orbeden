@@ -74,6 +74,9 @@ internal struct ProfileFrameSummary
     public int DroppedGpuEventCount;
     public ProfileGpuStatus GpuStatus;
 
+    //后端实际提交的绘制次数，实例化绘制计为一次
+    public int DrawCallCount;
+
     /// <summary>读取指定分类的耗时。</summary>
     internal readonly long GetCategoryMicroseconds(int category) => category switch
     {

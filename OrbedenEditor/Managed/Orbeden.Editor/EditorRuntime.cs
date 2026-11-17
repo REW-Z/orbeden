@@ -618,7 +618,8 @@ public static class EditorRuntime
         ValidateSize<ProfileEvent>(nameof(ProfileEvent), 40);
         ValidateSize<ProfileGpuEvent>(nameof(ProfileGpuEvent), 24);
         ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 104);
-        if (Marshal.OffsetOf<ProfileFrameSummary>(nameof(ProfileFrameSummary.GpuEventCount)).ToInt32() != 88
+        if (Marshal.OffsetOf<ProfileFrameSummary>(nameof(ProfileFrameSummary.DrawCallCount)).ToInt32() != 100
+            || Marshal.OffsetOf<ProfileFrameSummary>(nameof(ProfileFrameSummary.GpuEventCount)).ToInt32() != 88
             || Marshal.OffsetOf<ProfileGpuEvent>(nameof(ProfileGpuEvent.StartMicroseconds)).ToInt32() != 8
             || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.CopyProfilerGpuEvents)).ToInt32() != 194 * IntPtr.Size)
             throw new TypeLoadException("Editor GPU profiler ABI layout mismatch.");

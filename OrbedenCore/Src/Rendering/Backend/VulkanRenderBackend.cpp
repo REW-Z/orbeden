@@ -2074,6 +2074,7 @@ void VulkanRenderBackend::State::Draw(uint32 indexStart, uint32 indexCount, uint
         drawBindings.indexBuffer = indices.handle; drawBindings.indexOffset = indices.offset;
     }
     vkCmdDrawIndexed(commands, indexCount, instanceCount, indexStart, 0, 0);
+    Profiler::RecordDrawCall();
 }
 
 //绘制索引图元

@@ -277,6 +277,12 @@ internal sealed class ProfilerPanel : EditorPanel
             EditorGUI.TextColored($"Zoom {timelineZoom:F1}x", EditorTheme.Current.Active);
         }
 
+        //显示当前选中完整帧的实际绘制次数
+        if (selectedFrame >= 0)
+        {
+            EditorGUI.Label($"Draw Calls: {selectedFrameSummary.DrawCallCount:N0}");
+        }
+
         int dropped = CountDroppedEvents();
         if (dropped > 0)
         {
@@ -316,6 +322,7 @@ internal sealed class ProfilerPanel : EditorPanel
                     frame.RootMicroseconds,
                     frame.WaitMicroseconds,
                     UnmeasuredMicroseconds = Math.Max(frame.DeltaTimeMicroseconds - frame.RootMicroseconds - frame.WaitMicroseconds, 0),
+                    frame.DrawCallCount,
                     frame.EventCount,
                     ExportedEventCount = selectedFrameEventCount,
                     frame.DroppedEventCount,

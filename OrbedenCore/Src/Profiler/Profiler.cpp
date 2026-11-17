@@ -481,6 +481,15 @@ void Profiler::AddFrameWait(int64 microseconds)
     state.frames[state.currentFrameSlot].waitMicroseconds += microseconds;
 }
 
+//累加当前帧一次实际提交的绘制
+void Profiler::RecordDrawCall()
+{
+    CaptureState& state = GetCaptureState();
+    if (!state.capturing || state.currentFrameSlot < 0) return;
+
+    ++state.frames[state.currentFrameSlot].drawCallCount;
+}
+
 //开关按帧采集，停止时保留已采集的数据供查看
 void Profiler::SetCapturing(bool value)
 {

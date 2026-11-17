@@ -82,6 +82,9 @@ struct ProfileFrameSummary
     int32 gpuEventCount = 0;
     int32 droppedGpuEventCount = 0;
     ProfileGpuStatus gpuStatus = ProfileGpuStatus::Unavailable;
+
+    //后端实际提交的绘制次数，实例化绘制计为一次
+    int32 drawCallCount = 0;
 };
 
 //性能剖析器
@@ -116,6 +119,9 @@ public:
 
     //累加当前帧的限帧等待时间
     static void AddFrameWait(int64 microseconds);
+
+    //累加当前帧一次实际提交的绘制
+    static void RecordDrawCall();
 
     //开关按帧采集，停止时保留已采集的数据供查看
     static void SetCapturing(bool value);

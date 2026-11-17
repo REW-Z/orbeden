@@ -1105,6 +1105,7 @@ void OpenGLRenderBackend::DrawIndexed(uint32 indexStart, uint32 indexCount)
     const void* offset = reinterpret_cast<const void*>(static_cast<uintptr>(indexStart) * sizeof(uint32));
     ApplyDrawState();
     glDrawElements(GetPipelineState().topology == PrimitiveTopology::Lines ? GL_LINES : GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset);
+    Profiler::RecordDrawCall();
 }
 
 //实例化绘制的范围校验
@@ -1183,6 +1184,7 @@ void OpenGLRenderBackend::DrawIndexedInstanced(uint32 indexStart, uint32 indexCo
     ApplyDrawState();
     glDrawElementsInstanced(GetPipelineState().topology == PrimitiveTopology::Lines ? GL_LINES : GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset,
         static_cast<GLsizei>(instanceCount));
+    Profiler::RecordDrawCall();
 }
 
 //实例化能力查询

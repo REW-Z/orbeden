@@ -303,6 +303,7 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 197);
     static_assert(sizeof(ProfileFrameSummary) == 104);
+    static_assert(offsetof(ProfileFrameSummary, drawCallCount) == 100);
     static_assert(sizeof(ProfileGpuEvent) == 24);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 100);
