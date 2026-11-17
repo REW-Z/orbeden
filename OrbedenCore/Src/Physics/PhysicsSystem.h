@@ -15,6 +15,8 @@ namespace physx
 }
 
 class Mesh;
+class Component;
+class RigidBody;
 
 //PhysX 5 CPU-only 原生物理系统
 class PhysicsSystem final : public IEngineSystem
@@ -52,6 +54,18 @@ public:
 
     //接收后台烘焙的三角网格
     bool InstallTriangleMesh(Mesh& mesh, const List<uint8>& bytes);
+
+    //登记组件配置变化
+    void NotifyComponentChanged(Component& component);
+
+    //登记刚体速度与施力输入
+    void NotifyBodyInput(RigidBody& body);
+
+    //登记 Mesh 物理几何变化
+    void NotifyMeshChanged(Mesh& mesh);
+
+    //登记实体碰撞层与静态状态变化
+    void NotifyEnsChanged(World& world, EnsId ens);
 
     //旋转并平移物理坐标与运动状态
     void RebaseCoordinates(World& world, const quaternion& rotation, const vector3& translation);

@@ -631,13 +631,15 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             bool array = field.Kind?.CppName == "Reflection::FieldKind::Array";
             string xmlRead = array ? "ArrayToXmlValue" : "ToXmlValue";
             string xmlWrite = array ? "SetArrayFromXmlValue" : "SetFromXmlValue";
-            var setterBacked = classInfo.Name == "Transform"
+            //标量和对象引用的反射写入沿用声明的业务 Setter
+            var declaredSetter = !array && field.Setter.Length > 0 && field.Setter is not "Direct" and not "None";
+            var setterBacked = declaredSetter || classInfo.Name == "Transform"
                 || (field.Name == "enabled" && classInfo.Name is "Camera" or "DirectionalLight" or "StaticMeshRenderer");
             var marksDirty = classInfo.Name == "Material" && field.Name == "shader";
             var regenerateOnSet = field.Changed.Length != 0;
-            var getterExpression = setterBacked
-                ? $"instance->Get{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}()"
-                : $"instance->{field.Name}";
+            var getterExpression = field.Getter.Length > 0 && field.Getter is not "Direct" and not "None"
+                ? $"instance->{field.Getter}()"
+                : !declaredSetter && setterBacked ? $"instance->Get{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}()" : $"instance->{field.Name}";
             output.AppendLine($"    //读取 {classInfo.Name}.{field.Name} 字段");
             output.AppendLine($"    static std::string Get_{classInfo.Symbol}_{field.Name}(Object* object)");
             output.AppendLine("    {");
@@ -660,11 +662,18 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
             if (setterBacked)
             {
-                var setterName = $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}";
+                var setterName = declaredSetter ? field.Setter : $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}";
                 output.AppendLine($"        {field.Type} parsedValue{{}};");
                 output.AppendLine($"        if (!Reflection::{xmlWrite}(parsedValue, value)) return false;");
-                output.AppendLine($"        instance->{setterName}(parsedValue);");
-                output.AppendLine("        return true;");
+                if (field.SetterReturnsBool)
+                {
+                    output.AppendLine($"        return instance->{setterName}(parsedValue);");
+                }
+                else
+                {
+                    output.AppendLine($"        instance->{setterName}(parsedValue);");
+                    output.AppendLine("        return true;");
+                }
             }
             else if (marksDirty)
             {
@@ -695,11 +704,18 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             }
             else if (setterBacked)
             {
-                var setterName = $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}";
+                var setterName = declaredSetter ? field.Setter : $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}";
                 output.AppendLine($"        {field.Type} parsedValue{{}};");
                 output.AppendLine("        if (!Reflection::SetFromValue(parsedValue, value)) return false;");
-                output.AppendLine($"        instance->{setterName}(parsedValue);");
-                output.AppendLine("        return true;");
+                if (field.SetterReturnsBool)
+                {
+                    output.AppendLine($"        return instance->{setterName}(parsedValue);");
+                }
+                else
+                {
+                    output.AppendLine($"        instance->{setterName}(parsedValue);");
+                    output.AppendLine("        return true;");
+                }
             }
             else if (marksDirty)
             {

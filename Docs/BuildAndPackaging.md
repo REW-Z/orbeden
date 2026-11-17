@@ -1,4 +1,4 @@
-﻿# Orbeden 构建与打包说明
+# Orbeden 构建与打包说明
 
 本文说明 Orbeden 的 C++ / C# 构建关系，以及 Core、Editor、Game 在开发测试和发布打包时的职责边界。
 
@@ -1005,3 +1005,14 @@ Vulkan 继续缓存连续绘制的管线、资源组合及原生绑定，在新�
 两种语言的脚本挂载和序列化字段都直接保存在项目的 `.world` 文件中，不再生成 `.world.scripts.json` sidecar。
 
 只改字段值不需要重新构建 C++ 或 C#。修改、新增、删除或重命名任一语言的脚本后，按 `Ctrl+R`，编辑器按内容指纹重建有变动的 C#／C++ 工程；也可分别使用 `Build Game C#`／`Build Game C++` 强制构建，让程序集、MetaGen 和游戏模块反映最新代码。
+
+
+### 2026-11-17：Collider 与 RigidBody 的 Setter 和事件同步
+
+Collider、BoxCollider、SphereCollider、CapsuleCollider、ConvexMeshCollider、TriangleMeshCollider 和 RigidBody 的配置改为私有存储及 Getter/Setter。原生代码使用 GetEnabled/SetEnabled、GetCenter/SetCenter、GetMesh/SetMesh、GetMass/SetMass、GetLinearVelocity/SetLinearVelocity 等接口；C# 属性名及序列化字段名保持不变。元数据注解同时指定字段反射访问器和托管属性，XML、类型化反射及直接绑定均经业务 Setter，不直接修改私有存储。数组类访问器仍沿用原有路径。
+
+物理系统复用 OnTransformChanged 及生命周期通知，维护变更节点、所属 Actor 配置和运动输入队列。父子归属、激活状态、Ens 层及 static 状态、全局碰撞矩阵、Mesh 内容和资源发布/销毁分别触发相应失效。Mesh 的稳定 ID 订阅覆盖异步加载和资源重载。普通固定步不再遍历全部 Collider、全部 BodyInput 或全部静态 Actor 做收集、应用与清理；固定步数和 simulate/fetch 不变。
+
+动态 Actor 独立登记并回写 Transform/速度；物理回写不重新提交自身输入，具有其他 Actor 归属的后代仍接收父级变换通知。速度 Setter 与 AddForce/AddTorque 登记运动输入。场景查询同步不消费速度或力输入，待下一模拟步应用。独立 HeightField 的生成状态同步、Controller 和 Wheel 的既有每步流程保留。
+
+需重建 Core、Editor、SDK 和使用旧原生裸字段的游戏模块，不能混用旧绑定。引擎及 AviatorSage 的飞行原生示例已同步 Getter/Setter。Debug x64 Core、原生/托管 Editor、游戏原生模块、游戏 C# 运行时/Editor 模式及编辑器扩展编译通过；按约定仅编译和静态检查，未运行场景、执行测试或采集性能。编译记录位于 AviatorSage/Build/PhysicsEventSync。

@@ -37,16 +37,6 @@ namespace
 #define PHYSICS_FIELD(TYPE, MEMBER, TYPE_NAME, KIND) \
     Reflection::FieldInfo(#MEMBER, TYPE_NAME, Reflection::FieldKind::KIND, true, GetField<TYPE, &TYPE::MEMBER>, SetField<TYPE, &TYPE::MEMBER>)
 
-#define PHYSICS_REF_FIELD(TYPE, MEMBER, TYPE_NAME, REF_TYPE) \
-    Reflection::FieldInfo(#MEMBER, TYPE_NAME, Reflection::FieldKind::ObjectRef, true, GetField<TYPE, &TYPE::MEMBER>, SetField<TYPE, &TYPE::MEMBER>, REF_TYPE)
-
-#define COLLIDER_COMMON_FIELDS(TYPE) \
-    PHYSICS_FIELD(TYPE, enabled, "bool", Bool), \
-    PHYSICS_FIELD(TYPE, isTrigger, "bool", Bool), \
-    PHYSICS_FIELD(TYPE, center, "vector3", Vector3), \
-    PHYSICS_FIELD(TYPE, staticFriction, "float32", Float32), \
-    PHYSICS_FIELD(TYPE, dynamicFriction, "float32", Float32), \
-    PHYSICS_FIELD(TYPE, restitution, "float32", Float32)
 }
 
 namespace PhysicsReflection
@@ -103,56 +93,6 @@ namespace PhysicsReflection
             PHYSICS_FIELD(WheelCollider, steerAngle, "float32", Float32),
         });
 
-        Reflection::RegisterTypeFields(RigidBody::StaticType(),
-        {
-            PHYSICS_FIELD(RigidBody, enabled, "bool", Bool),
-            PHYSICS_FIELD(RigidBody, bodyType, "PhysicsBodyType", UInt32),
-            PHYSICS_FIELD(RigidBody, mass, "float32", Float32),
-            PHYSICS_FIELD(RigidBody, automaticCenterOfMass, "bool", Bool),
-            PHYSICS_FIELD(RigidBody, centerOfMass, "vector3", Vector3),
-            PHYSICS_FIELD(RigidBody, automaticInertiaTensor, "bool", Bool),
-            PHYSICS_FIELD(RigidBody, inertiaTensor, "vector3", Vector3),
-            PHYSICS_FIELD(RigidBody, inertiaTensorRotation, "quaternion", Quaternion),
-            PHYSICS_FIELD(RigidBody, useGravity, "bool", Bool),
-            PHYSICS_FIELD(RigidBody, linearDamping, "float32", Float32),
-            PHYSICS_FIELD(RigidBody, angularDamping, "float32", Float32),
-            PHYSICS_FIELD(RigidBody, linearVelocity, "vector3", Vector3),
-            PHYSICS_FIELD(RigidBody, angularVelocity, "vector3", Vector3),
-            PHYSICS_FIELD(RigidBody, continuousCollisionDetection, "bool", Bool),
-            PHYSICS_FIELD(RigidBody, lockFlags, "uint32", UInt32),
-        });
-
-        Reflection::RegisterTypeFields(BoxCollider::StaticType(),
-        {
-            COLLIDER_COMMON_FIELDS(BoxCollider),
-            PHYSICS_FIELD(BoxCollider, halfExtents, "vector3", Vector3),
-        });
-
-        Reflection::RegisterTypeFields(SphereCollider::StaticType(),
-        {
-            COLLIDER_COMMON_FIELDS(SphereCollider),
-            PHYSICS_FIELD(SphereCollider, radius, "float32", Float32),
-        });
-
-        Reflection::RegisterTypeFields(CapsuleCollider::StaticType(),
-        {
-            COLLIDER_COMMON_FIELDS(CapsuleCollider),
-            PHYSICS_FIELD(CapsuleCollider, radius, "float32", Float32),
-            PHYSICS_FIELD(CapsuleCollider, halfHeight, "float32", Float32),
-        });
-
-        Reflection::RegisterTypeFields(ConvexMeshCollider::StaticType(),
-        {
-            COLLIDER_COMMON_FIELDS(ConvexMeshCollider),
-            PHYSICS_REF_FIELD(ConvexMeshCollider, mesh, "Ref<Mesh>", "Mesh"),
-        });
-
-        Reflection::RegisterTypeFields(TriangleMeshCollider::StaticType(),
-        {
-            COLLIDER_COMMON_FIELDS(TriangleMeshCollider),
-            PHYSICS_REF_FIELD(TriangleMeshCollider, mesh, "Ref<Mesh>", "Mesh"),
-        });
-
         Reflection::RegisterTypeFields(CharacterController::StaticType(),
         {
             PHYSICS_FIELD(CharacterController, enabled, "bool", Bool),
@@ -169,7 +109,5 @@ namespace PhysicsReflection
 }
 
 #undef PHYSICS_FIELD
-#undef PHYSICS_REF_FIELD
-#undef COLLIDER_COMMON_FIELDS
 
 #undef HEIGHT_FIELD

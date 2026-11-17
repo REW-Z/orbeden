@@ -1,3 +1,4 @@
+#include "Physics/PhysicsSystem.h"
 #include "Runtime/Object/Ens.h"
 
 #include "Runtime/Object/Transform.h"
@@ -56,6 +57,10 @@ void Ens::SetLayer(uint32 value)
     if (World* world = GetWorld())
     {
         world->SetDirty();
+        if (PhysicsSystem* physics = PhysicsSystem::Current())
+        {
+            physics->NotifyEnsChanged(*world, ens);
+        }
     }
 }
 

@@ -1,3 +1,5 @@
+#include "Physics/PhysicsSystem.h"
+#include "Runtime/Object/Mesh.h"
 #include "ResourceManager/ResourceLoadOperation.h"
 
 #include "FileSystem/PathDefines.h"
@@ -218,6 +220,16 @@ bool ResourceLoadOperation::State::Commit(float64 budgetMilliseconds)
     }
     chunks.clear();
     Object::PublishResourceInstances(publishObjects);
+    for (Object* object : publishObjects)
+    {
+        if (Mesh* mesh = object->Cast<Mesh>())
+        {
+            if (PhysicsSystem* physics = PhysicsSystem::Current())
+            {
+                physics->NotifyMeshChanged(*mesh);
+            }
+        }
+    }
     ownedObjects.clear();
     committed = true;
     return true;

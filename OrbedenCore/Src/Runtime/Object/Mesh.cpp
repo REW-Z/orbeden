@@ -1,4 +1,5 @@
 #include "Runtime/Object/Mesh.h"
+#include "Physics/PhysicsSystem.h"
 
 #include <algorithm>
 #include <cmath>
@@ -113,6 +114,13 @@ void Mesh::MarkDirty(MeshDirtyFlags flags)
     //内容版本只在几何数据变化时推进，纯编辑器状态不算内容变化
     if ((static_cast<uint32>(flags) & static_cast<uint32>(MeshDirtyFlags::Gpu)) != 0) ++contentVersion;
     dirtyFlags |= static_cast<uint32>(flags);
+    if ((static_cast<uint32>(flags) & static_cast<uint32>(MeshDirtyFlags::Physics)) != 0)
+    {
+        if (PhysicsSystem* physics = PhysicsSystem::Current())
+        {
+            physics->NotifyMeshChanged(*this);
+        }
+    }
 }
 
 void Mesh::ClearDirty(MeshDirtyFlags flags)

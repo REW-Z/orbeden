@@ -57,7 +57,7 @@ void Engine::OnFixedUpdate(float32 deltaTime)
 {
     Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
-    if (!transform || !body || !body->enabled)
+    if (!transform || !body || !body->GetEnabled())
     {
         return;
     }
@@ -82,7 +82,7 @@ void Engine::EvaluateForces()
     Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
     Ens* propellerEns = world ? world->GetEns(propeller) : nullptr;
-    if (!transform || !body || !body->enabled || !propellerEns)
+    if (!transform || !body || !body->GetEnabled() || !propellerEns)
     {
         return;
     }
@@ -90,7 +90,7 @@ void Engine::EvaluateForces()
     //同步作用点与局部速度
     propellerPosition = propellerEns->Transform()->GetWorldPosition();
     vector3 offset = Add(propellerPosition, Scale(transform->GetWorldPosition(), -1.0f));
-    vector3 velocity = Add(body->linearVelocity, Cross(body->angularVelocity, offset));
+    vector3 velocity = Add(body->GetLinearVelocity(), Cross(body->GetAngularVelocity(), offset));
 
     //推力随前向空速衰减
     vector3 forward = Rotate(transform->GetWorldRotation(), { 0, 0, -1 });

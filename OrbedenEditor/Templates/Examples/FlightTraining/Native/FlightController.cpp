@@ -98,7 +98,7 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
 {
     Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
-    if (!transform || !body || !body->enabled)
+    if (!transform || !body || !body->GetEnabled())
     {
         return;
     }
@@ -170,12 +170,12 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
             vector3 mount = RenderMath::TransformPoint(wheelTransform->GetWorldMatrix(), wheel->wheelOffset);
             vector3 contact = Add(mount, Scale(normal, -((wheel->suspensionRestLength + wheel->wheelRadius) * scale - compression)));
             vector3 offset = Add(contact, Scale(center, -1.0f));
-            vector3 velocity = Add(body->linearVelocity, Cross(body->angularVelocity, offset));
+            vector3 velocity = Add(body->GetLinearVelocity(), Cross(body->GetAngularVelocity(), offset));
             float32 forwardSpeed = Dot(velocity, forward);
             float32 normalForce = std::max(wheel->suspensionStiffness * compression
                 - wheel->suspensionDamping * Dot(velocity, normal), 0.0f);
             float32 tractionLimit = brake * std::max(brakeFrictionCoefficient, 0.0f) * normalForce;
-            float32 stopLimit = std::max(std::abs(forwardSpeed) - 0.02f, 0.0f) * body->mass
+            float32 stopLimit = std::max(std::abs(forwardSpeed) - 0.02f, 0.0f) * body->GetMass()
                 / (deltaTime * groundedWheelCount);
             vector3 brakeForce = Scale(forward, -std::copysign(std::min(tractionLimit, stopLimit), forwardSpeed));
             body->AddForceAtPosition(brakeForce, contact);
@@ -253,7 +253,7 @@ void FlightController::EvaluateForces(const RigidBody& body, const Transform& tr
     vector3 center = transform.GetWorldPosition();
     vector3 right = Rotate(rotation, { 1, 0, 0 });
     vector3 up = Rotate(rotation, { 0, 1, 0 });
-    vector3 velocityBody = Rotate(inverse, body.linearVelocity);
+    vector3 velocityBody = Rotate(inverse, body.GetLinearVelocity());
     sideslipDegrees = std::atan2(velocityBody.x,
         std::sqrt(velocityBody.z * velocityBody.z + velocityBody.y * velocityBody.y)) * 180.0f / Pi;
     float32 pitchInput = GetPitchInput();
@@ -280,7 +280,7 @@ void FlightController::EvaluateForces(const RigidBody& body, const Transform& tr
         }
         vector3 position = node->Transform()->GetWorldPosition();
         vector3 offset = Add(position, Scale(center, -1.0f));
-        vector3 velocity = Add(body.linearVelocity, Cross(body.angularVelocity, offset));
+        vector3 velocity = Add(body.GetLinearVelocity(), Cross(body.GetAngularVelocity(), offset));
         vector3 localVelocity = Rotate(inverse, velocity);
         float32 alpha = std::atan2(-localVelocity.y, -localVelocity.z) * 180.0f / Pi;
 
@@ -333,7 +333,7 @@ void FlightController::EvaluateForces(const RigidBody& body, const Transform& tr
     //读取物理系统重力
     PhysicsSystem* physics = PhysicsSystem::Current();
     vector3 gravity = physics ? physics->GetGravity() : vector3{ 0, -9.81f, 0 };
-    gravityForce = body.useGravity ? Scale(gravity, body.mass) : vector3();
+    gravityForce = body.GetUseGravity() ? Scale(gravity, body.GetMass()) : vector3();
 }
 
 //按各部件作用点绘制受力箭头
@@ -346,7 +346,7 @@ void FlightController::OnLateUpdate(float32 deltaTime)
         return;
     }
     RigidBody* body = GetEns()->GetComponent<RigidBody>();
-    if (!body || !body->enabled)
+    if (!body || !body->GetEnabled())
     {
         return;
     }
@@ -411,7 +411,7 @@ void FlightController::OnLateUpdate(float32 deltaTime)
 float32 FlightController::GetAirspeed()
 {
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
-    return body ? Length(body->linearVelocity) : 0.0f;
+    return body ? Length(body->GetLinearVelocity()) : 0.0f;
 }
 
 /// <summary>读取襟翼位置，0 收起，1 全放。</summary>
@@ -464,7 +464,7 @@ float32 FlightController::GetWeightNewtons() { return Length(gravityForce); }
 float32 FlightController::GetClimbRate()
 {
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
-    return body ? body->linearVelocity.y : 0.0f;
+    return body ? body->GetLinearVelocity().y : 0.0f;
 }
 
 float32 FlightController::GetPitchDegrees()
@@ -526,8 +526,8 @@ void FlightController::ResetFlight()
     transform->SetLocalRotation(spawnRotation);
     if (RigidBody* body = GetEns()->GetComponent<RigidBody>())
     {
-        body->linearVelocity = {};
-        body->angularVelocity = {};
+        body->SetLinearVelocity({});
+        body->SetAngularVelocity({});
         body->pendingForce = {};
         body->pendingTorque = {};
     }

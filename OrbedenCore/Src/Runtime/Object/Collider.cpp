@@ -119,3 +119,216 @@ int32 TriangleMeshCollider::ApplyPreparedMesh()
     cookedBytes.reset();
     return success ? 1 : -1;
 }
+
+//登记碰撞属性变化
+void Collider::NotifyPhysicsChanged()
+{
+    if (PhysicsSystem* physics = PhysicsSystem::Current())
+    {
+        physics->NotifyComponentChanged(*this);
+    }
+}
+
+//读取 enabled
+bool Collider::GetEnabled() const
+{
+    return enabled;
+}
+
+//设置 enabled 并登记物理更新
+void Collider::SetEnabled(bool value)
+{
+    if (enabled == value)
+    {
+        return;
+    }
+    enabled = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 isTrigger
+bool Collider::GetIsTrigger() const
+{
+    return isTrigger;
+}
+
+//设置 isTrigger 并登记物理更新
+void Collider::SetIsTrigger(bool value)
+{
+    if (isTrigger == value)
+    {
+        return;
+    }
+    isTrigger = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 center
+const vector3& Collider::GetCenter() const
+{
+    return center;
+}
+
+//设置 center 并登记物理更新
+void Collider::SetCenter(const vector3& value)
+{
+    if (center.x == value.x && center.y == value.y && center.z == value.z)
+    {
+        return;
+    }
+    center = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 staticFriction
+float32 Collider::GetStaticFriction() const
+{
+    return staticFriction;
+}
+
+//设置 staticFriction 并登记物理更新
+void Collider::SetStaticFriction(float32 value)
+{
+    if (staticFriction == value)
+    {
+        return;
+    }
+    staticFriction = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 dynamicFriction
+float32 Collider::GetDynamicFriction() const
+{
+    return dynamicFriction;
+}
+
+//设置 dynamicFriction 并登记物理更新
+void Collider::SetDynamicFriction(float32 value)
+{
+    if (dynamicFriction == value)
+    {
+        return;
+    }
+    dynamicFriction = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 restitution
+float32 Collider::GetRestitution() const
+{
+    return restitution;
+}
+
+//设置 restitution 并登记物理更新
+void Collider::SetRestitution(float32 value)
+{
+    if (restitution == value)
+    {
+        return;
+    }
+    restitution = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 halfExtents
+const vector3& BoxCollider::GetHalfExtents() const
+{
+    return halfExtents;
+}
+
+//设置 halfExtents 并登记物理更新
+void BoxCollider::SetHalfExtents(const vector3& value)
+{
+    if (halfExtents.x == value.x && halfExtents.y == value.y && halfExtents.z == value.z)
+    {
+        return;
+    }
+    halfExtents = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 radius
+float32 SphereCollider::GetRadius() const
+{
+    return radius;
+}
+
+//设置 radius 并登记物理更新
+void SphereCollider::SetRadius(float32 value)
+{
+    if (radius == value)
+    {
+        return;
+    }
+    radius = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 radius
+float32 CapsuleCollider::GetRadius() const
+{
+    return radius;
+}
+
+//设置 radius 并登记物理更新
+void CapsuleCollider::SetRadius(float32 value)
+{
+    if (radius == value)
+    {
+        return;
+    }
+    radius = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 halfHeight
+float32 CapsuleCollider::GetHalfHeight() const
+{
+    return halfHeight;
+}
+
+//设置 halfHeight 并登记物理更新
+void CapsuleCollider::SetHalfHeight(float32 value)
+{
+    if (halfHeight == value)
+    {
+        return;
+    }
+    halfHeight = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 mesh
+const Ref<Mesh>& ConvexMeshCollider::GetMesh() const
+{
+    return mesh;
+}
+
+//设置 mesh 并登记物理更新
+void ConvexMeshCollider::SetMesh(const Ref<Mesh>& value)
+{
+    if (mesh.GetInstanceId() == value.GetInstanceId())
+    {
+        return;
+    }
+    mesh = value;
+    NotifyPhysicsChanged();
+}
+
+//读取 mesh
+const Ref<Mesh>& TriangleMeshCollider::GetMesh() const
+{
+    return mesh;
+}
+
+//设置 mesh 并登记物理更新
+void TriangleMeshCollider::SetMesh(const Ref<Mesh>& value)
+{
+    if (mesh.GetInstanceId() == value.GetInstanceId())
+    {
+        return;
+    }
+    mesh = value;
+    NotifyPhysicsChanged();
+}

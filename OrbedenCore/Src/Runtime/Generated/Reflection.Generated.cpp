@@ -1750,21 +1750,24 @@ public:
     static std::string Get_Collider_enabled(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
+        return Reflection::ToXmlValue(instance->GetEnabled());
     }
 
     //直接读取 Collider.enabled 字段
     static Reflection::Value GetValue_Collider_enabled(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetEnabled()) : Reflection::Value();
     }
 
     //写入 Collider.enabled 字段
     static bool Set_Collider_enabled(Object* object, const std::string& value)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
     }
 
     //直接写入 Collider.enabled 字段
@@ -1772,28 +1775,34 @@ public:
     {
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->enabled, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
     }
 
     //读取 Collider.isTrigger 字段
     static std::string Get_Collider_isTrigger(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::ToXmlValue(instance->isTrigger);
+        return Reflection::ToXmlValue(instance->GetIsTrigger());
     }
 
     //直接读取 Collider.isTrigger 字段
     static Reflection::Value GetValue_Collider_isTrigger(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return instance ? Reflection::ToValue(instance->isTrigger) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetIsTrigger()) : Reflection::Value();
     }
 
     //写入 Collider.isTrigger 字段
     static bool Set_Collider_isTrigger(Object* object, const std::string& value)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::SetFromXmlValue(instance->isTrigger, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetIsTrigger(parsedValue);
+        return true;
     }
 
     //直接写入 Collider.isTrigger 字段
@@ -1801,28 +1810,34 @@ public:
     {
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->isTrigger, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetIsTrigger(parsedValue);
+        return true;
     }
 
     //读取 Collider.center 字段
     static std::string Get_Collider_center(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::ToXmlValue(instance->center);
+        return Reflection::ToXmlValue(instance->GetCenter());
     }
 
     //直接读取 Collider.center 字段
     static Reflection::Value GetValue_Collider_center(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return instance ? Reflection::ToValue(instance->center) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetCenter()) : Reflection::Value();
     }
 
     //写入 Collider.center 字段
     static bool Set_Collider_center(Object* object, const std::string& value)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::SetFromXmlValue(instance->center, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetCenter(parsedValue);
+        return true;
     }
 
     //直接写入 Collider.center 字段
@@ -1830,28 +1845,34 @@ public:
     {
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->center, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetCenter(parsedValue);
+        return true;
     }
 
     //读取 Collider.staticFriction 字段
     static std::string Get_Collider_staticFriction(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::ToXmlValue(instance->staticFriction);
+        return Reflection::ToXmlValue(instance->GetStaticFriction());
     }
 
     //直接读取 Collider.staticFriction 字段
     static Reflection::Value GetValue_Collider_staticFriction(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return instance ? Reflection::ToValue(instance->staticFriction) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetStaticFriction()) : Reflection::Value();
     }
 
     //写入 Collider.staticFriction 字段
     static bool Set_Collider_staticFriction(Object* object, const std::string& value)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::SetFromXmlValue(instance->staticFriction, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetStaticFriction(parsedValue);
+        return true;
     }
 
     //直接写入 Collider.staticFriction 字段
@@ -1859,28 +1880,34 @@ public:
     {
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->staticFriction, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetStaticFriction(parsedValue);
+        return true;
     }
 
     //读取 Collider.dynamicFriction 字段
     static std::string Get_Collider_dynamicFriction(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::ToXmlValue(instance->dynamicFriction);
+        return Reflection::ToXmlValue(instance->GetDynamicFriction());
     }
 
     //直接读取 Collider.dynamicFriction 字段
     static Reflection::Value GetValue_Collider_dynamicFriction(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return instance ? Reflection::ToValue(instance->dynamicFriction) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetDynamicFriction()) : Reflection::Value();
     }
 
     //写入 Collider.dynamicFriction 字段
     static bool Set_Collider_dynamicFriction(Object* object, const std::string& value)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::SetFromXmlValue(instance->dynamicFriction, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetDynamicFriction(parsedValue);
+        return true;
     }
 
     //直接写入 Collider.dynamicFriction 字段
@@ -1888,28 +1915,34 @@ public:
     {
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->dynamicFriction, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetDynamicFriction(parsedValue);
+        return true;
     }
 
     //读取 Collider.restitution 字段
     static std::string Get_Collider_restitution(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::ToXmlValue(instance->restitution);
+        return Reflection::ToXmlValue(instance->GetRestitution());
     }
 
     //直接读取 Collider.restitution 字段
     static Reflection::Value GetValue_Collider_restitution(Object* object)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return instance ? Reflection::ToValue(instance->restitution) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetRestitution()) : Reflection::Value();
     }
 
     //写入 Collider.restitution 字段
     static bool Set_Collider_restitution(Object* object, const std::string& value)
     {
         Collider* instance = static_cast<Collider*>(object);
-        return Reflection::SetFromXmlValue(instance->restitution, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetRestitution(parsedValue);
+        return true;
     }
 
     //直接写入 Collider.restitution 字段
@@ -1917,7 +1950,10 @@ public:
     {
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->restitution, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetRestitution(parsedValue);
+        return true;
     }
 
     //按具体类型读取 Collider.enabled
@@ -1926,7 +1962,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            ScriptInterop::WriteDirectValue(instance->enabled, output);
+            ScriptInterop::WriteDirectValue(instance->GetEnabled(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -1940,7 +1976,7 @@ public:
             auto* instance = static_cast<Collider*>(object);
             bool value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->enabled = value;
+            instance->SetEnabled(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -1953,7 +1989,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            instance->enabled = value != 0;
+            instance->SetEnabled(value != 0);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -1966,7 +2002,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            ScriptInterop::WriteDirectValue(instance->isTrigger, output);
+            ScriptInterop::WriteDirectValue(instance->GetIsTrigger(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -1980,7 +2016,7 @@ public:
             auto* instance = static_cast<Collider*>(object);
             bool value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->isTrigger = value;
+            instance->SetIsTrigger(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -1993,7 +2029,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            instance->isTrigger = value != 0;
+            instance->SetIsTrigger(value != 0);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2006,7 +2042,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            ScriptInterop::WriteDirectValue(instance->center, output);
+            ScriptInterop::WriteDirectValue(instance->GetCenter(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2020,7 +2056,7 @@ public:
             auto* instance = static_cast<Collider*>(object);
             vector3 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->center = value;
+            instance->SetCenter(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2033,7 +2069,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            instance->center = value;
+            instance->SetCenter(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2046,7 +2082,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            ScriptInterop::WriteDirectValue(instance->staticFriction, output);
+            ScriptInterop::WriteDirectValue(instance->GetStaticFriction(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2060,7 +2096,7 @@ public:
             auto* instance = static_cast<Collider*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->staticFriction = value;
+            instance->SetStaticFriction(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2073,7 +2109,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            instance->staticFriction = value;
+            instance->SetStaticFriction(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2086,7 +2122,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            ScriptInterop::WriteDirectValue(instance->dynamicFriction, output);
+            ScriptInterop::WriteDirectValue(instance->GetDynamicFriction(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2100,7 +2136,7 @@ public:
             auto* instance = static_cast<Collider*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->dynamicFriction = value;
+            instance->SetDynamicFriction(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2113,7 +2149,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            instance->dynamicFriction = value;
+            instance->SetDynamicFriction(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2126,7 +2162,7 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            ScriptInterop::WriteDirectValue(instance->restitution, output);
+            ScriptInterop::WriteDirectValue(instance->GetRestitution(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2140,7 +2176,7 @@ public:
             auto* instance = static_cast<Collider*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->restitution = value;
+            instance->SetRestitution(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2153,8 +2189,500 @@ public:
         try
         {
             auto* instance = static_cast<Collider*>(object);
-            instance->restitution = value;
+            instance->SetRestitution(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.GetEnabled 方法
+    static Reflection::Value Invoke_Collider_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnabled();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 Collider.GetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_GetEnabled_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return ScriptInterop::WriteResult(instance->GetEnabled(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //封送并调用 Collider.GetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_GetEnabled_0(Object* object, void* output)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetEnabled(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.SetEnabled 方法
+    static Reflection::Value Invoke_Collider_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetEnabled(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 Collider.SetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_SetEnabled_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetEnabled(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 Collider.SetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Collider_SetEnabled_1(Object* object, uint8 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            instance->SetEnabled(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 Collider.SetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_SetEnabled_1(Object* object, const void* input0)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            bool arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetEnabled(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.GetIsTrigger 方法
+    static Reflection::Value Invoke_Collider_GetIsTrigger_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetIsTrigger();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 Collider.GetIsTrigger 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_GetIsTrigger_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return ScriptInterop::WriteResult(instance->GetIsTrigger(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //封送并调用 Collider.GetIsTrigger
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_GetIsTrigger_2(Object* object, void* output)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetIsTrigger(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.SetIsTrigger 方法
+    static Reflection::Value Invoke_Collider_SetIsTrigger_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetIsTrigger(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 Collider.SetIsTrigger 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_SetIsTrigger_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetIsTrigger(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 Collider.SetIsTrigger
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Collider_SetIsTrigger_3(Object* object, uint8 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            instance->SetIsTrigger(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 Collider.SetIsTrigger
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_SetIsTrigger_3(Object* object, const void* input0)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            bool arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetIsTrigger(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.GetCenter 方法
+    static Reflection::Value Invoke_Collider_GetCenter_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetCenter();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 Collider.GetCenter 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_GetCenter_4(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return ScriptInterop::WriteResult(instance->GetCenter(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //封送并调用 Collider.GetCenter
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_GetCenter_4(Object* object, void* output)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetCenter(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.SetCenter 方法
+    static Reflection::Value Invoke_Collider_SetCenter_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetCenter(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 Collider.SetCenter 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_SetCenter_5(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetCenter(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 Collider.SetCenter
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Collider_SetCenter_5(Object* object, vector3 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            instance->SetCenter(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 Collider.SetCenter
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_SetCenter_5(Object* object, const void* input0)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            vector3 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetCenter(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.GetStaticFriction 方法
+    static Reflection::Value Invoke_Collider_GetStaticFriction_6(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetStaticFriction();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 Collider.GetStaticFriction 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_GetStaticFriction_6(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return ScriptInterop::WriteResult(instance->GetStaticFriction(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 Collider.GetStaticFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_GetStaticFriction_6(Object* object, void* output)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetStaticFriction(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.SetStaticFriction 方法
+    static Reflection::Value Invoke_Collider_SetStaticFriction_7(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetStaticFriction(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 Collider.SetStaticFriction 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_SetStaticFriction_7(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetStaticFriction(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 Collider.SetStaticFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Collider_SetStaticFriction_7(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            instance->SetStaticFriction(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 Collider.SetStaticFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_SetStaticFriction_7(Object* object, const void* input0)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetStaticFriction(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.GetDynamicFriction 方法
+    static Reflection::Value Invoke_Collider_GetDynamicFriction_8(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetDynamicFriction();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 Collider.GetDynamicFriction 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_GetDynamicFriction_8(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return ScriptInterop::WriteResult(instance->GetDynamicFriction(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 Collider.GetDynamicFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_GetDynamicFriction_8(Object* object, void* output)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetDynamicFriction(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.SetDynamicFriction 方法
+    static Reflection::Value Invoke_Collider_SetDynamicFriction_9(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetDynamicFriction(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 Collider.SetDynamicFriction 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_SetDynamicFriction_9(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetDynamicFriction(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 Collider.SetDynamicFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Collider_SetDynamicFriction_9(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            instance->SetDynamicFriction(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 Collider.SetDynamicFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_SetDynamicFriction_9(Object* object, const void* input0)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetDynamicFriction(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.GetRestitution 方法
+    static Reflection::Value Invoke_Collider_GetRestitution_10(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRestitution();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 Collider.GetRestitution 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_GetRestitution_10(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return ScriptInterop::WriteResult(instance->GetRestitution(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 Collider.GetRestitution
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_GetRestitution_10(Object* object, void* output)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetRestitution(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 Collider.SetRestitution 方法
+    static Reflection::Value Invoke_Collider_SetRestitution_11(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetRestitution(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 Collider.SetRestitution 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Collider_SetRestitution_11(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetRestitution(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 Collider.SetRestitution
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_Collider_SetRestitution_11(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            instance->SetRestitution(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 Collider.SetRestitution
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Collider_SetRestitution_11(Object* object, const void* input0)
+    {
+        try
+        {
+            Collider* instance = static_cast<Collider*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetRestitution(arg0);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2164,21 +2692,24 @@ public:
     static std::string Get_BoxCollider_halfExtents(Object* object)
     {
         BoxCollider* instance = static_cast<BoxCollider*>(object);
-        return Reflection::ToXmlValue(instance->halfExtents);
+        return Reflection::ToXmlValue(instance->GetHalfExtents());
     }
 
     //直接读取 BoxCollider.halfExtents 字段
     static Reflection::Value GetValue_BoxCollider_halfExtents(Object* object)
     {
         BoxCollider* instance = static_cast<BoxCollider*>(object);
-        return instance ? Reflection::ToValue(instance->halfExtents) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetHalfExtents()) : Reflection::Value();
     }
 
     //写入 BoxCollider.halfExtents 字段
     static bool Set_BoxCollider_halfExtents(Object* object, const std::string& value)
     {
         BoxCollider* instance = static_cast<BoxCollider*>(object);
-        return Reflection::SetFromXmlValue(instance->halfExtents, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetHalfExtents(parsedValue);
+        return true;
     }
 
     //直接写入 BoxCollider.halfExtents 字段
@@ -2186,7 +2717,10 @@ public:
     {
         BoxCollider* instance = static_cast<BoxCollider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->halfExtents, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetHalfExtents(parsedValue);
+        return true;
     }
 
     //按具体类型读取 BoxCollider.halfExtents
@@ -2195,7 +2729,7 @@ public:
         try
         {
             auto* instance = static_cast<BoxCollider*>(object);
-            ScriptInterop::WriteDirectValue(instance->halfExtents, output);
+            ScriptInterop::WriteDirectValue(instance->GetHalfExtents(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2209,7 +2743,7 @@ public:
             auto* instance = static_cast<BoxCollider*>(object);
             vector3 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->halfExtents = value;
+            instance->SetHalfExtents(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2222,8 +2756,90 @@ public:
         try
         {
             auto* instance = static_cast<BoxCollider*>(object);
-            instance->halfExtents = value;
+            instance->SetHalfExtents(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 BoxCollider.GetHalfExtents 方法
+    static Reflection::Value Invoke_BoxCollider_GetHalfExtents_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        BoxCollider* instance = static_cast<BoxCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetHalfExtents();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 BoxCollider.GetHalfExtents 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_BoxCollider_GetHalfExtents_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        BoxCollider* instance = static_cast<BoxCollider*>(object);
+        return ScriptInterop::WriteResult(instance->GetHalfExtents(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //封送并调用 BoxCollider.GetHalfExtents
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_BoxCollider_GetHalfExtents_0(Object* object, void* output)
+    {
+        try
+        {
+            BoxCollider* instance = static_cast<BoxCollider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetHalfExtents(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 BoxCollider.SetHalfExtents 方法
+    static Reflection::Value Invoke_BoxCollider_SetHalfExtents_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        BoxCollider* instance = static_cast<BoxCollider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetHalfExtents(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 BoxCollider.SetHalfExtents 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_BoxCollider_SetHalfExtents_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        BoxCollider* instance = static_cast<BoxCollider*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetHalfExtents(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 BoxCollider.SetHalfExtents
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_BoxCollider_SetHalfExtents_1(Object* object, vector3 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<BoxCollider*>(object);
+            instance->SetHalfExtents(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 BoxCollider.SetHalfExtents
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_BoxCollider_SetHalfExtents_1(Object* object, const void* input0)
+    {
+        try
+        {
+            BoxCollider* instance = static_cast<BoxCollider*>(object);
+            vector3 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetHalfExtents(arg0);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2233,21 +2849,24 @@ public:
     static std::string Get_SphereCollider_radius(Object* object)
     {
         SphereCollider* instance = static_cast<SphereCollider*>(object);
-        return Reflection::ToXmlValue(instance->radius);
+        return Reflection::ToXmlValue(instance->GetRadius());
     }
 
     //直接读取 SphereCollider.radius 字段
     static Reflection::Value GetValue_SphereCollider_radius(Object* object)
     {
         SphereCollider* instance = static_cast<SphereCollider*>(object);
-        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetRadius()) : Reflection::Value();
     }
 
     //写入 SphereCollider.radius 字段
     static bool Set_SphereCollider_radius(Object* object, const std::string& value)
     {
         SphereCollider* instance = static_cast<SphereCollider*>(object);
-        return Reflection::SetFromXmlValue(instance->radius, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetRadius(parsedValue);
+        return true;
     }
 
     //直接写入 SphereCollider.radius 字段
@@ -2255,7 +2874,10 @@ public:
     {
         SphereCollider* instance = static_cast<SphereCollider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->radius, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetRadius(parsedValue);
+        return true;
     }
 
     //按具体类型读取 SphereCollider.radius
@@ -2264,7 +2886,7 @@ public:
         try
         {
             auto* instance = static_cast<SphereCollider*>(object);
-            ScriptInterop::WriteDirectValue(instance->radius, output);
+            ScriptInterop::WriteDirectValue(instance->GetRadius(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2278,7 +2900,7 @@ public:
             auto* instance = static_cast<SphereCollider*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->radius = value;
+            instance->SetRadius(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2291,8 +2913,90 @@ public:
         try
         {
             auto* instance = static_cast<SphereCollider*>(object);
-            instance->radius = value;
+            instance->SetRadius(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 SphereCollider.GetRadius 方法
+    static Reflection::Value Invoke_SphereCollider_GetRadius_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        SphereCollider* instance = static_cast<SphereCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRadius();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 SphereCollider.GetRadius 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_SphereCollider_GetRadius_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        SphereCollider* instance = static_cast<SphereCollider*>(object);
+        return ScriptInterop::WriteResult(instance->GetRadius(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 SphereCollider.GetRadius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_SphereCollider_GetRadius_0(Object* object, void* output)
+    {
+        try
+        {
+            SphereCollider* instance = static_cast<SphereCollider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetRadius(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 SphereCollider.SetRadius 方法
+    static Reflection::Value Invoke_SphereCollider_SetRadius_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        SphereCollider* instance = static_cast<SphereCollider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetRadius(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 SphereCollider.SetRadius 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_SphereCollider_SetRadius_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        SphereCollider* instance = static_cast<SphereCollider*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetRadius(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 SphereCollider.SetRadius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_SphereCollider_SetRadius_1(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<SphereCollider*>(object);
+            instance->SetRadius(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 SphereCollider.SetRadius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_SphereCollider_SetRadius_1(Object* object, const void* input0)
+    {
+        try
+        {
+            SphereCollider* instance = static_cast<SphereCollider*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetRadius(arg0);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2302,21 +3006,24 @@ public:
     static std::string Get_CapsuleCollider_radius(Object* object)
     {
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
-        return Reflection::ToXmlValue(instance->radius);
+        return Reflection::ToXmlValue(instance->GetRadius());
     }
 
     //直接读取 CapsuleCollider.radius 字段
     static Reflection::Value GetValue_CapsuleCollider_radius(Object* object)
     {
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
-        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetRadius()) : Reflection::Value();
     }
 
     //写入 CapsuleCollider.radius 字段
     static bool Set_CapsuleCollider_radius(Object* object, const std::string& value)
     {
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
-        return Reflection::SetFromXmlValue(instance->radius, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetRadius(parsedValue);
+        return true;
     }
 
     //直接写入 CapsuleCollider.radius 字段
@@ -2324,28 +3031,34 @@ public:
     {
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->radius, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetRadius(parsedValue);
+        return true;
     }
 
     //读取 CapsuleCollider.halfHeight 字段
     static std::string Get_CapsuleCollider_halfHeight(Object* object)
     {
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
-        return Reflection::ToXmlValue(instance->halfHeight);
+        return Reflection::ToXmlValue(instance->GetHalfHeight());
     }
 
     //直接读取 CapsuleCollider.halfHeight 字段
     static Reflection::Value GetValue_CapsuleCollider_halfHeight(Object* object)
     {
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
-        return instance ? Reflection::ToValue(instance->halfHeight) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetHalfHeight()) : Reflection::Value();
     }
 
     //写入 CapsuleCollider.halfHeight 字段
     static bool Set_CapsuleCollider_halfHeight(Object* object, const std::string& value)
     {
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
-        return Reflection::SetFromXmlValue(instance->halfHeight, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetHalfHeight(parsedValue);
+        return true;
     }
 
     //直接写入 CapsuleCollider.halfHeight 字段
@@ -2353,7 +3066,10 @@ public:
     {
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->halfHeight, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetHalfHeight(parsedValue);
+        return true;
     }
 
     //按具体类型读取 CapsuleCollider.radius
@@ -2362,7 +3078,7 @@ public:
         try
         {
             auto* instance = static_cast<CapsuleCollider*>(object);
-            ScriptInterop::WriteDirectValue(instance->radius, output);
+            ScriptInterop::WriteDirectValue(instance->GetRadius(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2376,7 +3092,7 @@ public:
             auto* instance = static_cast<CapsuleCollider*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->radius = value;
+            instance->SetRadius(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2389,7 +3105,7 @@ public:
         try
         {
             auto* instance = static_cast<CapsuleCollider*>(object);
-            instance->radius = value;
+            instance->SetRadius(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2402,7 +3118,7 @@ public:
         try
         {
             auto* instance = static_cast<CapsuleCollider*>(object);
-            ScriptInterop::WriteDirectValue(instance->halfHeight, output);
+            ScriptInterop::WriteDirectValue(instance->GetHalfHeight(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2416,7 +3132,7 @@ public:
             auto* instance = static_cast<CapsuleCollider*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->halfHeight = value;
+            instance->SetHalfHeight(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -2429,8 +3145,172 @@ public:
         try
         {
             auto* instance = static_cast<CapsuleCollider*>(object);
-            instance->halfHeight = value;
+            instance->SetHalfHeight(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 CapsuleCollider.GetRadius 方法
+    static Reflection::Value Invoke_CapsuleCollider_GetRadius_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRadius();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 CapsuleCollider.GetRadius 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_CapsuleCollider_GetRadius_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        return ScriptInterop::WriteResult(instance->GetRadius(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 CapsuleCollider.GetRadius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_CapsuleCollider_GetRadius_0(Object* object, void* output)
+    {
+        try
+        {
+            CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetRadius(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 CapsuleCollider.SetRadius 方法
+    static Reflection::Value Invoke_CapsuleCollider_SetRadius_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetRadius(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 CapsuleCollider.SetRadius 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_CapsuleCollider_SetRadius_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetRadius(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 CapsuleCollider.SetRadius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_CapsuleCollider_SetRadius_1(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<CapsuleCollider*>(object);
+            instance->SetRadius(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 CapsuleCollider.SetRadius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_CapsuleCollider_SetRadius_1(Object* object, const void* input0)
+    {
+        try
+        {
+            CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetRadius(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 CapsuleCollider.GetHalfHeight 方法
+    static Reflection::Value Invoke_CapsuleCollider_GetHalfHeight_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetHalfHeight();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 CapsuleCollider.GetHalfHeight 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_CapsuleCollider_GetHalfHeight_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        return ScriptInterop::WriteResult(instance->GetHalfHeight(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 CapsuleCollider.GetHalfHeight
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_CapsuleCollider_GetHalfHeight_2(Object* object, void* output)
+    {
+        try
+        {
+            CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetHalfHeight(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 CapsuleCollider.SetHalfHeight 方法
+    static Reflection::Value Invoke_CapsuleCollider_SetHalfHeight_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetHalfHeight(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 CapsuleCollider.SetHalfHeight 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_CapsuleCollider_SetHalfHeight_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetHalfHeight(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 CapsuleCollider.SetHalfHeight
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_CapsuleCollider_SetHalfHeight_3(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<CapsuleCollider*>(object);
+            instance->SetHalfHeight(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 CapsuleCollider.SetHalfHeight
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_CapsuleCollider_SetHalfHeight_3(Object* object, const void* input0)
+    {
+        try
+        {
+            CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetHalfHeight(arg0);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2440,21 +3320,24 @@ public:
     static std::string Get_ConvexMeshCollider_mesh(Object* object)
     {
         ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
-        return Reflection::ToXmlValue(instance->mesh);
+        return Reflection::ToXmlValue(instance->GetMesh());
     }
 
     //直接读取 ConvexMeshCollider.mesh 字段
     static Reflection::Value GetValue_ConvexMeshCollider_mesh(Object* object)
     {
         ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
-        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetMesh()) : Reflection::Value();
     }
 
     //写入 ConvexMeshCollider.mesh 字段
     static bool Set_ConvexMeshCollider_mesh(Object* object, const std::string& value)
     {
         ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
-        return Reflection::SetFromXmlValue(instance->mesh, value);
+        Ref<Mesh> parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetMesh(parsedValue);
+        return true;
     }
 
     //直接写入 ConvexMeshCollider.mesh 字段
@@ -2462,7 +3345,10 @@ public:
     {
         ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->mesh, value);
+        Ref<Mesh> parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetMesh(parsedValue);
+        return true;
     }
 
     //按具体类型读取 ConvexMeshCollider.mesh
@@ -2471,7 +3357,7 @@ public:
         try
         {
             auto* instance = static_cast<ConvexMeshCollider*>(object);
-            ScriptInterop::WriteDirectValue(instance->mesh, output);
+            ScriptInterop::WriteDirectValue(instance->GetMesh(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2485,15 +3371,85 @@ public:
             auto* instance = static_cast<ConvexMeshCollider*>(object);
             Ref<Mesh> value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->mesh = value;
+            instance->SetMesh(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //调用 ConvexMeshCollider.GetMesh 方法
+    static Reflection::Value Invoke_ConvexMeshCollider_GetMesh_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetMesh();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 ConvexMeshCollider.GetMesh 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ConvexMeshCollider_GetMesh_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        return ScriptInterop::WriteResult(instance->GetMesh(), Reflection::ValueKind::Object, output, stringStorage);
+    }
+
+    //封送并调用 ConvexMeshCollider.GetMesh
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ConvexMeshCollider_GetMesh_0(Object* object, void* output)
+    {
+        try
+        {
+            ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetMesh(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 ConvexMeshCollider.SetMesh 方法
+    static Reflection::Value Invoke_ConvexMeshCollider_SetMesh_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        Ref<Mesh> arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetMesh(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 ConvexMeshCollider.SetMesh 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ConvexMeshCollider_SetMesh_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        Ref<Mesh> arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetMesh(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //封送并调用 ConvexMeshCollider.SetMesh
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ConvexMeshCollider_SetMesh_1(Object* object, const void* input0)
+    {
+        try
+        {
+            ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+            Ref<Mesh> arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetMesh(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 ConvexMeshCollider.OnDetach 方法
-    static Reflection::Value Invoke_ConvexMeshCollider_OnDetach_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_ConvexMeshCollider_OnDetach_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
@@ -2505,7 +3461,7 @@ public:
     }
 
     //直接调用 ConvexMeshCollider.OnDetach 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_ConvexMeshCollider_OnDetach_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_ConvexMeshCollider_OnDetach_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
         instance->OnDetach();
@@ -2514,7 +3470,7 @@ public:
     }
 
     //封送并调用 ConvexMeshCollider.OnDetach
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ConvexMeshCollider_OnDetach_0(Object* object)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ConvexMeshCollider_OnDetach_2(Object* object)
     {
         try
         {
@@ -2529,21 +3485,24 @@ public:
     static std::string Get_TriangleMeshCollider_mesh(Object* object)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
-        return Reflection::ToXmlValue(instance->mesh);
+        return Reflection::ToXmlValue(instance->GetMesh());
     }
 
     //直接读取 TriangleMeshCollider.mesh 字段
     static Reflection::Value GetValue_TriangleMeshCollider_mesh(Object* object)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
-        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetMesh()) : Reflection::Value();
     }
 
     //写入 TriangleMeshCollider.mesh 字段
     static bool Set_TriangleMeshCollider_mesh(Object* object, const std::string& value)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
-        return Reflection::SetFromXmlValue(instance->mesh, value);
+        Ref<Mesh> parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetMesh(parsedValue);
+        return true;
     }
 
     //直接写入 TriangleMeshCollider.mesh 字段
@@ -2551,7 +3510,10 @@ public:
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->mesh, value);
+        Ref<Mesh> parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetMesh(parsedValue);
+        return true;
     }
 
     //按具体类型读取 TriangleMeshCollider.mesh
@@ -2560,7 +3522,7 @@ public:
         try
         {
             auto* instance = static_cast<TriangleMeshCollider*>(object);
-            ScriptInterop::WriteDirectValue(instance->mesh, output);
+            ScriptInterop::WriteDirectValue(instance->GetMesh(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -2574,15 +3536,85 @@ public:
             auto* instance = static_cast<TriangleMeshCollider*>(object);
             Ref<Mesh> value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->mesh = value;
+            instance->SetMesh(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //调用 TriangleMeshCollider.GetMesh 方法
+    static Reflection::Value Invoke_TriangleMeshCollider_GetMesh_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetMesh();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 TriangleMeshCollider.GetMesh 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_GetMesh_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        return ScriptInterop::WriteResult(instance->GetMesh(), Reflection::ValueKind::Object, output, stringStorage);
+    }
+
+    //封送并调用 TriangleMeshCollider.GetMesh
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_GetMesh_0(Object* object, void* output)
+    {
+        try
+        {
+            TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetMesh(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 TriangleMeshCollider.SetMesh 方法
+    static Reflection::Value Invoke_TriangleMeshCollider_SetMesh_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        Ref<Mesh> arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetMesh(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 TriangleMeshCollider.SetMesh 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_SetMesh_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        Ref<Mesh> arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetMesh(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //封送并调用 TriangleMeshCollider.SetMesh
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_SetMesh_1(Object* object, const void* input0)
+    {
+        try
+        {
+            TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+            Ref<Mesh> arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetMesh(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 TriangleMeshCollider.PrepareMeshAsync 方法
-    static Reflection::Value Invoke_TriangleMeshCollider_PrepareMeshAsync_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_TriangleMeshCollider_PrepareMeshAsync_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
@@ -2594,14 +3626,14 @@ public:
     }
 
     //直接调用 TriangleMeshCollider.PrepareMeshAsync 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_PrepareMeshAsync_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_PrepareMeshAsync_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
         return ScriptInterop::WriteResult(instance->PrepareMeshAsync(), Reflection::ValueKind::Bool, output, stringStorage);
     }
 
     //封送并调用 TriangleMeshCollider.PrepareMeshAsync
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_0(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_2(Object* object, void* output)
     {
         try
         {
@@ -2613,7 +3645,7 @@ public:
     }
 
     //调用 TriangleMeshCollider.DiscardPreparedMesh 方法
-    static Reflection::Value Invoke_TriangleMeshCollider_DiscardPreparedMesh_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_TriangleMeshCollider_DiscardPreparedMesh_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
@@ -2625,7 +3657,7 @@ public:
     }
 
     //直接调用 TriangleMeshCollider.DiscardPreparedMesh 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_DiscardPreparedMesh_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_DiscardPreparedMesh_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
         instance->DiscardPreparedMesh();
@@ -2634,7 +3666,7 @@ public:
     }
 
     //封送并调用 TriangleMeshCollider.DiscardPreparedMesh
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_1(Object* object)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_3(Object* object)
     {
         try
         {
@@ -2646,7 +3678,7 @@ public:
     }
 
     //调用 TriangleMeshCollider.ApplyPreparedMesh 方法
-    static Reflection::Value Invoke_TriangleMeshCollider_ApplyPreparedMesh_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_TriangleMeshCollider_ApplyPreparedMesh_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
@@ -2658,14 +3690,14 @@ public:
     }
 
     //直接调用 TriangleMeshCollider.ApplyPreparedMesh 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_4(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
         return ScriptInterop::WriteResult(instance->ApplyPreparedMesh(), Reflection::ValueKind::Int32, output, stringStorage);
     }
 
     //封送并调用 TriangleMeshCollider.ApplyPreparedMesh
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_2(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_4(Object* object, void* output)
     {
         try
         {
@@ -2677,7 +3709,7 @@ public:
     }
 
     //调用 TriangleMeshCollider.OnDetach 方法
-    static Reflection::Value Invoke_TriangleMeshCollider_OnDetach_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_TriangleMeshCollider_OnDetach_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
@@ -2689,7 +3721,7 @@ public:
     }
 
     //直接调用 TriangleMeshCollider.OnDetach 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_OnDetach_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_OnDetach_5(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
         instance->OnDetach();
@@ -2698,7 +3730,7 @@ public:
     }
 
     //封送并调用 TriangleMeshCollider.OnDetach
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_OnDetach_3(Object* object)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_OnDetach_5(Object* object)
     {
         try
         {
@@ -6151,8 +7183,9 @@ public:
     static bool Set_Material_shader(Object* object, const std::string& value)
     {
         Material* instance = static_cast<Material*>(object);
-        if (!Reflection::SetFromXmlValue(instance->shader, value)) return false;
-        instance->MarkDirty();
+        Ref<Shader> parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetShader(parsedValue);
         return true;
     }
 
@@ -6161,8 +7194,9 @@ public:
     {
         Material* instance = static_cast<Material*>(object);
         if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->shader, value)) return false;
-        instance->MarkDirty();
+        Ref<Shader> parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetShader(parsedValue);
         return true;
     }
 
@@ -8460,21 +9494,24 @@ public:
     static std::string Get_RigidBody_enabled(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
+        return Reflection::ToXmlValue(instance->GetEnabled());
     }
 
     //直接读取 RigidBody.enabled 字段
     static Reflection::Value GetValue_RigidBody_enabled(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetEnabled()) : Reflection::Value();
     }
 
     //写入 RigidBody.enabled 字段
     static bool Set_RigidBody_enabled(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.enabled 字段
@@ -8482,28 +9519,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->enabled, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.mass 字段
     static std::string Get_RigidBody_mass(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->mass);
+        return Reflection::ToXmlValue(instance->GetMass());
     }
 
     //直接读取 RigidBody.mass 字段
     static Reflection::Value GetValue_RigidBody_mass(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->mass) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetMass()) : Reflection::Value();
     }
 
     //写入 RigidBody.mass 字段
     static bool Set_RigidBody_mass(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->mass, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetMass(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.mass 字段
@@ -8511,28 +9554,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->mass, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetMass(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.automaticCenterOfMass 字段
     static std::string Get_RigidBody_automaticCenterOfMass(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->automaticCenterOfMass);
+        return Reflection::ToXmlValue(instance->GetAutomaticCenterOfMass());
     }
 
     //直接读取 RigidBody.automaticCenterOfMass 字段
     static Reflection::Value GetValue_RigidBody_automaticCenterOfMass(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->automaticCenterOfMass) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetAutomaticCenterOfMass()) : Reflection::Value();
     }
 
     //写入 RigidBody.automaticCenterOfMass 字段
     static bool Set_RigidBody_automaticCenterOfMass(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->automaticCenterOfMass, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetAutomaticCenterOfMass(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.automaticCenterOfMass 字段
@@ -8540,28 +9589,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->automaticCenterOfMass, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetAutomaticCenterOfMass(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.centerOfMass 字段
     static std::string Get_RigidBody_centerOfMass(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->centerOfMass);
+        return Reflection::ToXmlValue(instance->GetCenterOfMass());
     }
 
     //直接读取 RigidBody.centerOfMass 字段
     static Reflection::Value GetValue_RigidBody_centerOfMass(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->centerOfMass) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetCenterOfMass()) : Reflection::Value();
     }
 
     //写入 RigidBody.centerOfMass 字段
     static bool Set_RigidBody_centerOfMass(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->centerOfMass, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetCenterOfMass(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.centerOfMass 字段
@@ -8569,28 +9624,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->centerOfMass, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetCenterOfMass(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.automaticInertiaTensor 字段
     static std::string Get_RigidBody_automaticInertiaTensor(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->automaticInertiaTensor);
+        return Reflection::ToXmlValue(instance->GetAutomaticInertiaTensor());
     }
 
     //直接读取 RigidBody.automaticInertiaTensor 字段
     static Reflection::Value GetValue_RigidBody_automaticInertiaTensor(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->automaticInertiaTensor) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetAutomaticInertiaTensor()) : Reflection::Value();
     }
 
     //写入 RigidBody.automaticInertiaTensor 字段
     static bool Set_RigidBody_automaticInertiaTensor(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->automaticInertiaTensor, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetAutomaticInertiaTensor(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.automaticInertiaTensor 字段
@@ -8598,28 +9659,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->automaticInertiaTensor, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetAutomaticInertiaTensor(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.inertiaTensor 字段
     static std::string Get_RigidBody_inertiaTensor(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->inertiaTensor);
+        return Reflection::ToXmlValue(instance->GetInertiaTensor());
     }
 
     //直接读取 RigidBody.inertiaTensor 字段
     static Reflection::Value GetValue_RigidBody_inertiaTensor(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->inertiaTensor) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetInertiaTensor()) : Reflection::Value();
     }
 
     //写入 RigidBody.inertiaTensor 字段
     static bool Set_RigidBody_inertiaTensor(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->inertiaTensor, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetInertiaTensor(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.inertiaTensor 字段
@@ -8627,28 +9694,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->inertiaTensor, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetInertiaTensor(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.inertiaTensorRotation 字段
     static std::string Get_RigidBody_inertiaTensorRotation(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->inertiaTensorRotation);
+        return Reflection::ToXmlValue(instance->GetInertiaTensorRotation());
     }
 
     //直接读取 RigidBody.inertiaTensorRotation 字段
     static Reflection::Value GetValue_RigidBody_inertiaTensorRotation(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->inertiaTensorRotation) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetInertiaTensorRotation()) : Reflection::Value();
     }
 
     //写入 RigidBody.inertiaTensorRotation 字段
     static bool Set_RigidBody_inertiaTensorRotation(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->inertiaTensorRotation, value);
+        quaternion parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetInertiaTensorRotation(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.inertiaTensorRotation 字段
@@ -8656,28 +9729,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->inertiaTensorRotation, value);
+        quaternion parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetInertiaTensorRotation(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.useGravity 字段
     static std::string Get_RigidBody_useGravity(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->useGravity);
+        return Reflection::ToXmlValue(instance->GetUseGravity());
     }
 
     //直接读取 RigidBody.useGravity 字段
     static Reflection::Value GetValue_RigidBody_useGravity(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->useGravity) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetUseGravity()) : Reflection::Value();
     }
 
     //写入 RigidBody.useGravity 字段
     static bool Set_RigidBody_useGravity(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->useGravity, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetUseGravity(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.useGravity 字段
@@ -8685,28 +9764,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->useGravity, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetUseGravity(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.linearDamping 字段
     static std::string Get_RigidBody_linearDamping(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->linearDamping);
+        return Reflection::ToXmlValue(instance->GetLinearDamping());
     }
 
     //直接读取 RigidBody.linearDamping 字段
     static Reflection::Value GetValue_RigidBody_linearDamping(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->linearDamping) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetLinearDamping()) : Reflection::Value();
     }
 
     //写入 RigidBody.linearDamping 字段
     static bool Set_RigidBody_linearDamping(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->linearDamping, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLinearDamping(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.linearDamping 字段
@@ -8714,28 +9799,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->linearDamping, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetLinearDamping(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.angularDamping 字段
     static std::string Get_RigidBody_angularDamping(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->angularDamping);
+        return Reflection::ToXmlValue(instance->GetAngularDamping());
     }
 
     //直接读取 RigidBody.angularDamping 字段
     static Reflection::Value GetValue_RigidBody_angularDamping(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->angularDamping) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetAngularDamping()) : Reflection::Value();
     }
 
     //写入 RigidBody.angularDamping 字段
     static bool Set_RigidBody_angularDamping(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->angularDamping, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetAngularDamping(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.angularDamping 字段
@@ -8743,28 +9834,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->angularDamping, value);
+        float32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetAngularDamping(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.linearVelocity 字段
     static std::string Get_RigidBody_linearVelocity(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->linearVelocity);
+        return Reflection::ToXmlValue(instance->GetLinearVelocity());
     }
 
     //直接读取 RigidBody.linearVelocity 字段
     static Reflection::Value GetValue_RigidBody_linearVelocity(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->linearVelocity) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetLinearVelocity()) : Reflection::Value();
     }
 
     //写入 RigidBody.linearVelocity 字段
     static bool Set_RigidBody_linearVelocity(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->linearVelocity, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLinearVelocity(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.linearVelocity 字段
@@ -8772,28 +9869,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->linearVelocity, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetLinearVelocity(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.angularVelocity 字段
     static std::string Get_RigidBody_angularVelocity(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->angularVelocity);
+        return Reflection::ToXmlValue(instance->GetAngularVelocity());
     }
 
     //直接读取 RigidBody.angularVelocity 字段
     static Reflection::Value GetValue_RigidBody_angularVelocity(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->angularVelocity) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetAngularVelocity()) : Reflection::Value();
     }
 
     //写入 RigidBody.angularVelocity 字段
     static bool Set_RigidBody_angularVelocity(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->angularVelocity, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetAngularVelocity(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.angularVelocity 字段
@@ -8801,28 +9904,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->angularVelocity, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetAngularVelocity(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.continuousCollisionDetection 字段
     static std::string Get_RigidBody_continuousCollisionDetection(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->continuousCollisionDetection);
+        return Reflection::ToXmlValue(instance->GetContinuousCollisionDetection());
     }
 
     //直接读取 RigidBody.continuousCollisionDetection 字段
     static Reflection::Value GetValue_RigidBody_continuousCollisionDetection(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->continuousCollisionDetection) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetContinuousCollisionDetection()) : Reflection::Value();
     }
 
     //写入 RigidBody.continuousCollisionDetection 字段
     static bool Set_RigidBody_continuousCollisionDetection(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->continuousCollisionDetection, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetContinuousCollisionDetection(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.continuousCollisionDetection 字段
@@ -8830,28 +9939,34 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->continuousCollisionDetection, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetContinuousCollisionDetection(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.lockFlags 字段
     static std::string Get_RigidBody_lockFlags(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::ToXmlValue(instance->lockFlags);
+        return Reflection::ToXmlValue(instance->GetLockFlags());
     }
 
     //直接读取 RigidBody.lockFlags 字段
     static Reflection::Value GetValue_RigidBody_lockFlags(Object* object)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return instance ? Reflection::ToValue(instance->lockFlags) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->GetLockFlags()) : Reflection::Value();
     }
 
     //写入 RigidBody.lockFlags 字段
     static bool Set_RigidBody_lockFlags(Object* object, const std::string& value)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
-        return Reflection::SetFromXmlValue(instance->lockFlags, value);
+        uint32 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLockFlags(parsedValue);
+        return true;
     }
 
     //直接写入 RigidBody.lockFlags 字段
@@ -8859,7 +9974,10 @@ public:
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->lockFlags, value);
+        uint32 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetLockFlags(parsedValue);
+        return true;
     }
 
     //读取 RigidBody.pendingForce 字段
@@ -8926,7 +10044,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->enabled, output);
+            ScriptInterop::WriteDirectValue(instance->GetEnabled(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -8940,7 +10058,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             bool value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->enabled = value;
+            instance->SetEnabled(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -8953,7 +10071,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->enabled = value != 0;
+            instance->SetEnabled(value != 0);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -8966,7 +10084,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->mass, output);
+            ScriptInterop::WriteDirectValue(instance->GetMass(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -8980,7 +10098,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->mass = value;
+            instance->SetMass(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -8993,7 +10111,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->mass = value;
+            instance->SetMass(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9006,7 +10124,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->automaticCenterOfMass, output);
+            ScriptInterop::WriteDirectValue(instance->GetAutomaticCenterOfMass(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9020,7 +10138,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             bool value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->automaticCenterOfMass = value;
+            instance->SetAutomaticCenterOfMass(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9033,7 +10151,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->automaticCenterOfMass = value != 0;
+            instance->SetAutomaticCenterOfMass(value != 0);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9046,7 +10164,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->centerOfMass, output);
+            ScriptInterop::WriteDirectValue(instance->GetCenterOfMass(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9060,7 +10178,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             vector3 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->centerOfMass = value;
+            instance->SetCenterOfMass(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9073,7 +10191,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->centerOfMass = value;
+            instance->SetCenterOfMass(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9086,7 +10204,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->automaticInertiaTensor, output);
+            ScriptInterop::WriteDirectValue(instance->GetAutomaticInertiaTensor(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9100,7 +10218,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             bool value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->automaticInertiaTensor = value;
+            instance->SetAutomaticInertiaTensor(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9113,7 +10231,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->automaticInertiaTensor = value != 0;
+            instance->SetAutomaticInertiaTensor(value != 0);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9126,7 +10244,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->inertiaTensor, output);
+            ScriptInterop::WriteDirectValue(instance->GetInertiaTensor(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9140,7 +10258,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             vector3 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->inertiaTensor = value;
+            instance->SetInertiaTensor(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9153,7 +10271,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->inertiaTensor = value;
+            instance->SetInertiaTensor(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9166,7 +10284,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->inertiaTensorRotation, output);
+            ScriptInterop::WriteDirectValue(instance->GetInertiaTensorRotation(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9180,7 +10298,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             quaternion value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->inertiaTensorRotation = value;
+            instance->SetInertiaTensorRotation(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9193,7 +10311,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->inertiaTensorRotation = value;
+            instance->SetInertiaTensorRotation(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9206,7 +10324,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->useGravity, output);
+            ScriptInterop::WriteDirectValue(instance->GetUseGravity(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9220,7 +10338,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             bool value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->useGravity = value;
+            instance->SetUseGravity(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9233,7 +10351,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->useGravity = value != 0;
+            instance->SetUseGravity(value != 0);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9246,7 +10364,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->linearDamping, output);
+            ScriptInterop::WriteDirectValue(instance->GetLinearDamping(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9260,7 +10378,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->linearDamping = value;
+            instance->SetLinearDamping(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9273,7 +10391,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->linearDamping = value;
+            instance->SetLinearDamping(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9286,7 +10404,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->angularDamping, output);
+            ScriptInterop::WriteDirectValue(instance->GetAngularDamping(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9300,7 +10418,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             float32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->angularDamping = value;
+            instance->SetAngularDamping(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9313,7 +10431,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->angularDamping = value;
+            instance->SetAngularDamping(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9326,7 +10444,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->linearVelocity, output);
+            ScriptInterop::WriteDirectValue(instance->GetLinearVelocity(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9340,7 +10458,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             vector3 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->linearVelocity = value;
+            instance->SetLinearVelocity(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9353,7 +10471,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->linearVelocity = value;
+            instance->SetLinearVelocity(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9366,7 +10484,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->angularVelocity, output);
+            ScriptInterop::WriteDirectValue(instance->GetAngularVelocity(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9380,7 +10498,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             vector3 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->angularVelocity = value;
+            instance->SetAngularVelocity(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9393,7 +10511,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->angularVelocity = value;
+            instance->SetAngularVelocity(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9406,7 +10524,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->continuousCollisionDetection, output);
+            ScriptInterop::WriteDirectValue(instance->GetContinuousCollisionDetection(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9420,7 +10538,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             bool value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->continuousCollisionDetection = value;
+            instance->SetContinuousCollisionDetection(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9433,7 +10551,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->continuousCollisionDetection = value != 0;
+            instance->SetContinuousCollisionDetection(value != 0);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9446,7 +10564,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            ScriptInterop::WriteDirectValue(instance->lockFlags, output);
+            ScriptInterop::WriteDirectValue(instance->GetLockFlags(), output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
@@ -9460,7 +10578,7 @@ public:
             auto* instance = static_cast<RigidBody*>(object);
             uint32 value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->lockFlags = value;
+            instance->SetLockFlags(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9473,7 +10591,7 @@ public:
         try
         {
             auto* instance = static_cast<RigidBody*>(object);
-            instance->lockFlags = value;
+            instance->SetLockFlags(value);
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -9560,8 +10678,1213 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //调用 RigidBody.GetEnabled 方法
+    static Reflection::Value Invoke_RigidBody_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnabled();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetEnabled_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetEnabled(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetEnabled_0(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetEnabled(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetEnabled 方法
+    static Reflection::Value Invoke_RigidBody_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetEnabled(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetEnabled_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetEnabled(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetEnabled_1(Object* object, uint8 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetEnabled(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetEnabled_1(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            bool arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetEnabled(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetMass 方法
+    static Reflection::Value Invoke_RigidBody_GetMass_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetMass();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetMass 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetMass_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetMass(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetMass_2(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetMass(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetMass 方法
+    static Reflection::Value Invoke_RigidBody_SetMass_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetMass(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetMass 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetMass_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetMass(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetMass_3(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetMass(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetMass_3(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetMass(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetAutomaticCenterOfMass 方法
+    static Reflection::Value Invoke_RigidBody_GetAutomaticCenterOfMass_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetAutomaticCenterOfMass();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetAutomaticCenterOfMass 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetAutomaticCenterOfMass_4(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetAutomaticCenterOfMass(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetAutomaticCenterOfMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetAutomaticCenterOfMass_4(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetAutomaticCenterOfMass(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetAutomaticCenterOfMass 方法
+    static Reflection::Value Invoke_RigidBody_SetAutomaticCenterOfMass_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetAutomaticCenterOfMass(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetAutomaticCenterOfMass 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetAutomaticCenterOfMass_5(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetAutomaticCenterOfMass(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetAutomaticCenterOfMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetAutomaticCenterOfMass_5(Object* object, uint8 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetAutomaticCenterOfMass(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetAutomaticCenterOfMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetAutomaticCenterOfMass_5(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            bool arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetAutomaticCenterOfMass(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetCenterOfMass 方法
+    static Reflection::Value Invoke_RigidBody_GetCenterOfMass_6(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetCenterOfMass();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetCenterOfMass 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetCenterOfMass_6(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetCenterOfMass(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetCenterOfMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetCenterOfMass_6(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetCenterOfMass(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetCenterOfMass 方法
+    static Reflection::Value Invoke_RigidBody_SetCenterOfMass_7(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetCenterOfMass(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetCenterOfMass 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetCenterOfMass_7(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetCenterOfMass(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetCenterOfMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetCenterOfMass_7(Object* object, vector3 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetCenterOfMass(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetCenterOfMass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetCenterOfMass_7(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            vector3 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetCenterOfMass(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetAutomaticInertiaTensor 方法
+    static Reflection::Value Invoke_RigidBody_GetAutomaticInertiaTensor_8(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetAutomaticInertiaTensor();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetAutomaticInertiaTensor 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetAutomaticInertiaTensor_8(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetAutomaticInertiaTensor(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetAutomaticInertiaTensor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetAutomaticInertiaTensor_8(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetAutomaticInertiaTensor(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetAutomaticInertiaTensor 方法
+    static Reflection::Value Invoke_RigidBody_SetAutomaticInertiaTensor_9(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetAutomaticInertiaTensor(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetAutomaticInertiaTensor 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetAutomaticInertiaTensor_9(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetAutomaticInertiaTensor(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetAutomaticInertiaTensor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetAutomaticInertiaTensor_9(Object* object, uint8 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetAutomaticInertiaTensor(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetAutomaticInertiaTensor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetAutomaticInertiaTensor_9(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            bool arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetAutomaticInertiaTensor(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetInertiaTensor 方法
+    static Reflection::Value Invoke_RigidBody_GetInertiaTensor_10(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetInertiaTensor();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetInertiaTensor 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetInertiaTensor_10(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetInertiaTensor(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetInertiaTensor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetInertiaTensor_10(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetInertiaTensor(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetInertiaTensor 方法
+    static Reflection::Value Invoke_RigidBody_SetInertiaTensor_11(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetInertiaTensor(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetInertiaTensor 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetInertiaTensor_11(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetInertiaTensor(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetInertiaTensor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetInertiaTensor_11(Object* object, vector3 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetInertiaTensor(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetInertiaTensor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetInertiaTensor_11(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            vector3 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetInertiaTensor(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetInertiaTensorRotation 方法
+    static Reflection::Value Invoke_RigidBody_GetInertiaTensorRotation_12(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetInertiaTensorRotation();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetInertiaTensorRotation 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetInertiaTensorRotation_12(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetInertiaTensorRotation(), Reflection::ValueKind::Quaternion, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetInertiaTensorRotation
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetInertiaTensorRotation_12(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetInertiaTensorRotation(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetInertiaTensorRotation 方法
+    static Reflection::Value Invoke_RigidBody_SetInertiaTensorRotation_13(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        quaternion arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetInertiaTensorRotation(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetInertiaTensorRotation 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetInertiaTensorRotation_13(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        quaternion arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetInertiaTensorRotation(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetInertiaTensorRotation
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetInertiaTensorRotation_13(Object* object, quaternion value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetInertiaTensorRotation(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetInertiaTensorRotation
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetInertiaTensorRotation_13(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            quaternion arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetInertiaTensorRotation(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetUseGravity 方法
+    static Reflection::Value Invoke_RigidBody_GetUseGravity_14(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetUseGravity();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetUseGravity 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetUseGravity_14(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetUseGravity(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetUseGravity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetUseGravity_14(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetUseGravity(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetUseGravity 方法
+    static Reflection::Value Invoke_RigidBody_SetUseGravity_15(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetUseGravity(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetUseGravity 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetUseGravity_15(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetUseGravity(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetUseGravity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetUseGravity_15(Object* object, uint8 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetUseGravity(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetUseGravity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetUseGravity_15(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            bool arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetUseGravity(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetLinearDamping 方法
+    static Reflection::Value Invoke_RigidBody_GetLinearDamping_16(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLinearDamping();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetLinearDamping 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetLinearDamping_16(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetLinearDamping(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetLinearDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetLinearDamping_16(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetLinearDamping(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetLinearDamping 方法
+    static Reflection::Value Invoke_RigidBody_SetLinearDamping_17(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetLinearDamping(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetLinearDamping 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetLinearDamping_17(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetLinearDamping(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetLinearDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetLinearDamping_17(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetLinearDamping(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetLinearDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetLinearDamping_17(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetLinearDamping(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetAngularDamping 方法
+    static Reflection::Value Invoke_RigidBody_GetAngularDamping_18(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetAngularDamping();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetAngularDamping 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetAngularDamping_18(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetAngularDamping(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetAngularDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetAngularDamping_18(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetAngularDamping(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetAngularDamping 方法
+    static Reflection::Value Invoke_RigidBody_SetAngularDamping_19(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        float32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetAngularDamping(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetAngularDamping 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetAngularDamping_19(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetAngularDamping(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetAngularDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetAngularDamping_19(Object* object, float32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetAngularDamping(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetAngularDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetAngularDamping_19(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            float32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetAngularDamping(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetLinearVelocity 方法
+    static Reflection::Value Invoke_RigidBody_GetLinearVelocity_20(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLinearVelocity();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetLinearVelocity 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetLinearVelocity_20(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetLinearVelocity(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetLinearVelocity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetLinearVelocity_20(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetLinearVelocity(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetLinearVelocity 方法
+    static Reflection::Value Invoke_RigidBody_SetLinearVelocity_21(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetLinearVelocity(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetLinearVelocity 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetLinearVelocity_21(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetLinearVelocity(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetLinearVelocity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetLinearVelocity_21(Object* object, vector3 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetLinearVelocity(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetLinearVelocity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetLinearVelocity_21(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            vector3 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetLinearVelocity(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetAngularVelocity 方法
+    static Reflection::Value Invoke_RigidBody_GetAngularVelocity_22(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetAngularVelocity();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetAngularVelocity 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetAngularVelocity_22(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetAngularVelocity(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetAngularVelocity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetAngularVelocity_22(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetAngularVelocity(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetAngularVelocity 方法
+    static Reflection::Value Invoke_RigidBody_SetAngularVelocity_23(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetAngularVelocity(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetAngularVelocity 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetAngularVelocity_23(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetAngularVelocity(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetAngularVelocity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetAngularVelocity_23(Object* object, vector3 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetAngularVelocity(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetAngularVelocity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetAngularVelocity_23(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            vector3 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetAngularVelocity(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetContinuousCollisionDetection 方法
+    static Reflection::Value Invoke_RigidBody_GetContinuousCollisionDetection_24(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetContinuousCollisionDetection();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetContinuousCollisionDetection 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetContinuousCollisionDetection_24(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetContinuousCollisionDetection(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetContinuousCollisionDetection
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetContinuousCollisionDetection_24(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetContinuousCollisionDetection(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetContinuousCollisionDetection 方法
+    static Reflection::Value Invoke_RigidBody_SetContinuousCollisionDetection_25(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetContinuousCollisionDetection(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetContinuousCollisionDetection 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetContinuousCollisionDetection_25(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetContinuousCollisionDetection(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetContinuousCollisionDetection
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetContinuousCollisionDetection_25(Object* object, uint8 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetContinuousCollisionDetection(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetContinuousCollisionDetection
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetContinuousCollisionDetection_25(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            bool arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetContinuousCollisionDetection(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.GetLockFlags 方法
+    static Reflection::Value Invoke_RigidBody_GetLockFlags_26(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLockFlags();
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 RigidBody.GetLockFlags 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_GetLockFlags_26(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return ScriptInterop::WriteResult(instance->GetLockFlags(), Reflection::ValueKind::UInt32, output, stringStorage);
+    }
+
+    //封送并调用 RigidBody.GetLockFlags
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_GetLockFlags_26(Object* object, void* output)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            ScriptInterop::WriteDirectValue(instance->GetLockFlags(), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.SetLockFlags 方法
+    static Reflection::Value Invoke_RigidBody_SetLockFlags_27(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        uint32 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        instance->SetLockFlags(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.SetLockFlags 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_SetLockFlags_27(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        uint32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetLockFlags(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.SetLockFlags
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_SetLockFlags_27(Object* object, uint32 value0)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->SetLockFlags(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.SetLockFlags
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_SetLockFlags_27(Object* object, const void* input0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            uint32 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetLockFlags(arg0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //调用 RigidBody.WritePhysicsVelocities 方法
+    static Reflection::Value Invoke_RigidBody_WritePhysicsVelocities_28(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        vector3 arg1{};
+        if (!Reflection::SetFromValue(arg1, args[1])) return Reflection::Value();
+        instance->WritePhysicsVelocities(arg0, arg1);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.WritePhysicsVelocities 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_WritePhysicsVelocities_28(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        vector3 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->WritePhysicsVelocities(arg0, arg1);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按原生 ABI 直接传值调用 RigidBody.WritePhysicsVelocities
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_WritePhysicsVelocities_28(Object* object, vector3 value0, vector3 value1)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            instance->WritePhysicsVelocities(value0, value1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 RigidBody.WritePhysicsVelocities
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_WritePhysicsVelocities_28(Object* object, const void* input0, const void* input1)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            vector3 arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            vector3 arg1{};
+            if (!ScriptInterop::ReadDirectValue(input1, arg1)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->WritePhysicsVelocities(arg0, arg1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 RigidBody.AddForce 方法
-    static Reflection::Value Invoke_RigidBody_AddForce_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_RigidBody_AddForce_29(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         RigidBody* instance = static_cast<RigidBody*>(object);
@@ -9575,7 +11898,7 @@ public:
     }
 
     //直接调用 RigidBody.AddForce 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddForce_0(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddForce_29(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         vector3 arg0{};
@@ -9586,7 +11909,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 RigidBody.AddForce
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_AddForce_0(Object* object, vector3 value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_AddForce_29(Object* object, vector3 value0)
     {
         try
         {
@@ -9598,7 +11921,7 @@ public:
     }
 
     //封送并调用 RigidBody.AddForce
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddForce_0(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddForce_29(Object* object, const void* input0)
     {
         try
         {
@@ -9612,7 +11935,7 @@ public:
     }
 
     //调用 RigidBody.AddTorque 方法
-    static Reflection::Value Invoke_RigidBody_AddTorque_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_RigidBody_AddTorque_30(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         RigidBody* instance = static_cast<RigidBody*>(object);
@@ -9626,7 +11949,7 @@ public:
     }
 
     //直接调用 RigidBody.AddTorque 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddTorque_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddTorque_30(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         vector3 arg0{};
@@ -9637,7 +11960,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 RigidBody.AddTorque
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_AddTorque_1(Object* object, vector3 value0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_AddTorque_30(Object* object, vector3 value0)
     {
         try
         {
@@ -9649,7 +11972,7 @@ public:
     }
 
     //封送并调用 RigidBody.AddTorque
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddTorque_1(Object* object, const void* input0)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddTorque_30(Object* object, const void* input0)
     {
         try
         {
@@ -9663,7 +11986,7 @@ public:
     }
 
     //调用 RigidBody.AddForceAtPosition 方法
-    static Reflection::Value Invoke_RigidBody_AddForceAtPosition_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_RigidBody_AddForceAtPosition_31(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         RigidBody* instance = static_cast<RigidBody*>(object);
@@ -9679,7 +12002,7 @@ public:
     }
 
     //直接调用 RigidBody.AddForceAtPosition 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddForceAtPosition_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddForceAtPosition_31(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         RigidBody* instance = static_cast<RigidBody*>(object);
         vector3 arg0{};
@@ -9692,7 +12015,7 @@ public:
     }
 
     //按原生 ABI 直接传值调用 RigidBody.AddForceAtPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_AddForceAtPosition_2(Object* object, vector3 value0, vector3 value1)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_RigidBody_AddForceAtPosition_31(Object* object, vector3 value0, vector3 value1)
     {
         try
         {
@@ -9704,7 +12027,7 @@ public:
     }
 
     //封送并调用 RigidBody.AddForceAtPosition
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddForceAtPosition_2(Object* object, const void* input0, const void* input1)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddForceAtPosition_31(Object* object, const void* input0, const void* input1)
     {
         try
         {
@@ -14287,6 +16610,18 @@ namespace Reflection
 
         RegisterTypeMethods(Collider::StaticType(),
             {
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Collider_GetEnabled_0, ReflectionGeneratedAccess::InvokeAbi_Collider_GetEnabled_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetEnabled_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetEnabled_0)),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Collider_SetEnabled_1, ReflectionGeneratedAccess::InvokeAbi_Collider_SetEnabled_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_SetEnabled_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Collider_SetEnabled_1)),
+                MethodInfo("GetIsTrigger", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Collider_GetIsTrigger_2, ReflectionGeneratedAccess::InvokeAbi_Collider_GetIsTrigger_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetIsTrigger_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetIsTrigger_2)),
+                MethodInfo("SetIsTrigger", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Collider_SetIsTrigger_3, ReflectionGeneratedAccess::InvokeAbi_Collider_SetIsTrigger_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_SetIsTrigger_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Collider_SetIsTrigger_3)),
+                MethodInfo("GetCenter", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Collider_GetCenter_4, ReflectionGeneratedAccess::InvokeAbi_Collider_GetCenter_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetCenter_4), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetCenter_4)),
+                MethodInfo("SetCenter", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Collider_SetCenter_5, ReflectionGeneratedAccess::InvokeAbi_Collider_SetCenter_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_SetCenter_5), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Collider_SetCenter_5)),
+                MethodInfo("GetStaticFriction", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Collider_GetStaticFriction_6, ReflectionGeneratedAccess::InvokeAbi_Collider_GetStaticFriction_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetStaticFriction_6), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetStaticFriction_6)),
+                MethodInfo("SetStaticFriction", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Collider_SetStaticFriction_7, ReflectionGeneratedAccess::InvokeAbi_Collider_SetStaticFriction_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_SetStaticFriction_7), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Collider_SetStaticFriction_7)),
+                MethodInfo("GetDynamicFriction", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Collider_GetDynamicFriction_8, ReflectionGeneratedAccess::InvokeAbi_Collider_GetDynamicFriction_8, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetDynamicFriction_8), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetDynamicFriction_8)),
+                MethodInfo("SetDynamicFriction", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Collider_SetDynamicFriction_9, ReflectionGeneratedAccess::InvokeAbi_Collider_SetDynamicFriction_9, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_SetDynamicFriction_9), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Collider_SetDynamicFriction_9)),
+                MethodInfo("GetRestitution", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Collider_GetRestitution_10, ReflectionGeneratedAccess::InvokeAbi_Collider_GetRestitution_10, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetRestitution_10), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_GetRestitution_10)),
+                MethodInfo("SetRestitution", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Collider_SetRestitution_11, ReflectionGeneratedAccess::InvokeAbi_Collider_SetRestitution_11, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Collider_SetRestitution_11), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_Collider_SetRestitution_11)),
             });
 
         RegisterTypeFields(BoxCollider::StaticType(),
@@ -14296,6 +16631,8 @@ namespace Reflection
 
         RegisterTypeMethods(BoxCollider::StaticType(),
             {
+                MethodInfo("GetHalfExtents", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_BoxCollider_GetHalfExtents_0, ReflectionGeneratedAccess::InvokeAbi_BoxCollider_GetHalfExtents_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_BoxCollider_GetHalfExtents_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_BoxCollider_GetHalfExtents_0)),
+                MethodInfo("SetHalfExtents", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_BoxCollider_SetHalfExtents_1, ReflectionGeneratedAccess::InvokeAbi_BoxCollider_SetHalfExtents_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_BoxCollider_SetHalfExtents_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_BoxCollider_SetHalfExtents_1)),
             });
 
         RegisterTypeFields(SphereCollider::StaticType(),
@@ -14305,6 +16642,8 @@ namespace Reflection
 
         RegisterTypeMethods(SphereCollider::StaticType(),
             {
+                MethodInfo("GetRadius", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_SphereCollider_GetRadius_0, ReflectionGeneratedAccess::InvokeAbi_SphereCollider_GetRadius_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_SphereCollider_GetRadius_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_SphereCollider_GetRadius_0)),
+                MethodInfo("SetRadius", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_SphereCollider_SetRadius_1, ReflectionGeneratedAccess::InvokeAbi_SphereCollider_SetRadius_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_SphereCollider_SetRadius_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_SphereCollider_SetRadius_1)),
             });
 
         RegisterTypeFields(CapsuleCollider::StaticType(),
@@ -14315,6 +16654,10 @@ namespace Reflection
 
         RegisterTypeMethods(CapsuleCollider::StaticType(),
             {
+                MethodInfo("GetRadius", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_CapsuleCollider_GetRadius_0, ReflectionGeneratedAccess::InvokeAbi_CapsuleCollider_GetRadius_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_CapsuleCollider_GetRadius_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_CapsuleCollider_GetRadius_0)),
+                MethodInfo("SetRadius", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_CapsuleCollider_SetRadius_1, ReflectionGeneratedAccess::InvokeAbi_CapsuleCollider_SetRadius_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_CapsuleCollider_SetRadius_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_CapsuleCollider_SetRadius_1)),
+                MethodInfo("GetHalfHeight", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_CapsuleCollider_GetHalfHeight_2, ReflectionGeneratedAccess::InvokeAbi_CapsuleCollider_GetHalfHeight_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_CapsuleCollider_GetHalfHeight_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_CapsuleCollider_GetHalfHeight_2)),
+                MethodInfo("SetHalfHeight", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_CapsuleCollider_SetHalfHeight_3, ReflectionGeneratedAccess::InvokeAbi_CapsuleCollider_SetHalfHeight_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_CapsuleCollider_SetHalfHeight_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_CapsuleCollider_SetHalfHeight_3)),
             });
 
         RegisterTypeFields(ConvexMeshCollider::StaticType(),
@@ -14324,7 +16667,9 @@ namespace Reflection
 
         RegisterTypeMethods(ConvexMeshCollider::StaticType(),
             {
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ConvexMeshCollider_OnDetach_0, ReflectionGeneratedAccess::InvokeAbi_ConvexMeshCollider_OnDetach_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ConvexMeshCollider_OnDetach_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ConvexMeshCollider_OnDetach_0)),
+                MethodInfo("GetMesh", "Ref<Mesh>", Reflection::ValueKind::Object, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ConvexMeshCollider_GetMesh_0, ReflectionGeneratedAccess::InvokeAbi_ConvexMeshCollider_GetMesh_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ConvexMeshCollider_GetMesh_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ConvexMeshCollider_GetMesh_0)),
+                MethodInfo("SetMesh", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "Ref<Mesh>", Reflection::ValueKind::Object) }, ReflectionGeneratedAccess::Invoke_ConvexMeshCollider_SetMesh_1, ReflectionGeneratedAccess::InvokeAbi_ConvexMeshCollider_SetMesh_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ConvexMeshCollider_SetMesh_1), nullptr),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ConvexMeshCollider_OnDetach_2, ReflectionGeneratedAccess::InvokeAbi_ConvexMeshCollider_OnDetach_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ConvexMeshCollider_OnDetach_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ConvexMeshCollider_OnDetach_2)),
             });
 
         RegisterTypeFields(TriangleMeshCollider::StaticType(),
@@ -14338,10 +16683,12 @@ namespace Reflection
 
         RegisterTypeMethods(TriangleMeshCollider::StaticType(),
             {
-                MethodInfo("PrepareMeshAsync", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_PrepareMeshAsync_0, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_PrepareMeshAsync_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_0)),
-                MethodInfo("DiscardPreparedMesh", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_DiscardPreparedMesh_1, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_DiscardPreparedMesh_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_1)),
-                MethodInfo("ApplyPreparedMesh", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_ApplyPreparedMesh_2, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_2)),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_3, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_OnDetach_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_3)),
+                MethodInfo("GetMesh", "Ref<Mesh>", Reflection::ValueKind::Object, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_GetMesh_0, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_GetMesh_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_GetMesh_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_GetMesh_0)),
+                MethodInfo("SetMesh", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "Ref<Mesh>", Reflection::ValueKind::Object) }, ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_SetMesh_1, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_SetMesh_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_SetMesh_1), nullptr),
+                MethodInfo("PrepareMeshAsync", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_PrepareMeshAsync_2, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_PrepareMeshAsync_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_PrepareMeshAsync_2)),
+                MethodInfo("DiscardPreparedMesh", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_DiscardPreparedMesh_3, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_DiscardPreparedMesh_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_DiscardPreparedMesh_3)),
+                MethodInfo("ApplyPreparedMesh", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_ApplyPreparedMesh_4, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_ApplyPreparedMesh_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_4), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_ApplyPreparedMesh_4)),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_5, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_OnDetach_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_5), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_5)),
             });
 
         RegisterTypeFields(Component::StaticType(),
@@ -14601,9 +16948,38 @@ namespace Reflection
 
         RegisterTypeMethods(RigidBody::StaticType(),
             {
-                MethodInfo("AddForce", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForce_0, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddForce_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddForce_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_AddForce_0)),
-                MethodInfo("AddTorque", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("torque", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddTorque_1, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddTorque_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddTorque_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_AddTorque_1)),
-                MethodInfo("AddForceAtPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3), ParameterInfo("worldPosition", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForceAtPosition_2, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddForceAtPosition_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddForceAtPosition_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_AddForceAtPosition_2)),
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetEnabled_0, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetEnabled_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetEnabled_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetEnabled_0)),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetEnabled_1, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetEnabled_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetEnabled_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetEnabled_1)),
+                MethodInfo("GetMass", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetMass_2, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetMass_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetMass_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetMass_2)),
+                MethodInfo("SetMass", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetMass_3, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetMass_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetMass_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetMass_3)),
+                MethodInfo("GetAutomaticCenterOfMass", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetAutomaticCenterOfMass_4, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetAutomaticCenterOfMass_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetAutomaticCenterOfMass_4), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetAutomaticCenterOfMass_4)),
+                MethodInfo("SetAutomaticCenterOfMass", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetAutomaticCenterOfMass_5, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetAutomaticCenterOfMass_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetAutomaticCenterOfMass_5), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetAutomaticCenterOfMass_5)),
+                MethodInfo("GetCenterOfMass", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetCenterOfMass_6, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetCenterOfMass_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetCenterOfMass_6), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetCenterOfMass_6)),
+                MethodInfo("SetCenterOfMass", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetCenterOfMass_7, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetCenterOfMass_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetCenterOfMass_7), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetCenterOfMass_7)),
+                MethodInfo("GetAutomaticInertiaTensor", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetAutomaticInertiaTensor_8, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetAutomaticInertiaTensor_8, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetAutomaticInertiaTensor_8), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetAutomaticInertiaTensor_8)),
+                MethodInfo("SetAutomaticInertiaTensor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetAutomaticInertiaTensor_9, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetAutomaticInertiaTensor_9, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetAutomaticInertiaTensor_9), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetAutomaticInertiaTensor_9)),
+                MethodInfo("GetInertiaTensor", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetInertiaTensor_10, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetInertiaTensor_10, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetInertiaTensor_10), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetInertiaTensor_10)),
+                MethodInfo("SetInertiaTensor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetInertiaTensor_11, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetInertiaTensor_11, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetInertiaTensor_11), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetInertiaTensor_11)),
+                MethodInfo("GetInertiaTensorRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetInertiaTensorRotation_12, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetInertiaTensorRotation_12, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetInertiaTensorRotation_12), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetInertiaTensorRotation_12)),
+                MethodInfo("SetInertiaTensorRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetInertiaTensorRotation_13, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetInertiaTensorRotation_13, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetInertiaTensorRotation_13), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetInertiaTensorRotation_13)),
+                MethodInfo("GetUseGravity", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetUseGravity_14, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetUseGravity_14, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetUseGravity_14), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetUseGravity_14)),
+                MethodInfo("SetUseGravity", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetUseGravity_15, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetUseGravity_15, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetUseGravity_15), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetUseGravity_15)),
+                MethodInfo("GetLinearDamping", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetLinearDamping_16, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetLinearDamping_16, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetLinearDamping_16), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetLinearDamping_16)),
+                MethodInfo("SetLinearDamping", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetLinearDamping_17, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetLinearDamping_17, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetLinearDamping_17), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetLinearDamping_17)),
+                MethodInfo("GetAngularDamping", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetAngularDamping_18, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetAngularDamping_18, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetAngularDamping_18), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetAngularDamping_18)),
+                MethodInfo("SetAngularDamping", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetAngularDamping_19, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetAngularDamping_19, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetAngularDamping_19), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetAngularDamping_19)),
+                MethodInfo("GetLinearVelocity", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetLinearVelocity_20, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetLinearVelocity_20, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetLinearVelocity_20), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetLinearVelocity_20)),
+                MethodInfo("SetLinearVelocity", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetLinearVelocity_21, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetLinearVelocity_21, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetLinearVelocity_21), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetLinearVelocity_21)),
+                MethodInfo("GetAngularVelocity", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetAngularVelocity_22, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetAngularVelocity_22, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetAngularVelocity_22), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetAngularVelocity_22)),
+                MethodInfo("SetAngularVelocity", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetAngularVelocity_23, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetAngularVelocity_23, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetAngularVelocity_23), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetAngularVelocity_23)),
+                MethodInfo("GetContinuousCollisionDetection", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetContinuousCollisionDetection_24, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetContinuousCollisionDetection_24, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetContinuousCollisionDetection_24), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetContinuousCollisionDetection_24)),
+                MethodInfo("SetContinuousCollisionDetection", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetContinuousCollisionDetection_25, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetContinuousCollisionDetection_25, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetContinuousCollisionDetection_25), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetContinuousCollisionDetection_25)),
+                MethodInfo("GetLockFlags", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_RigidBody_GetLockFlags_26, ReflectionGeneratedAccess::InvokeAbi_RigidBody_GetLockFlags_26, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetLockFlags_26), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_GetLockFlags_26)),
+                MethodInfo("SetLockFlags", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_RigidBody_SetLockFlags_27, ReflectionGeneratedAccess::InvokeAbi_RigidBody_SetLockFlags_27, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_SetLockFlags_27), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_SetLockFlags_27)),
+                MethodInfo("WritePhysicsVelocities", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("linear", "vector3", Reflection::ValueKind::Vector3), ParameterInfo("angular", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_WritePhysicsVelocities_28, ReflectionGeneratedAccess::InvokeAbi_RigidBody_WritePhysicsVelocities_28, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_WritePhysicsVelocities_28), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_WritePhysicsVelocities_28)),
+                MethodInfo("AddForce", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForce_29, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddForce_29, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddForce_29), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_AddForce_29)),
+                MethodInfo("AddTorque", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("torque", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddTorque_30, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddTorque_30, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddTorque_30), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_AddTorque_30)),
+                MethodInfo("AddForceAtPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3), ParameterInfo("worldPosition", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForceAtPosition_31, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddForceAtPosition_31, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddForceAtPosition_31), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_RigidBody_AddForceAtPosition_31)),
             });
 
         Script::RegisterReflection();

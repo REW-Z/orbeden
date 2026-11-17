@@ -744,6 +744,10 @@ bool World::SetEnsStatic(EnsId ens, bool value, std::string& outError)
 
     target->isStatic = value;
     SetDirty();
+    if (PhysicsSystem* physics = PhysicsSystem::Current())
+    {
+        physics->NotifyEnsChanged(*this, ens);
+    }
     return true;
 }
 

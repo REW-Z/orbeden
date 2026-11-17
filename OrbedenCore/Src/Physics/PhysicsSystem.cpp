@@ -2,6 +2,7 @@
 #include "Physics/PhysicsSystem.h"
 #include "Runtime/LayerSettings.h"
 #include "Runtime/World.h"
+#include "Runtime/ITransformListener.h"
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
@@ -26,6 +27,7 @@
 #include "extensions/PxRigidBodyExt.h"
 
 #include <algorithm>
+#include <array>
 #include <string>
 #include <bit>
 #include <cmath>
@@ -260,7 +262,7 @@ namespace
     };
 }
 
-class PhysicsSystem::Impl : private IObjectDestroyListener, private IWorldLifecycleListener
+class PhysicsSystem::Impl : private IObjectDestroyListener, private IWorldLifecycleListener, private ITransformListener
 {
 public:
     enum class BindingKind : uint32
@@ -302,6 +304,7 @@ public:
         vector3 lastPosition;
         quaternion lastRotation;
         bool lastPoseValid = false;
+        uint64 transformRevision = 0;
     };
 
     struct BodyInput
@@ -322,6 +325,9 @@ public:
         RigidBody* attachedBody = nullptr;
         List<EnsId> ancestors;
         uint32 bodyDepth = 0;
+        uint64 ownerKey = 0;
+        List<Mesh*> meshes;
+        List<uint64> meshIds;
         uint64 transformRevision = 0;
         uint64 poseHash = 0;
     };
@@ -445,6 +451,17 @@ public:
     std::unordered_map<uint64, PhysicsNode> physicsNodes;
     std::unordered_map<uint64, std::unordered_set<uint64>> physicsDependents;
     std::unordered_set<uint64> dirtyOwnership;
+    std::unordered_map<uint64, std::unordered_set<uint64>> bodyNodes;
+    std::unordered_map<Mesh*, std::unordered_set<uint64>> meshNodes;
+    std::unordered_map<uint64, std::unordered_set<uint64>> meshIdNodes;
+    std::unordered_set<uint64> dirtyNodes;
+    std::unordered_set<uint64> dirtyBodyInputs;
+    std::unordered_set<uint64> motionInputs;
+    std::unordered_set<uint64> dynamicBodies;
+    std::unordered_set<uint64> heightFieldNodes;
+    std::unordered_set<Mesh*> changedMeshes;
+    std::array<uint32, 32> collisionMasks = {};
+    bool writingPhysicsPoses = false;
     uint64 worldContentRevision = 0;
     //已经报过「static 被物理驱动」的 Ens，按对象去重
     std::unordered_set<uint64> reportedStaticDrives;
@@ -576,6 +593,7 @@ public:
         if (world)
         {
             world->RemoveLifecycleListener(this);
+            world->RemoveTransformListener(this);
         }
         for (auto& entry : controllers) DestroyController(*entry.second);
         controllers.clear();
@@ -586,6 +604,17 @@ public:
         physicsNodes.clear();
         physicsDependents.clear();
         dirtyOwnership.clear();
+        bodyNodes.clear();
+        meshNodes.clear();
+        meshIdNodes.clear();
+        dirtyNodes.clear();
+        dirtyBodyInputs.clear();
+        motionInputs.clear();
+        dynamicBodies.clear();
+        heightFieldNodes.clear();
+        changedMeshes.clear();
+        collisionMasks.fill(0);
+        writingPhysicsPoses = false;
         worldContentRevision = 0;
         for (auto& entry : heightFields) DestroyHeightField(*entry.second);
         heightFields.clear();
@@ -661,8 +690,8 @@ public:
 
     Mesh* GetColliderMesh(const Collider& collider) const
     {
-        if (const ConvexMeshCollider* convex = collider.Cast<ConvexMeshCollider>()) return convex->mesh.Get();
-        if (const TriangleMeshCollider* triangle = collider.Cast<TriangleMeshCollider>()) return triangle->mesh.Get();
+        if (const ConvexMeshCollider* convex = collider.Cast<ConvexMeshCollider>()) return convex->GetMesh().Get();
+        if (const TriangleMeshCollider* triangle = collider.Cast<TriangleMeshCollider>()) return triangle->GetMesh().Get();
         return nullptr;
     }
 
@@ -670,23 +699,23 @@ public:
     {
         uint64 hash = 0xCBF29CE484222325ull;
         hash = MixHash(hash, static_cast<uint32>(collider.GetGeometryType()));
-        hash = MixHash(hash, collider.isTrigger);
-        hash = MixFloat(hash, collider.staticFriction);
-        hash = MixFloat(hash, collider.dynamicFriction);
-        hash = MixFloat(hash, collider.restitution);
+        hash = MixHash(hash, collider.GetIsTrigger());
+        hash = MixFloat(hash, collider.GetStaticFriction());
+        hash = MixFloat(hash, collider.GetDynamicFriction());
+        hash = MixFloat(hash, collider.GetRestitution());
 
         if (const BoxCollider* box = collider.Cast<BoxCollider>())
         {
-            hash = MixVector(hash, box->halfExtents);
+            hash = MixVector(hash, box->GetHalfExtents());
         }
         else if (const SphereCollider* sphere = collider.Cast<SphereCollider>())
         {
-            hash = MixFloat(hash, sphere->radius);
+            hash = MixFloat(hash, sphere->GetRadius());
         }
         else if (const CapsuleCollider* capsule = collider.Cast<CapsuleCollider>())
         {
-            hash = MixFloat(hash, capsule->radius);
-            hash = MixFloat(hash, capsule->halfHeight);
+            hash = MixFloat(hash, capsule->GetRadius());
+            hash = MixFloat(hash, capsule->GetHalfHeight());
         }
         else if (Mesh* mesh = GetColliderMesh(collider))
         {
@@ -699,15 +728,15 @@ public:
     uint64 CalculateBodyHash(const RigidBody* body) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
-        PhysicsBodyType type = body ? body->bodyType : PhysicsBodyType::Static;
+        PhysicsBodyType type = body ? body->GetBodyType() : PhysicsBodyType::Static;
         hash = MixHash(hash, static_cast<uint32>(type));
         if (body)
         {
-            hash = MixHash(hash, body->useGravity);
-            hash = MixFloat(hash, body->linearDamping);
-            hash = MixFloat(hash, body->angularDamping);
-            hash = MixHash(hash, body->continuousCollisionDetection);
-            hash = MixHash(hash, body->lockFlags);
+            hash = MixHash(hash, body->GetUseGravity());
+            hash = MixFloat(hash, body->GetLinearDamping());
+            hash = MixFloat(hash, body->GetAngularDamping());
+            hash = MixHash(hash, body->GetContinuousCollisionDetection());
+            hash = MixHash(hash, body->GetLockFlags());
         }
         return hash;
     }
@@ -763,6 +792,27 @@ public:
     //释放 Mesh 烘焙网格
     void InvalidateCookedMeshes(Mesh& mesh)
     {
+        auto users = meshNodes.find(&mesh);
+        if (users != meshNodes.end())
+        {
+            for (uint64 key : users->second)
+            {
+                uint64 owner = physicsNodes.at(key).ownerKey;
+                dirtyBodyInputs.insert(owner);
+                auto body = bodies.find(owner);
+                if (body != bodies.end())
+                {
+                    for (auto& shape : body->second->shapes)
+                    {
+                        if (shape.second->sourceMesh == &mesh)
+                        {
+                            shape.second->sourceMeshInvalidated = true;
+                        }
+                    }
+                }
+            }
+        }
+
         auto convex = convexMeshes.find(&mesh);
         if (convex != convexMeshes.end())
         {
@@ -781,19 +831,18 @@ public:
     //处理 Mesh 销毁事件
     void OnObjectDestroyed(Object* object) override
     {
-        if (!object || !object->Is(Mesh::StaticType())) return;
-
-        Mesh* mesh = static_cast<Mesh*>(object);
-        InvalidateCookedMeshes(*mesh);
-        for (auto& entry : bodies)
+        if (!object || !object->Is(Mesh::StaticType()))
         {
-            for (auto& shape : entry.second->shapes)
-            {
-                if (shape.second->sourceMesh == mesh)
-                {
-                    shape.second->sourceMeshInvalidated = true;
-                }
-            }
+            return;
+        }
+        Mesh* mesh = static_cast<Mesh*>(object);
+        changedMeshes.erase(mesh);
+        InvalidateCookedMeshes(*mesh);
+        auto users = meshNodes.find(mesh);
+        if (users != meshNodes.end())
+        {
+            dirtyNodes.insert(users->second.begin(), users->second.end());
+            meshNodes.erase(users);
         }
     }
 
@@ -801,33 +850,33 @@ public:
         uint32 layerMask, uint32 collisionMask)
     {
         PxMaterial* material = physics->createMaterial(
-            std::max(0.0f, collider.staticFriction),
-            std::max(0.0f, collider.dynamicFriction),
-            std::clamp(collider.restitution, 0.0f, 1.0f));
+            std::max(0.0f, collider.GetStaticFriction()),
+            std::max(0.0f, collider.GetDynamicFriction()),
+            std::clamp(collider.GetRestitution(), 0.0f, 1.0f));
         if (!material) return nullptr;
 
         PxShapeFlags flags = PxShapeFlag::eSCENE_QUERY_SHAPE;
-        flags |= collider.isTrigger ? PxShapeFlag::eTRIGGER_SHAPE : PxShapeFlag::eSIMULATION_SHAPE;
+        flags |= collider.GetIsTrigger() ? PxShapeFlag::eTRIGGER_SHAPE : PxShapeFlag::eSIMULATION_SHAPE;
         PxShape* shape = nullptr;
 
         ColliderGeometryType geometryType = collider.GetGeometryType();
         if (const BoxCollider* box = collider.Cast<BoxCollider>())
         {
             PxBoxGeometry geometry(
-                Positive(box->halfExtents.x * scale.x),
-                Positive(box->halfExtents.y * scale.y),
-                Positive(box->halfExtents.z * scale.z));
+                Positive(box->GetHalfExtents().x * scale.x),
+                Positive(box->GetHalfExtents().y * scale.y),
+                Positive(box->GetHalfExtents().z * scale.z));
             shape = physics->createShape(geometry, *material, true, flags);
         }
         else if (const SphereCollider* sphere = collider.Cast<SphereCollider>())
         {
             float32 uniformScale = std::max({ Positive(scale.x), Positive(scale.y), Positive(scale.z) });
-            shape = physics->createShape(PxSphereGeometry(Positive(sphere->radius * uniformScale)), *material, true, flags);
+            shape = physics->createShape(PxSphereGeometry(Positive(sphere->GetRadius() * uniformScale)), *material, true, flags);
         }
         else if (const CapsuleCollider* capsule = collider.Cast<CapsuleCollider>())
         {
             float32 radialScale = std::max(Positive(scale.x), Positive(scale.z));
-            PxCapsuleGeometry geometry(Positive(capsule->radius * radialScale), Positive(capsule->halfHeight * scale.y));
+            PxCapsuleGeometry geometry(Positive(capsule->GetRadius() * radialScale), Positive(capsule->GetHalfHeight() * scale.y));
             shape = physics->createShape(geometry, *material, true, flags);
         }
         else if (Mesh* mesh = GetColliderMesh(collider))
@@ -877,7 +926,7 @@ public:
     std::unique_ptr<BodyRecord> CreateBody(Ens& ens, RigidBody* body, uint64 configurationHash)
     {
         Transform& transform = *ens.Transform();
-        PhysicsBodyType bodyType = body ? body->bodyType : PhysicsBodyType::Static;
+        PhysicsBodyType bodyType = body ? body->GetBodyType() : PhysicsBodyType::Static;
         if (bodyType != PhysicsBodyType::Static && ens.GetStatic())
         {
             ReportStaticDrive(ens.GetId());
@@ -908,24 +957,25 @@ public:
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(actor);
             bool kinematic = bodyType == PhysicsBodyType::Kinematic;
             dynamic->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
-            dynamic->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, body && !body->useGravity);
-            dynamic->setLinearDamping(body ? std::max(0.0f, body->linearDamping) : 0.05f);
-            dynamic->setAngularDamping(body ? std::max(0.0f, body->angularDamping) : 0.05f);
-            dynamic->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, body && body->continuousCollisionDetection && !kinematic);
-            dynamic->setRigidDynamicLockFlags(PxRigidDynamicLockFlags(body ? static_cast<PxU8>(body->lockFlags & 0x3Fu) : 0));
+            dynamic->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, body && !body->GetUseGravity());
+            dynamic->setLinearDamping(body ? std::max(0.0f, body->GetLinearDamping()) : 0.05f);
+            dynamic->setAngularDamping(body ? std::max(0.0f, body->GetAngularDamping()) : 0.05f);
+            dynamic->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, body && body->GetContinuousCollisionDetection() && !kinematic);
+            dynamic->setRigidDynamicLockFlags(PxRigidDynamicLockFlags(body ? static_cast<PxU8>(body->GetLockFlags() & 0x3Fu) : 0));
             if (!kinematic)
             {
-                float32 mass = body ? Positive(body->mass) : 1.0f;
+                float32 mass = body ? Positive(body->GetMass()) : 1.0f;
                 dynamic->setMass(mass);
                 dynamic->setMassSpaceInertiaTensor(PxVec3(mass));
-                dynamic->setLinearVelocity(body ? ToPx(body->linearVelocity) : PxVec3(0.0f), false);
-                dynamic->setAngularVelocity(body ? ToPx(body->angularVelocity) : PxVec3(0.0f), false);
+                dynamic->setLinearVelocity(body ? ToPx(body->GetLinearVelocity()) : PxVec3(0.0f), false);
+                dynamic->setAngularVelocity(body ? ToPx(body->GetAngularVelocity()) : PxVec3(0.0f), false);
             }
         }
         scene->addActor(*actor);
         record->lastPosition = transform.GetWorldPosition();
         record->lastRotation = transform.GetWorldRotation();
         record->lastPoseValid = true;
+        record->transformRevision = transform.GetWorldTransformRevision();
         return record;
     }
 
@@ -947,7 +997,8 @@ public:
             entry.second->seen = false;
         }
         Transform& bodyTransform = *input.ens->Transform();
-        PxTransform inverseBody = PxTransform(ToPx(bodyTransform.GetWorldPosition()), ToPx(bodyTransform.GetWorldRotation())).getInverse();
+        PxTransform inverseBody(PxIdentity);
+        bool inverseBodyReady = false;
         bool massChanged = false;
         bool filtersChanged = false;
         for (auto [collider, poseHash] : input.colliders)
@@ -1007,10 +1058,16 @@ public:
             }
 
             //仅在局部变换链或中心变化时换算相对位姿
-            uint64 localPoseHash = poseHash ? MixVector(poseHash, collider->center) : 0;
+            uint64 localPoseHash = poseHash ? MixVector(poseHash, collider->GetCenter()) : 0;
             if (created || localPoseHash == 0 || entry.poseHash != localPoseHash)
             {
-                vector3 center = RenderMath::TransformPoint(transform.GetWorldMatrix(), collider->center);
+                //按需计算形状所属 Actor 的逆变换
+                if (!inverseBodyReady)
+                {
+                    inverseBody = PxTransform(ToPx(bodyTransform.GetWorldPosition()), ToPx(bodyTransform.GetWorldRotation())).getInverse();
+                    inverseBodyReady = true;
+                }
+                vector3 center = RenderMath::TransformPoint(transform.GetWorldMatrix(), collider->GetCenter());
                 PxQuat rotation = ToPx(transform.GetWorldRotation());
                 if (collider->GetGeometryType() == ColliderGeometryType::Capsule)
                 {
@@ -1050,17 +1107,17 @@ public:
 
         //比较当前质量分布设置
         const RigidBody& body = *input.body;
-        uint64 massHash = MixFloat(0xCBF29CE484222325ull, body.mass);
-        massHash = MixHash(massHash, body.automaticCenterOfMass);
-        massHash = MixHash(massHash, body.automaticInertiaTensor);
-        if (!body.automaticCenterOfMass)
+        uint64 massHash = MixFloat(0xCBF29CE484222325ull, body.GetMass());
+        massHash = MixHash(massHash, body.GetAutomaticCenterOfMass());
+        massHash = MixHash(massHash, body.GetAutomaticInertiaTensor());
+        if (!body.GetAutomaticCenterOfMass())
         {
-            massHash = MixVector(massHash, body.centerOfMass);
+            massHash = MixVector(massHash, body.GetCenterOfMass());
         }
-        if (!body.automaticInertiaTensor)
+        if (!body.GetAutomaticInertiaTensor())
         {
-            massHash = MixVector(massHash, body.inertiaTensor);
-            const quaternion& rotation = body.inertiaTensorRotation;
+            massHash = MixVector(massHash, body.GetInertiaTensor());
+            const quaternion& rotation = body.GetInertiaTensorRotation();
             massHash = MixFloat(massHash, rotation.x);
             massHash = MixFloat(massHash, rotation.y);
             massHash = MixFloat(massHash, rotation.z);
@@ -1071,16 +1128,16 @@ public:
         if (massChanged || record.massPropertiesHash != massHash)
         {
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record.actor);
-            float32 mass = Positive(body.mass);
-            PxVec3 manualCenter = ToPx(body.centerOfMass);
+            float32 mass = Positive(body.GetMass());
+            PxVec3 manualCenter = ToPx(body.GetCenterOfMass());
             bool hasSimulationShape = false;
             for (const auto& entry : record.shapes)
             {
                 hasSimulationShape |= entry.second->shape->getFlags().isSet(PxShapeFlag::eSIMULATION_SHAPE);
             }
-            bool calculate = hasSimulationShape && (body.automaticCenterOfMass || body.automaticInertiaTensor);
+            bool calculate = hasSimulationShape && (body.GetAutomaticCenterOfMass() || body.GetAutomaticInertiaTensor());
             if (!calculate || !PxRigidBodyExt::setMassAndUpdateInertia(*dynamic, mass,
-                body.automaticCenterOfMass ? nullptr : &manualCenter))
+                body.GetAutomaticCenterOfMass() ? nullptr : &manualCenter))
             {
                 dynamic->setMass(mass);
                 dynamic->setCMassLocalPose(PxTransform(PxIdentity));
@@ -1089,17 +1146,17 @@ public:
 
             //应用手动设置并保留自动计算的另一部分
             PxTransform massPose = dynamic->getCMassLocalPose();
-            if (!body.automaticCenterOfMass)
+            if (!body.GetAutomaticCenterOfMass())
             {
                 massPose.p = manualCenter;
             }
-            if (!body.automaticInertiaTensor)
+            if (!body.GetAutomaticInertiaTensor())
             {
-                massPose.q = ToPx(body.inertiaTensorRotation);
+                massPose.q = ToPx(body.GetInertiaTensorRotation());
                 dynamic->setMassSpaceInertiaTensor(PxVec3(
-                    std::max(body.inertiaTensor.x, MinimumDimension),
-                    std::max(body.inertiaTensor.y, MinimumDimension),
-                    std::max(body.inertiaTensor.z, MinimumDimension)));
+                    std::max(body.GetInertiaTensor().x, MinimumDimension),
+                    std::max(body.GetInertiaTensor().y, MinimumDimension),
+                    std::max(body.GetInertiaTensor().z, MinimumDimension)));
             }
             dynamic->setCMassLocalPose(massPose);
             record.massPropertiesHash = massHash;
@@ -1295,6 +1352,17 @@ public:
     //同步所属刚体位姿、速度与脚本累积力
     void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform, bool queryOnly = false)
     {
+        //跳过世界变换未变化的静态 Actor
+        if (record.bodyType == PhysicsBodyType::Static)
+        {
+            uint64 revision = transform.GetWorldTransformRevision();
+            if (record.lastPoseValid && record.transformRevision == revision)
+            {
+                return;
+            }
+            record.transformRevision = revision;
+        }
+
         PxTransform pose(ToPx(transform.GetWorldPosition()), ToPx(transform.GetWorldRotation()));
         //查询模式只把位姿写进场景，不设 kinematicTarget、不写速度、不施力也不清累积力
         if (queryOnly)
@@ -1325,8 +1393,8 @@ public:
                 }
                 if (body)
                 {
-                    dynamic->setLinearVelocity(ToPx(body->linearVelocity), false);
-                    dynamic->setAngularVelocity(ToPx(body->angularVelocity), false);
+                    dynamic->setLinearVelocity(ToPx(body->GetLinearVelocity()), false);
+                    dynamic->setAngularVelocity(ToPx(body->GetAngularVelocity()), false);
 
                     //施加脚本累积的力/力矩，然后清零；下一物理步积分。
                     if (body->pendingForce.x != 0.0f || body->pendingForce.y != 0.0f || body->pendingForce.z != 0.0f)
@@ -1345,6 +1413,106 @@ public:
         record.lastPosition = transform.GetWorldPosition();
         record.lastRotation = transform.GetWorldRotation();
         record.lastPoseValid = true;
+    }
+
+    //登记物理节点的配置与位姿变化
+    void MarkNodeDirty(uint64 key)
+    {
+        if (physicsNodes.contains(key))
+        {
+            dirtyNodes.insert(key);
+        }
+    }
+
+    //解除节点的网格订阅
+    void RemoveMeshDependencies(uint64 key, PhysicsNode& node)
+    {
+        for (Mesh* mesh : node.meshes)
+        {
+            auto found = meshNodes.find(mesh);
+            if (found != meshNodes.end())
+            {
+                found->second.erase(key);
+                if (found->second.empty())
+                {
+                    meshNodes.erase(found);
+                }
+            }
+        }
+        node.meshes.clear();
+        for (uint64 id : node.meshIds)
+        {
+            auto found = meshIdNodes.find(id);
+            if (found != meshIdNodes.end())
+            {
+                found->second.erase(key);
+                if (found->second.empty())
+                {
+                    meshIdNodes.erase(found);
+                }
+            }
+        }
+        node.meshIds.clear();
+    }
+
+    //更新变更节点的网格订阅
+    void RefreshMeshDependencies(uint64 key, PhysicsNode& node)
+    {
+        RemoveMeshDependencies(key, node);
+        for (Collider* collider : node.colliders)
+        {
+            const Ref<Mesh>* reference = nullptr;
+            if (auto* convex = collider->Cast<ConvexMeshCollider>())
+            {
+                reference = &convex->GetMesh();
+            }
+            else if (auto* triangle = collider->Cast<TriangleMeshCollider>())
+            {
+                reference = &triangle->GetMesh();
+            }
+            if (reference && reference->GetInstanceId().IsValid())
+            {
+                uint64 id = reference->GetInstanceId().GetHash();
+                if (std::find(node.meshIds.begin(), node.meshIds.end(), id) == node.meshIds.end())
+                {
+                    node.meshIds.push_back(id);
+                    meshIdNodes[id].insert(key);
+                }
+            }
+            Mesh* mesh = GetColliderMesh(*collider);
+            if (mesh && std::find(node.meshes.begin(), node.meshes.end(), mesh) == node.meshes.end())
+            {
+                node.meshes.push_back(mesh);
+                meshNodes[mesh].insert(key);
+            }
+        }
+    }
+
+    //登记节点激活状态变化
+    void OnEnsWorldActiveChanged(EnsId ens, bool active) override
+    {
+        (void)active;
+        MarkNodeDirty(EnsKey(ens));
+    }
+
+    //登记变换子树中的物理节点
+    void OnTransformChanged(World& currentWorld, EnsId ens, TransformChangeSource source) override
+    {
+        (void)currentWorld;
+        (void)source;
+        auto found = physicsDependents.find(EnsKey(ens));
+        if (found == physicsDependents.end())
+        {
+            return;
+        }
+        for (uint64 key : found->second)
+        {
+            const PhysicsNode& node = physicsNodes.at(key);
+            if (!writingPhysicsPoses || node.ownerKey != EnsKey(ens))
+            {
+                dirtyNodes.insert(key);
+            }
+        }
     }
 
     //标记受指定层级节点影响的刚体归属
@@ -1409,6 +1577,11 @@ public:
             ++node.wheelCount;
         }
         dirtyOwnership.insert(key);
+        dirtyNodes.insert(key);
+        if (heightField)
+        {
+            heightFieldNodes.insert(key);
+        }
         if (body)
         {
             InvalidateBodyOwnership(component.GetEnsId());
@@ -1426,6 +1599,9 @@ public:
         }
 
         PhysicsNode& node = found->second;
+        dirtyOwnership.insert(key);
+        dirtyNodes.insert(key);
+        dirtyBodyInputs.insert(node.ownerKey);
         if (node.body == &component)
         {
             node.body = nullptr;
@@ -1434,6 +1610,10 @@ public:
         if (node.heightField == &component)
         {
             node.heightField = node.ens->GetComponent<HeightField>();
+            if (!node.heightField)
+            {
+                heightFieldNodes.erase(key);
+            }
         }
         if (component.Is(WheelCollider::StaticType()))
         {
@@ -1443,6 +1623,14 @@ public:
         if (!node.body && !node.heightField && node.colliders.empty() && node.wheelCount == 0)
         {
             RemovePhysicsDependencies(key, node);
+            RemoveMeshDependencies(key, node);
+            auto members = bodyNodes.find(node.ownerKey);
+            if (members != bodyNodes.end())
+            {
+                members->second.erase(key);
+            }
+            dirtyNodes.erase(key);
+            heightFieldNodes.erase(key);
             dirtyOwnership.erase(key);
             attachedBodies.erase(key);
             physicsNodes.erase(found);
@@ -1478,6 +1666,7 @@ public:
         world = &currentWorld;
         worldContentRevision = currentWorld.GetContentRevision();
         currentWorld.AddLifecycleListener(this);
+        currentWorld.AddTransformListener(this);
         currentWorld.ForEachEns([&](Ens& ens)
         {
             for (Component* component : ens.GetComponents())
@@ -1493,6 +1682,11 @@ public:
         for (uint64 key : dirtyOwnership)
         {
             PhysicsNode& node = physicsNodes.at(key);
+            if (node.ownerKey)
+            {
+                bodyNodes[node.ownerKey].erase(key);
+                dirtyBodyInputs.insert(node.ownerKey);
+            }
             RemovePhysicsDependencies(key, node);
             node.attachedBody = nullptr;
             node.bodyDepth = 0;
@@ -1508,6 +1702,10 @@ public:
                 physicsDependents[EnsKey(ancestor->GetId())].insert(key);
             }
             attachedBodies[key] = node.attachedBody ? node.attachedBody->GetEnsId() : EnsId();
+            node.ownerKey = node.attachedBody ? EnsKey(node.attachedBody->GetEnsId()) : key;
+            bodyNodes[node.ownerKey].insert(key);
+            dirtyNodes.insert(key);
+            dirtyBodyInputs.insert(node.ownerKey);
         }
         dirtyOwnership.clear();
     }
@@ -1525,7 +1723,9 @@ public:
         node.poseHash = 0;
         if (!node.attachedBody)
         {
-            return 0;
+            //缓存独立静态碰撞体的世界变换版本
+            node.poseHash = MixHash(0xCBF29CE484222325ull, revision);
+            return node.poseHash;
         }
         Transform& bodyTransform = *node.attachedBody->GetEns()->Transform();
         if (!bodyTransform.parent.IsNull())
@@ -1547,138 +1747,220 @@ public:
         return hash;
     }
 
-    //按登记的物理组件同步复合刚体
-    void SyncBodies(bool queryOnly = false)
+    //重建发生变化的所属 Actor 输入
+    bool RebuildBodyInput(uint64 ownerKey)
     {
-        for (auto& entry : bodyInputs)
+        BodyInput input;
+        auto members = bodyNodes.find(ownerKey);
+        if (members != bodyNodes.end())
         {
-            entry.second.ens = nullptr;
-            entry.second.body = nullptr;
-            entry.second.colliders.clear();
-        }
-        std::unordered_set<uint64> heightFieldSeen;
-        std::unordered_set<Mesh*> dirtyMeshes;
-        {
-            PROFILE("Physics/Bodies/RefreshOwnership");
-            RefreshBodyOwnership();
-        }
-        {
-            PROFILE("Physics/Bodies/CollectComponents");
-            for (auto& entry : physicsNodes)
+            for (uint64 key : members->second)
             {
-                PhysicsNode& node = entry.second;
+                PhysicsNode& node = physicsNodes.at(key);
                 Ens& ens = *node.ens;
                 if (!ens.GetWorldActive())
                 {
                     continue;
                 }
-                Transform& transform = *ens.Transform();
-                RigidBody* ownBody = node.body;
-                RigidBody* attachedBody = node.attachedBody;
-
-                //同步独立高度场
-                HeightField* heightField = node.heightField;
-                if (heightField && heightField->enabled && (!ownBody || (ownBody->enabled && ownBody->bodyType == PhysicsBodyType::Static)))
-                {
-                    heightFieldSeen.insert(entry.first);
-                    SyncHeightField(*heightField, transform, entry.first, ens.GetLayerMask(), LayerSettings::GetCollisionMask(ens.GetLayer()));
-                }
-                if (attachedBody && (!attachedBody->enabled || !attachedBody->GetEns()->GetWorldActive()))
+                RigidBody* body = node.attachedBody;
+                if (body && (!body->GetEnabled() || !body->GetEns()->GetWorldActive()))
                 {
                     continue;
                 }
-
-                //收集刚体与独立静态形状
-                if (ownBody)
+                if (node.body)
                 {
-                    BodyInput& input = bodyInputs[entry.first];
                     input.ens = &ens;
-                    input.body = ownBody;
+                    input.body = node.body;
                 }
-                uint64 poseHash = node.colliders.empty() ? 0 : GetColliderPoseHash(node, transform);
+                uint64 poseHash = node.colliders.empty() ? 0 : GetColliderPoseHash(node, *ens.Transform());
                 for (Collider* collider : node.colliders)
                 {
-                    if (!collider->enabled)
+                    if (!collider->GetEnabled())
                     {
                         continue;
                     }
-                    Ens* owner = attachedBody ? attachedBody->GetEns() : &ens;
-                    BodyInput& input = bodyInputs[EnsKey(owner->GetId())];
-                    input.ens = owner;
-                    input.body = attachedBody;
+                    input.ens = body ? body->GetEns() : &ens;
+                    input.body = body;
                     input.colliders.emplace_back(collider, poseHash);
-                    Mesh* mesh = GetColliderMesh(*collider);
-                    if (mesh && mesh->IsDirty(MeshDirtyFlags::Physics))
+                }
+            }
+        }
+        if (input.ens)
+        {
+            bodyInputs.insert_or_assign(ownerKey, std::move(input));
+            return true;
+        }
+
+        //释放失去活动组件的 Actor
+        bodyInputs.erase(ownerKey);
+        dynamicBodies.erase(ownerKey);
+        motionInputs.erase(ownerKey);
+        auto body = bodies.find(ownerKey);
+        if (body != bodies.end())
+        {
+            DestroyBody(*body->second);
+            bodies.erase(body);
+        }
+        if (members != bodyNodes.end() && members->second.empty())
+        {
+            bodyNodes.erase(members);
+        }
+        return false;
+    }
+
+    //按事件队列同步形状配置与运动输入
+    void SyncBodies(bool queryOnly = false)
+    {
+        //刷新全局碰撞矩阵变更
+        bool layersChanged = false;
+        for (uint32 layer = 0; layer < 32; ++layer)
+        {
+            uint32 mask = LayerSettings::GetCollisionMask(layer);
+            layersChanged |= collisionMasks[layer] != mask;
+            collisionMasks[layer] = mask;
+        }
+        if (layersChanged)
+        {
+            for (const auto& entry : physicsNodes)
+            {
+                dirtyNodes.insert(entry.first);
+            }
+        }
+        {
+            PROFILE("Physics/Bodies/RefreshOwnership");
+            RefreshBodyOwnership();
+        }
+
+        std::unordered_set<Mesh*> dirtyMeshes;
+        dirtyMeshes.swap(changedMeshes);
+        {
+            PROFILE("Physics/Bodies/CollectComponents");
+            for (uint64 key : dirtyNodes)
+            {
+                auto found = physicsNodes.find(key);
+                if (found == physicsNodes.end())
+                {
+                    continue;
+                }
+                PhysicsNode& node = found->second;
+                RefreshMeshDependencies(key, node);
+                dirtyBodyInputs.insert(node.ownerKey);
+                for (Mesh* mesh : node.meshes)
+                {
+                    if (mesh->IsDirty(MeshDirtyFlags::Physics))
                     {
                         dirtyMeshes.insert(mesh);
                     }
                 }
             }
+            dirtyNodes.clear();
         }
         {
             PROFILE("Physics/Bodies/InvalidateMeshes");
-            for (Mesh* mesh : dirtyMeshes)
+            for (auto it = dirtyMeshes.begin(); it != dirtyMeshes.end();)
             {
-                InvalidateCookedMeshes(*mesh);
-            }
-        }
-        //保留 Actor，只按各形状的几何与相对变换更新
-        {
-            PROFILE("Physics/Bodies/ApplyInputs");
-            for (auto iterator = bodyInputs.begin(); iterator != bodyInputs.end();)
-            {
-                BodyInput& input = iterator->second;
-                if (!input.ens)
+                if (!(*it)->IsDirty(MeshDirtyFlags::Physics))
                 {
-                    iterator = bodyInputs.erase(iterator);
+                    it = dirtyMeshes.erase(it);
                     continue;
                 }
-                uint64 key = iterator->first;
+                InvalidateCookedMeshes(**it);
+                ++it;
+            }
+        }
+        {
+            PROFILE("Physics/Bodies/ApplyInputs");
+            for (uint64 key : dirtyBodyInputs)
+            {
+                if (!RebuildBodyInput(key))
+                {
+                    continue;
+                }
+                BodyInput& input = bodyInputs.at(key);
                 uint64 hash = CalculateBodyHash(input.body);
+                PhysicsBodyType type = input.body ? input.body->GetBodyType() : PhysicsBodyType::Static;
+                if (input.ens->GetStatic())
+                {
+                    type = PhysicsBodyType::Static;
+                }
                 auto found = bodies.find(key);
-                PhysicsBodyType type = input.body ? input.body->bodyType : PhysicsBodyType::Static;
-                if (input.ens->GetStatic()) type = PhysicsBodyType::Static;
                 if (found != bodies.end() && (found->second->configurationHash != hash || found->second->bodyType != type
                     || (type == PhysicsBodyType::Dynamic && !input.ens->Transform()->parent.IsNull())))
                 {
                     DestroyBody(*found->second);
                     bodies.erase(found);
+                    dynamicBodies.erase(key);
                     found = bodies.end();
                 }
                 if (found == bodies.end())
                 {
-                    std::unique_ptr<BodyRecord> created = CreateBody(*input.ens, input.body, hash);
-                    if (created) found = bodies.emplace(key, std::move(created)).first;
+                    auto created = CreateBody(*input.ens, input.body, hash);
+                    if (created)
+                    {
+                        found = bodies.emplace(key, std::move(created)).first;
+                    }
                 }
                 if (found != bodies.end())
                 {
+                    if (found->second->bodyType == PhysicsBodyType::Dynamic)
+                    {
+                        dynamicBodies.insert(key);
+                    }
                     SyncBodyShapes(*found->second, input, dirtyMeshes, queryOnly);
                     SyncBodyPoseAndVelocity(*found->second, input.body, *input.ens->Transform(), queryOnly);
+                    if (queryOnly && input.body)
+                    {
+                        motionInputs.insert(key);
+                    }
+                    else
+                    {
+                        motionInputs.erase(key);
+                    }
                 }
-                ++iterator;
+            }
+            dirtyBodyInputs.clear();
+
+            //只在模拟步消费脚本速度与施力
+            if (!queryOnly)
+            {
+                for (uint64 key : motionInputs)
+                {
+                    auto body = bodies.find(key);
+                    auto input = bodyInputs.find(key);
+                    if (body != bodies.end() && input != bodyInputs.end())
+                    {
+                        SyncBodyPoseAndVelocity(*body->second, input->second.body, *input->second.ens->Transform());
+                    }
+                }
+                motionInputs.clear();
+            }
+        }
+
+        //保留独立高度场现有的生成状态同步
+        std::unordered_set<uint64> heightFieldSeen;
+        for (uint64 key : heightFieldNodes)
+        {
+            PhysicsNode& node = physicsNodes.at(key);
+            Ens& ens = *node.ens;
+            HeightField* heightField = node.heightField;
+            if (ens.GetWorldActive() && heightField && heightField->enabled
+                && (!node.body || (node.body->GetEnabled() && node.body->GetBodyType() == PhysicsBodyType::Static)))
+            {
+                heightFieldSeen.insert(key);
+                SyncHeightField(*heightField, *ens.Transform(), key, ens.GetLayerMask(), LayerSettings::GetCollisionMask(ens.GetLayer()));
             }
         }
         {
             PROFILE("Physics/Bodies/ReleaseUnused");
-            for (auto iterator = bodies.begin(); iterator != bodies.end();)
+            for (auto it = heightFields.begin(); it != heightFields.end();)
             {
-                if (bodyInputs.contains(iterator->first))
+                if (heightFieldSeen.contains(it->first))
                 {
-                    ++iterator;
+                    ++it;
                     continue;
                 }
-                DestroyBody(*iterator->second);
-                iterator = bodies.erase(iterator);
-            }
-            for (auto iterator = heightFields.begin(); iterator != heightFields.end();)
-            {
-                if (heightFieldSeen.contains(iterator->first))
-                {
-                    ++iterator;
-                    continue;
-                }
-                DestroyHeightField(*iterator->second);
-                iterator = heightFields.erase(iterator);
+                DestroyHeightField(*it->second);
+                it = heightFields.erase(it);
             }
             for (Mesh* mesh : dirtyMeshes)
             {
@@ -1860,10 +2142,10 @@ public:
 
     void WriteDynamicPoses(World& currentWorld)
     {
-        for (auto& entry : bodies)
+        writingPhysicsPoses = true;
+        for (uint64 key : dynamicBodies)
         {
-            BodyRecord& record = *entry.second;
-            if (record.bodyType != PhysicsBodyType::Dynamic) continue;
+            BodyRecord& record = *bodies.at(key);
             Transform* transform = currentWorld.GetTransform(record.binding.ens);
             Ens* ens = currentWorld.GetEns(record.binding.ens);
             RigidBody* body = ens ? ens->GetComponent<RigidBody>() : nullptr;
@@ -1880,14 +2162,13 @@ public:
             }
 
             PxTransform pose = dynamic->getGlobalPose();
-            transform->SetLocalPosition(FromPx(pose.p));
-            transform->SetLocalRotation(FromPx(pose.q));
-            body->linearVelocity = FromPx(dynamic->getLinearVelocity());
-            body->angularVelocity = FromPx(dynamic->getAngularVelocity());
+            transform->WriteLocalPose(FromPx(pose.p), FromPx(pose.q));
+            body->WritePhysicsVelocities(FromPx(dynamic->getLinearVelocity()), FromPx(dynamic->getAngularVelocity()));
             record.lastPosition = transform->GetLocalPosition();
             record.lastRotation = transform->GetLocalRotation();
             record.lastPoseValid = true;
         }
+        writingPhysicsPoses = false;
     }
 
     //只同步场景查询所需的位姿：不 simulate、不 fetchResults、不写回 Transform 与速度
@@ -2359,6 +2640,48 @@ bool PhysicsSystem::InstallTriangleMesh(Mesh& mesh, const List<uint8>& bytes)
     return true;
 }
 
+//登记组件配置变化
+void PhysicsSystem::NotifyComponentChanged(Component& component)
+{
+    if (impl && impl->world == component.GetWorld())
+    {
+        impl->MarkNodeDirty(EnsKey(component.GetEnsId()));
+    }
+}
+
+//登记刚体速度与施力输入
+void PhysicsSystem::NotifyBodyInput(RigidBody& body)
+{
+    if (impl && impl->world == body.GetWorld())
+    {
+        impl->motionInputs.insert(EnsKey(body.GetEnsId()));
+    }
+}
+
+//登记 Mesh 物理几何变化
+void PhysicsSystem::NotifyMeshChanged(Mesh& mesh)
+{
+    if (!impl || !mesh.IsPublished())
+    {
+        return;
+    }
+    auto users = impl->meshIdNodes.find(mesh.GetInstanceId().GetHash());
+    if (users != impl->meshIdNodes.end())
+    {
+        impl->changedMeshes.insert(&mesh);
+        impl->dirtyNodes.insert(users->second.begin(), users->second.end());
+    }
+}
+
+//登记实体碰撞层与静态状态变化
+void PhysicsSystem::NotifyEnsChanged(World& world, EnsId ens)
+{
+    if (impl && impl->world == &world)
+    {
+        impl->MarkNodeDirty(EnsKey(ens));
+    }
+}
+
 //旋转并平移物理坐标与运动状态
 void PhysicsSystem::RebaseCoordinates(World& world, const quaternion& rotation, const vector3& translation)
 {
@@ -2370,8 +2693,8 @@ void PhysicsSystem::RebaseCoordinates(World& world, const quaternion& rotation, 
     PxTransform change(ToPx(translation), q);
     world.ForEachComponent<RigidBody>([&](RigidBody* body)
     {
-        body->linearVelocity = FromPx(q.rotate(ToPx(body->linearVelocity)));
-        body->angularVelocity = FromPx(q.rotate(ToPx(body->angularVelocity)));
+        body->WritePhysicsVelocities(FromPx(q.rotate(ToPx(body->GetLinearVelocity()))),
+            FromPx(q.rotate(ToPx(body->GetAngularVelocity()))));
         body->pendingForce = FromPx(q.rotate(ToPx(body->pendingForce)));
         body->pendingTorque = FromPx(q.rotate(ToPx(body->pendingTorque)));
     });

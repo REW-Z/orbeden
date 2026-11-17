@@ -2675,6 +2675,78 @@
       "Doc": "\u7269\u7406\u78B0\u649E\u4F53\u57FA\u7C7B\uFF1B\u5F52\u5C5E\u81EA\u8EAB\u6216\u6700\u8FD1\u7956\u5148\u7684\u521A\u4F53\uFF0C\u672A\u627E\u5230\u65F6\u4F5C\u4E3A\u72EC\u7ACB\u9759\u6001\u78B0\u649E\u4F53\n\u78B0\u649E\u5C42\u8BFB\u53D6\u6240\u5C5E Ens\uFF0C\u4EA4\u4E92\u89C4\u5219\u7531\u9879\u76EE\u78B0\u649E\u77E9\u9635\u51B3\u5B9A",
       "Members": [
         {
+          "Name": "center",
+          "Doc": "\u8BFB\u53D6 center",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const vector3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "dynamicFriction",
+          "Doc": "\u8BFB\u53D6 dynamicFriction",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "enabled",
+          "Doc": "\u8BFB\u53D6 enabled",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "isTrigger",
+          "Doc": "\u8BFB\u53D6 isTrigger",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "restitution",
+          "Doc": "\u8BFB\u53D6 restitution",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "staticFriction",
+          "Doc": "\u8BFB\u53D6 staticFriction",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "GetGeometryType",
           "Doc": "\u83B7\u53D6\u5177\u4F53\u51E0\u4F55\u7C7B\u578B\u3002",
           "IsMethod": true,
@@ -2687,78 +2759,6 @@
           "Arities": [
             0
           ]
-        },
-        {
-          "Name": "center",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "vector3",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "dynamicFriction",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "enabled",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "isTrigger",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "restitution",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "staticFriction",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
         }
       ]
     },
@@ -3734,6 +3734,186 @@
       "Doc": "\u7531 PhysicsSystem \u9A71\u52A8\u7684\u521A\u4F53\u7EC4\u4EF6",
       "Members": [
         {
+          "Name": "angularDamping",
+          "Doc": "\u8BFB\u53D6 angularDamping",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "angularVelocity",
+          "Doc": "\u8BFB\u53D6 angularVelocity",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const vector3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "automaticCenterOfMass",
+          "Doc": "\u8BFB\u53D6 automaticCenterOfMass",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "automaticInertiaTensor",
+          "Doc": "\u8BFB\u53D6 automaticInertiaTensor",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "bodyType",
+          "Doc": "\u8BFB\u53D6 bodyType",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "PhysicsBodyType",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "centerOfMass",
+          "Doc": "\u8BFB\u53D6 centerOfMass",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const vector3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "continuousCollisionDetection",
+          "Doc": "\u8BFB\u53D6 continuousCollisionDetection",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "enabled",
+          "Doc": "\u8BFB\u53D6 enabled",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "inertiaTensor",
+          "Doc": "\u8BFB\u53D6 inertiaTensor",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const vector3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "inertiaTensorRotation",
+          "Doc": "\u8BFB\u53D6 inertiaTensorRotation",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const quaternion\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "linearDamping",
+          "Doc": "\u8BFB\u53D6 linearDamping",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "linearVelocity",
+          "Doc": "\u8BFB\u53D6 linearVelocity",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const vector3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "lockFlags",
+          "Doc": "\u8BFB\u53D6 lockFlags",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "mass",
+          "Doc": "\u8BFB\u53D6 mass",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "useGravity",
+          "Doc": "\u8BFB\u53D6 useGravity",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "AddForce",
           "Doc": "\u7D2F\u79EF\u4E00\u4E2A\u4F5C\u7528\u4E8E\u8D28\u5FC3\u7684\u529B\u3002",
           "IsMethod": true,
@@ -3797,186 +3977,6 @@
           "Arities": [
             1
           ]
-        },
-        {
-          "Name": "angularDamping",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "angularVelocity",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "vector3",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "automaticCenterOfMass",
-          "Doc": "\u6839\u636E\u6240\u5C5E\u5B9E\u4F53\u78B0\u649E\u5F62\u72B6\u81EA\u52A8\u8BA1\u7B97\u91CD\u5FC3",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "automaticInertiaTensor",
-          "Doc": "\u6839\u636E\u6240\u5C5E\u5B9E\u4F53\u78B0\u649E\u5F62\u72B6\u548C\u5F53\u524D\u91CD\u5FC3\u81EA\u52A8\u8BA1\u7B97\u60EF\u91CF",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "bodyType",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "PhysicsBodyType",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "centerOfMass",
-          "Doc": "\u624B\u52A8\u91CD\u5FC3\uFF0C\u76F8\u5BF9\u521A\u4F53\u539F\u70B9\u7684\u4F4D\u7F6E\uFF0C\u4E0D\u968F Transform \u7F29\u653E",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "vector3",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "continuousCollisionDetection",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "enabled",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "inertiaTensor",
-          "Doc": "\u624B\u52A8\u4E3B\u60EF\u91CF\uFF0C\u4E09\u4E2A\u5206\u91CF\u5747\u987B\u4E3A\u6B63\uFF0C\u5355\u4F4D kg\u00B7m\u00B2",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "vector3",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "inertiaTensorRotation",
-          "Doc": "\u624B\u52A8\u60EF\u91CF\u4E3B\u8F74\u76F8\u5BF9\u521A\u4F53\u5C40\u90E8\u5750\u6807\u7CFB\u7684\u65CB\u8F6C",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "quaternion",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "linearDamping",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "linearVelocity",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "vector3",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "lockFlags",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "uint32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "mass",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "useGravity",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
         }
       ]
     },
@@ -4622,6 +4622,18 @@
       "Doc": "\u76D2\u5F62\u78B0\u649E\u4F53\u3002",
       "Members": [
         {
+          "Name": "halfExtents",
+          "Doc": "\u8BFB\u53D6 halfExtents",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const vector3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "GetGeometryType",
           "Doc": "",
           "IsMethod": true,
@@ -4634,18 +4646,6 @@
           "Arities": [
             0
           ]
-        },
-        {
-          "Name": "halfExtents",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "vector3",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
         }
       ]
     },
@@ -4662,6 +4662,30 @@
       "Doc": "\u80F6\u56CA\u5F62\u78B0\u649E\u4F53\u3002",
       "Members": [
         {
+          "Name": "halfHeight",
+          "Doc": "\u8BFB\u53D6 halfHeight",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "radius",
+          "Doc": "\u8BFB\u53D6 radius",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "GetGeometryType",
           "Doc": "",
           "IsMethod": true,
@@ -4674,30 +4698,6 @@
           "Arities": [
             0
           ]
-        },
-        {
-          "Name": "halfHeight",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "radius",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
         }
       ]
     },
@@ -4714,6 +4714,18 @@
       "Doc": "\u51F8\u5305\u7F51\u683C\u78B0\u649E\u4F53\u3002",
       "Members": [
         {
+          "Name": "mesh",
+          "Doc": "\u8BFB\u53D6 mesh",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const Ref\u003CMesh\u003E\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "GetGeometryType",
           "Doc": "",
           "IsMethod": true,
@@ -4726,18 +4738,6 @@
           "Arities": [
             0
           ]
-        },
-        {
-          "Name": "mesh",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "Ref\u003CMesh\u003E",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
         }
       ]
     },
@@ -4754,6 +4754,18 @@
       "Doc": "\u7403\u5F62\u78B0\u649E\u4F53\u3002",
       "Members": [
         {
+          "Name": "radius",
+          "Doc": "\u8BFB\u53D6 radius",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "GetGeometryType",
           "Doc": "",
           "IsMethod": true,
@@ -4766,18 +4778,6 @@
           "Arities": [
             0
           ]
-        },
-        {
-          "Name": "radius",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
         }
       ]
     },
@@ -4793,6 +4793,18 @@
       "IsComponent": true,
       "Doc": "\u4E09\u89D2\u7F51\u683C\u78B0\u649E\u4F53\u3002",
       "Members": [
+        {
+          "Name": "mesh",
+          "Doc": "\u8BFB\u53D6 mesh",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "const Ref\u003CMesh\u003E\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
         {
           "Name": "ApplyPreparedMesh",
           "Doc": "\u63D0\u4EA4\u540E\u53F0\u7ED3\u679C\uFF0C\u8FD4\u56DE\u7B49\u5F85\u3001\u6210\u529F\u6216\u5931\u8D25",
@@ -4848,18 +4860,6 @@
           "Arities": [
             0
           ]
-        },
-        {
-          "Name": "mesh",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "Ref\u003CMesh\u003E",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
         }
       ]
     },

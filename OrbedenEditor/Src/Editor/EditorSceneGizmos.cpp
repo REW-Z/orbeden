@@ -1,4 +1,4 @@
-﻿#include "Editor/EditorSceneGizmos.h"
+#include "Editor/EditorSceneGizmos.h"
 #include "Editor/EditorScene.h"
 #include "Physics/PhysicsSystem.h"
 #include "Rendering/RenderMath.h"
@@ -294,14 +294,14 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
             }
             Collider* collider = component->Cast<Collider>();
             if (!collider) continue;
-            sink.ink = active && collider->enabled ? IM_COL32(90, 230, 135, selected ? 245 : 130) : IM_COL32(105, 155, 120, 140);
+            sink.ink = active && collider->GetEnabled() ? IM_COL32(90, 230, 135, selected ? 245 : 130) : IM_COL32(105, 155, 120, 140);
             sink.thickness = selected ? 1.5f : 1.0f;
-            vector3 center = RenderMath::TransformPoint(rotation, {collider->center.x * scale.x, collider->center.y * scale.y, collider->center.z * scale.z});
+            vector3 center = RenderMath::TransformPoint(rotation, {collider->GetCenter().x * scale.x, collider->GetCenter().y * scale.y, collider->GetCenter().z * scale.z});
             center = Offset(transform->GetWorldPosition(), center, 1);
             matrix4x4 pose = RenderMath::TRS(center, transform->GetWorldRotation(), {1,1,1});
             if (BoxCollider* box = collider->Cast<BoxCollider>())
             {
-                vector3 extent{std::max(std::abs(box->halfExtents.x * scale.x), 0.001f), std::max(std::abs(box->halfExtents.y * scale.y), 0.001f), std::max(std::abs(box->halfExtents.z * scale.z), 0.001f)};
+                vector3 extent{std::max(std::abs(box->GetHalfExtents().x * scale.x), 0.001f), std::max(std::abs(box->GetHalfExtents().y * scale.y), 0.001f), std::max(std::abs(box->GetHalfExtents().z * scale.z), 0.001f)};
                 vector3 corners[8];
                 for (int32 index = 0; index < 8; ++index)
                     corners[index] = RenderMath::TransformPoint(pose, {(index&1)?extent.x:-extent.x, (index&2)?extent.y:-extent.y, (index&4)?extent.z:-extent.z});
@@ -310,15 +310,15 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
             }
             else if (SphereCollider* sphere = collider->Cast<SphereCollider>())
             {
-                float32 radius = std::max(std::abs(sphere->radius) * std::max({scale.x, scale.y, scale.z, 0.001f}), 0.001f);
+                float32 radius = std::max(std::abs(sphere->GetRadius()) * std::max({scale.x, scale.y, scale.z, 0.001f}), 0.001f);
                 sink.Arc(pose, {}, {1,0,0}, {0,1,0}, radius);
                 sink.Arc(pose, {}, {1,0,0}, {0,0,1}, radius);
                 sink.Arc(pose, {}, {0,1,0}, {0,0,1}, radius);
             }
             else if (CapsuleCollider* capsule = collider->Cast<CapsuleCollider>())
             {
-                float32 radius = std::max(std::abs(capsule->radius) * std::max({scale.x, scale.z, 0.001f}), 0.001f);
-                float32 half = std::max(std::abs(capsule->halfHeight * scale.y), 0.001f);
+                float32 radius = std::max(std::abs(capsule->GetRadius()) * std::max({scale.x, scale.z, 0.001f}), 0.001f);
+                float32 half = std::max(std::abs(capsule->GetHalfHeight() * scale.y), 0.001f);
                 for (float32 sign : {-1.0f, 1.0f})
                 {
                     sink.Arc(pose, {0, sign * half, 0}, {1,0,0}, {0,0,1}, radius);
@@ -331,8 +331,8 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
             else
             {
                 bool convex = collider->Is(ConvexMeshCollider::StaticType());
-                Mesh* mesh = convex ? static_cast<ConvexMeshCollider*>(collider)->mesh.Get()
-                    : collider->Is(TriangleMeshCollider::StaticType()) ? static_cast<TriangleMeshCollider*>(collider)->mesh.Get() : nullptr;
+                Mesh* mesh = convex ? static_cast<ConvexMeshCollider*>(collider)->GetMesh().Get()
+                    : collider->Is(TriangleMeshCollider::StaticType()) ? static_cast<TriangleMeshCollider*>(collider)->GetMesh().Get() : nullptr;
                 if (!mesh) continue;
                 uint64 hash = 1469598103934665603ull;
                 for (const vector3& vertex : mesh->vertices)

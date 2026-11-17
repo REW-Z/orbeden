@@ -1298,11 +1298,11 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
 
                 if (ConvexMeshCollider* convex = collider->Cast<ConvexMeshCollider>())
                 {
-                    ResourceManager::MarkObjectGraph(convex->mesh.Get(), marked);
+                    ResourceManager::MarkObjectGraph(convex->GetMesh().Get(), marked);
                 }
                 else if (TriangleMeshCollider* triangle = collider->Cast<TriangleMeshCollider>())
                 {
-                    ResourceManager::MarkObjectGraph(triangle->mesh.Get(), marked);
+                    ResourceManager::MarkObjectGraph(triangle->GetMesh().Get(), marked);
                 }
             }
         });
