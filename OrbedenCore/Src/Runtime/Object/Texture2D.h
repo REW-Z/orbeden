@@ -68,6 +68,9 @@ public:
     //按纹理开启 GPU 多级缩小过滤
     ORBEDEN_BIND_CHANGED(MarkDirty)
     bool generateMipmaps = false;
+    //硬件各向异性过滤倍数，1 为关闭，后端按设备上限限制
+    ORBEDEN_BIND_CHANGED(MarkDirty)
+    int32 anisotropy = 1;
     //Alpha 语义；画布输出必须是预乘，普通图片保持直通。
     ORBEDEN_BIND_CHANGED(MarkDirty)
     TextureAlphaMode alphaMode = TextureAlphaMode::Straight;

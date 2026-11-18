@@ -4044,13 +4044,37 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_13(int32 objectId, int32*
     {
         auto* instance = NativeBindings::Require<Texture2D>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<int32>(instance->channels);
+        *result = static_cast<int32>(instance->anisotropy);
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
 NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_14(int32 objectId, int32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Texture2D>(objectId);
+        instance->anisotropy = value;
+        instance->MarkDirty();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_15(int32 objectId, int32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Texture2D>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<int32>(instance->channels);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_16(int32 objectId, int32 value)
 {
     try
     {
@@ -4062,7 +4086,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_14(int32 objectId, int32 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_15(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_17(int32 objectId, uint32* result)
 {
     try
     {
@@ -4074,7 +4098,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_15(int32 objectId, uint32
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_16(int32 objectId, uint32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_18(int32 objectId, uint32 value)
 {
     try
     {
@@ -4086,7 +4110,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_16(int32 objectId, uint32
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_17(int32 objectId, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_19(int32 objectId, int32* result)
 {
     try
     {
@@ -4098,7 +4122,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_17(int32 objectId, int32*
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_18(int32 objectId, int32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_20(int32 objectId, int32 value)
 {
     try
     {
@@ -4110,7 +4134,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_18(int32 objectId, int32 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_19(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_21(int32 objectId, uint8* result)
 {
     try
     {
@@ -4122,7 +4146,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_19(int32 objectId, uint8*
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_20(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_22(int32 objectId, uint8 value)
 {
     try
     {
@@ -4134,7 +4158,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_20(int32 objectId, uint8 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_21(int32 objectId, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_23(int32 objectId, int32* result)
 {
     try
     {
@@ -4146,7 +4170,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_21(int32 objectId, int32*
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_22(int32 objectId, int32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_24(int32 objectId, int32 value)
 {
     try
     {
@@ -4158,7 +4182,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_22(int32 objectId, int32 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_23(int32 objectId, NativeBindingBuffer* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_25(int32 objectId, NativeBindingBuffer* result)
 {
     try
     {
@@ -4170,7 +4194,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_23(int32 objectId, Native
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_24(int32 objectId, NativeBindingSlice value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_26(int32 objectId, NativeBindingSlice value)
 {
     try
     {
@@ -4184,7 +4208,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_24(int32 objectId, Native
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_25(int32 objectId, NativeBindingBuffer* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_27(int32 objectId, NativeBindingBuffer* result)
 {
     try
     {
@@ -4196,7 +4220,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_25(int32 objectId, Native
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_26(int32 objectId, NativeBindingSlice value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_28(int32 objectId, NativeBindingSlice value)
 {
     try
     {
@@ -4210,7 +4234,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_26(int32 objectId, Native
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_27(int32 objectId, uint64* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_29(int32 objectId, uint64* result)
 {
     try
     {
@@ -4222,7 +4246,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_27(int32 objectId, uint64
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_28(int32 objectId, uint64 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_30(int32 objectId, uint64 value)
 {
     try
     {
@@ -4233,7 +4257,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_28(int32 objectId, uint64
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_29(int32 objectId, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_31(int32 objectId, int32* result)
 {
     try
     {
@@ -4245,7 +4269,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_29(int32 objectId, int32*
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_30(int32 objectId, int32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Texture2D_32(int32 objectId, int32 value)
 {
     try
     {
@@ -7721,8 +7745,8 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(Skybox::StaticType(), 5502695681722555340ULL, { functions_Skybox, 12 });
     static void* functions_TextResource[] = { reinterpret_cast<void*>(&Call_TextResource_0), reinterpret_cast<void*>(&Call_TextResource_1) };
     NativeBindings::Register(TextResource::StaticType(), 11768548724227209485ULL, { functions_TextResource, 2 });
-    static void* functions_Texture2D[] = { reinterpret_cast<void*>(&Call_Texture2D_0), reinterpret_cast<void*>(&Call_Texture2D_1), reinterpret_cast<void*>(&Call_Texture2D_2), reinterpret_cast<void*>(&Call_Texture2D_3), reinterpret_cast<void*>(&Call_Texture2D_4), reinterpret_cast<void*>(&Call_Texture2D_5), reinterpret_cast<void*>(&Call_Texture2D_6), reinterpret_cast<void*>(&Call_Texture2D_7), reinterpret_cast<void*>(&Call_Texture2D_8), reinterpret_cast<void*>(&Call_Texture2D_9), reinterpret_cast<void*>(&Call_Texture2D_10), reinterpret_cast<void*>(&Call_Texture2D_11), reinterpret_cast<void*>(&Call_Texture2D_12), reinterpret_cast<void*>(&Call_Texture2D_13), reinterpret_cast<void*>(&Call_Texture2D_14), reinterpret_cast<void*>(&Call_Texture2D_15), reinterpret_cast<void*>(&Call_Texture2D_16), reinterpret_cast<void*>(&Call_Texture2D_17), reinterpret_cast<void*>(&Call_Texture2D_18), reinterpret_cast<void*>(&Call_Texture2D_19), reinterpret_cast<void*>(&Call_Texture2D_20), reinterpret_cast<void*>(&Call_Texture2D_21), reinterpret_cast<void*>(&Call_Texture2D_22), reinterpret_cast<void*>(&Call_Texture2D_23), reinterpret_cast<void*>(&Call_Texture2D_24), reinterpret_cast<void*>(&Call_Texture2D_25), reinterpret_cast<void*>(&Call_Texture2D_26), reinterpret_cast<void*>(&Call_Texture2D_27), reinterpret_cast<void*>(&Call_Texture2D_28), reinterpret_cast<void*>(&Call_Texture2D_29), reinterpret_cast<void*>(&Call_Texture2D_30) };
-    NativeBindings::Register(Texture2D::StaticType(), 14515963638923589657ULL, { functions_Texture2D, 31 });
+    static void* functions_Texture2D[] = { reinterpret_cast<void*>(&Call_Texture2D_0), reinterpret_cast<void*>(&Call_Texture2D_1), reinterpret_cast<void*>(&Call_Texture2D_2), reinterpret_cast<void*>(&Call_Texture2D_3), reinterpret_cast<void*>(&Call_Texture2D_4), reinterpret_cast<void*>(&Call_Texture2D_5), reinterpret_cast<void*>(&Call_Texture2D_6), reinterpret_cast<void*>(&Call_Texture2D_7), reinterpret_cast<void*>(&Call_Texture2D_8), reinterpret_cast<void*>(&Call_Texture2D_9), reinterpret_cast<void*>(&Call_Texture2D_10), reinterpret_cast<void*>(&Call_Texture2D_11), reinterpret_cast<void*>(&Call_Texture2D_12), reinterpret_cast<void*>(&Call_Texture2D_13), reinterpret_cast<void*>(&Call_Texture2D_14), reinterpret_cast<void*>(&Call_Texture2D_15), reinterpret_cast<void*>(&Call_Texture2D_16), reinterpret_cast<void*>(&Call_Texture2D_17), reinterpret_cast<void*>(&Call_Texture2D_18), reinterpret_cast<void*>(&Call_Texture2D_19), reinterpret_cast<void*>(&Call_Texture2D_20), reinterpret_cast<void*>(&Call_Texture2D_21), reinterpret_cast<void*>(&Call_Texture2D_22), reinterpret_cast<void*>(&Call_Texture2D_23), reinterpret_cast<void*>(&Call_Texture2D_24), reinterpret_cast<void*>(&Call_Texture2D_25), reinterpret_cast<void*>(&Call_Texture2D_26), reinterpret_cast<void*>(&Call_Texture2D_27), reinterpret_cast<void*>(&Call_Texture2D_28), reinterpret_cast<void*>(&Call_Texture2D_29), reinterpret_cast<void*>(&Call_Texture2D_30), reinterpret_cast<void*>(&Call_Texture2D_31), reinterpret_cast<void*>(&Call_Texture2D_32) };
+    NativeBindings::Register(Texture2D::StaticType(), 5910295945204820263ULL, { functions_Texture2D, 33 });
     static void* functions_Camera[] = { reinterpret_cast<void*>(&Call_Camera_0), reinterpret_cast<void*>(&Call_Camera_1), reinterpret_cast<void*>(&Call_Camera_2), reinterpret_cast<void*>(&Call_Camera_3), reinterpret_cast<void*>(&Call_Camera_4), reinterpret_cast<void*>(&Call_Camera_5), reinterpret_cast<void*>(&Call_Camera_6), reinterpret_cast<void*>(&Call_Camera_7), reinterpret_cast<void*>(&Call_Camera_8), reinterpret_cast<void*>(&Call_Camera_9), reinterpret_cast<void*>(&Call_Camera_10), reinterpret_cast<void*>(&Call_Camera_11), reinterpret_cast<void*>(&Call_Camera_12), reinterpret_cast<void*>(&Call_Camera_13), reinterpret_cast<void*>(&Call_Camera_14), reinterpret_cast<void*>(&Call_Camera_15), reinterpret_cast<void*>(&Call_Camera_16), reinterpret_cast<void*>(&Call_Camera_17), reinterpret_cast<void*>(&Call_Camera_18), reinterpret_cast<void*>(&Call_Camera_19), reinterpret_cast<void*>(&Call_Camera_20), reinterpret_cast<void*>(&Call_Camera_21), reinterpret_cast<void*>(&Call_Camera_22), reinterpret_cast<void*>(&Call_Camera_23), reinterpret_cast<void*>(&Call_Camera_24), reinterpret_cast<void*>(&Call_Camera_25), reinterpret_cast<void*>(&Call_Camera_26), reinterpret_cast<void*>(&Call_Camera_27), reinterpret_cast<void*>(&Call_Camera_28), reinterpret_cast<void*>(&Call_Camera_29), reinterpret_cast<void*>(&Call_Camera_30) };
     NativeBindings::Register(Camera::StaticType(), 1701664351275001347ULL, { functions_Camera, 31 });
     static void* functions_CharacterController[] = { reinterpret_cast<void*>(&Call_CharacterController_0), reinterpret_cast<void*>(&Call_CharacterController_1), reinterpret_cast<void*>(&Call_CharacterController_2), reinterpret_cast<void*>(&Call_CharacterController_3), reinterpret_cast<void*>(&Call_CharacterController_4), reinterpret_cast<void*>(&Call_CharacterController_5), reinterpret_cast<void*>(&Call_CharacterController_6), reinterpret_cast<void*>(&Call_CharacterController_7), reinterpret_cast<void*>(&Call_CharacterController_8), reinterpret_cast<void*>(&Call_CharacterController_9), reinterpret_cast<void*>(&Call_CharacterController_10), reinterpret_cast<void*>(&Call_CharacterController_11), reinterpret_cast<void*>(&Call_CharacterController_12), reinterpret_cast<void*>(&Call_CharacterController_13), reinterpret_cast<void*>(&Call_CharacterController_14), reinterpret_cast<void*>(&Call_CharacterController_15), reinterpret_cast<void*>(&Call_CharacterController_16), reinterpret_cast<void*>(&Call_CharacterController_17) };

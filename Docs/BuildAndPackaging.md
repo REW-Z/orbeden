@@ -585,6 +585,10 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+#### 版本 135：纹理硬件各向异性过滤
+
+`Texture2D.anisotropy` 设置硬件各向异性过滤倍数，默认 1，OpenGL 与 Vulkan 按设备上限限制。Vulkan 同时启用设备特性，并按采样倍数区分图像缓存。属性写入会刷新 GPU 纹理，C# 绑定由 MetaGen 生成。需重建 Core、托管 SDK、Editor 及游戏脚本并同步项目 SDK；无需重置 Builtin，无场景或资源格式迁移。发布包重新 Build Player。
+
 #### 版本 134：屏幕 Bitmap 文字按像素绘制
 
 Text 与 TextField 的屏幕、离屏 Bitmap 文字按光栅化取整后的实际像号生成显示矩形，排版宽度、字距、行高与命中逻辑保留原字号语义。UIRenderer 为屏幕与离屏 Bitmap 命令写入保留参数 `u_BitmapPixelSnap`；UI Shader 在投影后的像素坐标中对齐轴向文字顶点，并通过 `texelFetch` 读取字形覆盖率，不混合相邻字形纹素。规则不依赖固定屏幕分辨率；字体位图自带的灰度覆盖率保留，旋转文字不做轴向顶点取整。SDF/MSDF、WorldSpace 与 Scene 编辑预览沿用原绘制方式。

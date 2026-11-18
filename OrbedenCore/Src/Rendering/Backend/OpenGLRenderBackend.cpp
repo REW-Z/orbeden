@@ -9,6 +9,7 @@
 #include <GLFW/glfw3.h>
 #include <glad/gl.h>
 
+#include <algorithm>
 #include <cstring>
 #include <stdexcept>
 #include <string>
@@ -49,6 +50,10 @@ namespace
     {
         return value ? reinterpret_cast<const char*>(value) : "unknown";
     }
+
+    //各向异性扩展的纹理参数枚举
+    constexpr GLenum TextureMaxAnisotropy = 0x84FE;
+    constexpr GLenum MaxTextureMaxAnisotropy = 0x84FF;
 
     //GLsizei 能表达的最大元素或实例数量上界
     constexpr uint32 MaxGlSizei = 0x7FFFFFFFu;
@@ -203,6 +208,13 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     boundCubeTextures.clear();
     programUniforms.clear();
     currentUniforms = nullptr;
+
+    //读取硬件各向异性过滤上限
+    maximumAnisotropy = 1.0f;
+    if (glfwExtensionSupported("GL_EXT_texture_filter_anisotropic") || glfwExtensionSupported("GL_ARB_texture_filter_anisotropic"))
+    {
+        glGetFloatv(MaxTextureMaxAnisotropy, &maximumAnisotropy);
+    }
 
     //实例化能力在此判定一次：网格顶点 4 个属性加实例属性 10 个，共需 14 个 attribute 槽位。
     instancingSupported = false;
@@ -499,6 +511,12 @@ GpuTextureID OpenGLRenderBackend::CreateTexture(const GpuTextureDesc& desc)
     glBindTexture(GL_TEXTURE_2D, id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, desc.generateMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //按设备上限设置硬件各向异性过滤
+    if (maximumAnisotropy > 1.0f)
+    {
+        float32 anisotropy = std::clamp(static_cast<float32>(desc.anisotropy), 1.0f, maximumAnisotropy);
+        glTexParameterf(GL_TEXTURE_2D, TextureMaxAnisotropy, anisotropy);
+    }
     GLint wrap = desc.clampToEdge ? GL_CLAMP_TO_EDGE : GL_REPEAT;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);

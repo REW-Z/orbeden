@@ -68,6 +68,8 @@ private:
     CullMode cullMode = CullMode::None;
     //实例化能力，初始化时按 GL_MAX_VERTEX_ATTRIBS 判定一次
     bool instancingSupported = false;
+    //硬件各向异性过滤上限，1 表示不支持
+    float32 maximumAnisotropy = 1.0f;
     //片元纹理槽上限，初始化时按 GL_MAX_TEXTURE_IMAGE_UNITS 查询一次
     uint32 fragmentTextureUnitCount = 0;
     //当前混合方程，BeginFrame 重设为 Alpha 基线

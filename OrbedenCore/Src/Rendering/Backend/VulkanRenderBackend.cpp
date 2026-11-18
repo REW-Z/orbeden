@@ -89,6 +89,7 @@ struct VulkanRenderBackend::State
         uint64 cacheSerial = 0;
         bool linear = false;
         bool repeat = false;
+        float32 anisotropy = 1.0f;
         bool initialized = false;
         bool owned = true;
     };
@@ -207,6 +208,7 @@ struct VulkanRenderBackend::State
     uint32 queueFamily = 0;
     uint32 timestampValidBits = 0;
     VkPhysicalDeviceProperties properties = {};
+    float32 maximumAnisotropy = 1.0f;
     VkPhysicalDeviceMemoryProperties memoryProperties = {};
     VkPipelineCache pipelineCache = VK_NULL_HANDLE;
     std::array<Frame, FrameCount> frames;
@@ -510,14 +512,16 @@ struct VulkanRenderBackend::State
     }
 
     //创建采样图像与视图
-    Image AllocateImage(uint32 width, uint32 height, VkFormat format, bool depth, uint32 layers = 1, uint32 levels = 1, bool linear = false, bool repeat = false)
+    Image AllocateImage(uint32 width, uint32 height, VkFormat format, bool depth, uint32 layers = 1, uint32 levels = 1, bool linear = false, bool repeat = false, float32 anisotropy = 1.0f)
     {
+        //按设备能力确定采样器各向异性倍数
+        anisotropy = linear ? std::clamp(anisotropy, 1.0f, maximumAnisotropy) : 1.0f;
         //复用已完成帧的同规格图像及采样对象
         for (usize index = imageCache.size(); index > 0; --index)
         {
             const Image& cached = imageCache[index - 1];
             if (cached.width != width || cached.height != height || cached.format != format
-                || cached.layers != layers || cached.levels != levels || cached.linear != linear || cached.repeat != repeat
+                || cached.layers != layers || cached.levels != levels || cached.linear != linear || cached.repeat != repeat || cached.anisotropy != anisotropy
                 || cached.aspect != (depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT))
             {
                 continue;
@@ -537,6 +541,7 @@ struct VulkanRenderBackend::State
         Image result;
         result.linear = linear;
         result.repeat = repeat;
+        result.anisotropy = anisotropy;
         result.width = width; result.height = height; result.layers = layers; result.levels = levels; result.format = format;
         result.aspect = depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -568,6 +573,8 @@ struct VulkanRenderBackend::State
             sampler.mipmapMode = linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
             sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = repeat ? VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             sampler.maxLod = static_cast<float32>(levels - 1);
+            sampler.anisotropyEnable = anisotropy > 1.0f ? VK_TRUE : VK_FALSE;
+            sampler.maxAnisotropy = anisotropy;
             Check(vkCreateSampler(device, &sampler, nullptr, &result.sampler), "vkCreateSampler");
         }
         catch (...)
@@ -954,7 +961,15 @@ bool VulkanRenderBackend::Initialize(IWindow* window)
                 Check(vkGetPhysicalDeviceSurfaceSupportKHR(candidate, family, s.surfaces.at(0).handle, &present), "vkGetPhysicalDeviceSurfaceSupportKHR");
                 if (!present || (families[family].queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) != (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) continue;
                 int32 score = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 2 : 1;
-                if (score > bestScore) { bestScore = score; s.physical = candidate; s.queueFamily = family; s.properties = properties; s.timestampValidBits = families[family].timestampValidBits; }
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    s.physical = candidate;
+                    s.queueFamily = family;
+                    s.properties = properties;
+                    s.timestampValidBits = families[family].timestampValidBits;
+                    s.maximumAnisotropy = features.features.samplerAnisotropy ? properties.limits.maxSamplerAnisotropy : 1.0f;
+                }
             }
         }
         if (!s.physical) throw std::runtime_error("Vulkan 1.3 device with graphics, compute, presentation and wireframe support was not found.");
@@ -965,6 +980,7 @@ bool VulkanRenderBackend::Initialize(IWindow* window)
         VkPhysicalDeviceVulkan13Features features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
         features13.dynamicRendering = VK_TRUE; features13.synchronization2 = VK_TRUE;
         VkPhysicalDeviceFeatures features = {}; features.fillModeNonSolid = VK_TRUE;
+        features.samplerAnisotropy = s.maximumAnisotropy > 1.0f ? VK_TRUE : VK_FALSE;
         const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
         VkDeviceCreateInfo device = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
         device.pNext = &features13; device.pEnabledFeatures = &features; device.queueCreateInfoCount = 1; device.pQueueCreateInfos = &queue;
@@ -1514,7 +1530,7 @@ GpuTextureID VulkanRenderBackend::CreateTexture(const GpuTextureDesc& desc)
     auto& s = *state;
     uint32 levels = desc.generateMipmaps ? static_cast<uint32>(std::floor(std::log2(std::max(desc.width, desc.height)))) + 1 : 1;
     VkFormat format = desc.channels == 1 ? VK_FORMAT_R8_UNORM : desc.srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
-    auto image = s.AllocateImage(desc.width, desc.height, format, false, 1, levels, true, !desc.clampToEdge);
+    auto image = s.AllocateImage(desc.width, desc.height, format, false, 1, levels, true, !desc.clampToEdge, static_cast<float32>(desc.anisotropy));
     image.uploadChannels = desc.channels;
     uint32 id = s.nextId++; s.images.emplace(id, image);
     if (!UploadTextureRegion({ id }, 0, 0, desc.width, desc.height, desc.channels, desc.pixels, desc.width * desc.channels)) { DeleteTexture({ id }); return {}; }

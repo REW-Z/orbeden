@@ -2213,6 +2213,18 @@
           "Arities": []
         },
         {
+          "Name": "anisotropy",
+          "Doc": "\u786C\u4EF6\u5404\u5411\u5F02\u6027\u8FC7\u6EE4\u500D\u6570\uFF0C1 \u4E3A\u5173\u95ED\uFF0C\u540E\u7AEF\u6309\u8BBE\u5907\u4E0A\u9650\u9650\u5236",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "MarkDirty",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "channels",
           "Doc": "",
           "IsMethod": false,

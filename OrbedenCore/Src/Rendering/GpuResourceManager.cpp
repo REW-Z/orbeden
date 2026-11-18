@@ -669,6 +669,7 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
     textureDesc.srgb = texture->colorSpace == TextureColorSpace::SRGB;
 
     textureDesc.generateMipmaps = texture->generateMipmaps;
+    textureDesc.anisotropy = texture->anisotropy;
     GpuTextureID textureID = backend->CreateTexture(textureDesc);
     if (!textureID.IsValid())
     {

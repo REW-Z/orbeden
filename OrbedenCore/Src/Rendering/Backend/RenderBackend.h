@@ -79,6 +79,8 @@ public:
     //UI 纹理（字形图集、遮罩）必须夹边采样：越界取重复色会让遮罩边缘绕回另一侧。
     bool clampToEdge = false;
     bool generateMipmaps = false;
+    //硬件各向异性过滤倍数
+    int32 anisotropy = 1;
 };
 
 //GPU 深度纹理创建描述，描述阴影图等深度贴图尺寸。
