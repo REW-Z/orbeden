@@ -65,6 +65,9 @@ public:
     //改动后必须重传 GPU 纹理，否则会静默复用按旧颜色空间创建的纹理。
     ORBEDEN_BIND_CHANGED(MarkDirty)
     TextureColorSpace colorSpace = TextureColorSpace::SRGB;
+    //按纹理开启 GPU 多级缩小过滤
+    ORBEDEN_BIND_CHANGED(MarkDirty)
+    bool generateMipmaps = false;
     //Alpha 语义；画布输出必须是预乘，普通图片保持直通。
     ORBEDEN_BIND_CHANGED(MarkDirty)
     TextureAlphaMode alphaMode = TextureAlphaMode::Straight;

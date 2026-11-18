@@ -668,6 +668,7 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
     textureDesc.pixels = texture->pixels.empty() ? nullptr : texture->pixels.data();
     textureDesc.srgb = texture->colorSpace == TextureColorSpace::SRGB;
 
+    textureDesc.generateMipmaps = texture->generateMipmaps;
     GpuTextureID textureID = backend->CreateTexture(textureDesc);
     if (!textureID.IsValid())
     {

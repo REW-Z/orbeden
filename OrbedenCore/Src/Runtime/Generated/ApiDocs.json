@@ -2249,6 +2249,18 @@
           "Arities": []
         },
         {
+          "Name": "generateMipmaps",
+          "Doc": "\u6309\u7EB9\u7406\u5F00\u542F GPU \u591A\u7EA7\u7F29\u5C0F\u8FC7\u6EE4",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "MarkDirty",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "height",
           "Doc": "",
           "IsMethod": false,

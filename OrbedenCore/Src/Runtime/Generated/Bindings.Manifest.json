@@ -73369,6 +73369,25 @@
           "Parameters": []
         },
         {
+          "Name": "generateMipmaps",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "MarkDirty",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "alphaMode",
           "Type": "TextureAlphaMode",
           "Access": "public",
