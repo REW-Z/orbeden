@@ -83,7 +83,7 @@ struct ProfileFrameSummary
     int32 droppedGpuEventCount = 0;
     ProfileGpuStatus gpuStatus = ProfileGpuStatus::Unavailable;
 
-    //后端实际提交的绘制次数，实例化绘制计为一次
+    //游戏绘制提交次数，包含游戏 UI，实例化绘制计为一次
     int32 drawCallCount = 0;
 };
 
@@ -162,6 +162,21 @@ public:
 
     //按编号拷贝采样名，返回文本长度
     static int32 CopyName(int32 nameId, char* text, int32 capacity);
+};
+
+//在当前作用域排除编辑器绘制计数
+class ScopedDrawCallExclusion
+{
+public:
+    //按指定条件暂停当前线程的绘制计数
+    explicit ScopedDrawCallExclusion(bool exclude = true);
+    //恢复进入作用域前的绘制计数状态
+    ~ScopedDrawCallExclusion();
+    ScopedDrawCallExclusion(const ScopedDrawCallExclusion&) = delete;
+    ScopedDrawCallExclusion& operator=(const ScopedDrawCallExclusion&) = delete;
+
+private:
+    bool previouslyExcluded;
 };
 
 //自动作用域采样

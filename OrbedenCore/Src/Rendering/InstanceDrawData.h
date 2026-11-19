@@ -7,6 +7,9 @@
 
 class World;
 
+//每个渲染帧接收的显式实例总数
+constexpr uint32 MaximumSubmittedInstances = 1048576u;
+
 //显式实例提交的每实例数据。
 //这一层只表达 TRS：父级变换与 shear 不由该记录表示，静态渲染器仍走完整世界矩阵。
 struct MeshInstanceData
@@ -19,7 +22,15 @@ public:
     color tint = { 1.0f, 1.0f, 1.0f, 1.0f };
     //图集 uv 变换，只作为四个浮点使用，禁止颜色空间转换
     color uvRect = { 0.0f, 0.0f, 1.0f, 1.0f };
+
+    //检查实例变换和着色数据
+    bool IsValid() const;
 };
+
+//与托管实例缓冲共享连续的浮点布局
+static_assert(std::is_trivially_copyable_v<MeshInstanceData> && std::is_standard_layout_v<MeshInstanceData>);
+static_assert(sizeof(MeshInstanceData) == 72 && offsetof(MeshInstanceData, rotation) == 12
+    && offsetof(MeshInstanceData, scale) == 28 && offsetof(MeshInstanceData, tint) == 40 && offsetof(MeshInstanceData, uvRect) == 56);
 
 //显式实例提交的绘制选项
 struct InstanceDrawOptions
@@ -45,4 +56,5 @@ public:
     Ref<Material> material;
     uint32 subMeshIndex = 0;
     List<MeshInstanceData> instances;
+    List<DrawParameterData> drawParameters;
 };

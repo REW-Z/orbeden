@@ -159,6 +159,7 @@ void EditorFloatingWindow::EndFrame()
     backend->SetSurface(surface);
     {
         PROFILE("Render/FloatingWindow/DrawGui");
+        ScopedDrawCallExclusion excludeEditorDraws;
         renderer.Render(ImGui::GetDrawData());
     }
 

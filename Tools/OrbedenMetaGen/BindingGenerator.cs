@@ -397,7 +397,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
             }
             else
             {
-                output.AppendLine($"public struct {name}\n{{");
+                output.AppendLine($"public partial struct {name}\n{{");
                 foreach (var member in model.ExportedMembers(declaration).Where(member => !member.IsMethod && !member.IsStatic))
                     output.AppendLine($"    public {types.Resolve(member.Type, declaration).Managed} @{member.Name};");
             }

@@ -41,6 +41,28 @@ public struct EnsId : IEquatable<EnsId>
     }
 }
 
+public partial struct MeshInstanceData
+{
+    /// <summary>在指定世界坐标创建实例，使用单位旋转、单位缩放、白色和完整 UV 区域。</summary>
+    public MeshInstanceData(vector3 position)
+    {
+        this.position = position;
+        rotation = new(0, 0, 0, 1);
+        scale = new(1, 1, 1);
+        tint = new(1, 1, 1, 1);
+        uvRect = new(0, 0, 1, 1);
+    }
+}
+
+public partial struct InstanceDrawOptions
+{
+    /// <summary>默认绘制到第一个图层，对全部相机可见，并投射和接收阴影。</summary>
+    public static InstanceDrawOptions Default => new()
+    {
+        drawLayer = 1, castShadows = true, receiveShadows = true, camera = EnsId.Null
+    };
+}
+
 /// <summary>二维向量，布局需要与 C++ 托管桥接结构一致。</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct vector2

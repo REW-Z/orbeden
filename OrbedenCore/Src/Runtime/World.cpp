@@ -4,6 +4,7 @@
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Transform.h"
 #include "Rendering/RenderMath.h"
+#include "Rendering/RenderSystem.h"
 #include "Physics/PhysicsSystem.h"
 #include "Profiler/Profiler.h"
 #include "Scripting/ScriptSystem.h"
@@ -19,6 +20,25 @@ namespace
         static World* currentWorld = nullptr;
         return currentWorld;
     }
+}
+
+//提交世界空间的网格实例
+bool World::DrawMeshInstanced(Mesh* mesh, Material* material, std::span<const MeshInstanceData> instances,
+    std::span<const float32> drawParameters, uint32 subMeshIndex, const InstanceDrawOptions& options)
+{
+    RenderSystem* renderer = RenderSystem::Current();
+    if (!renderer || instances.empty() || instances.size() > MaximumSubmittedInstances)
+    {
+        return false;
+    }
+    for (const MeshInstanceData& instance : instances)
+    {
+        if (!instance.IsValid())
+        {
+            return false;
+        }
+    }
+    return renderer->SubmitInstances(*this, options, mesh, subMeshIndex, material, instances, 0, drawParameters);
 }
 
 //查找组件稀疏集

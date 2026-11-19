@@ -589,8 +589,33 @@
           ]
         },
         {
+          "Name": "SetDrawParameters",
+          "Doc": "\u6309\u5B9E\u4F8B\u987A\u5E8F\u8BBE\u7F6E\u7740\u8272\u53C2\u6570\uFF0C\u6BCF\u5B9E\u4F8B 32 \u4E2A float\u3002\u7A7A\u7F13\u51B2\u6E05\u9664\u53C2\u6570\uFF0C\u5931\u8D25\u65F6\u4FDD\u7559\u65E7\u503C\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const float32*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
           "Name": "SetInstances",
-          "Doc": "\u66FF\u6362\u5168\u90E8\u5B9E\u4F8B\u6570\u636E\uFF1B\u4EFB\u4E00\u6761\u975E\u6CD5\u5219\u6574\u4F53\u62D2\u7EDD\u5E76\u4FDD\u7559\u65E7\u503C\u3002",
+          "Doc": "\u66FF\u6362\u5B9E\u4F8B\u6570\u636E\uFF0C\u6570\u91CF\u53D8\u5316\u65F6\u6E05\u9664\u65E7\u7740\u8272\u53C2\u6570\uFF0C\u5931\u8D25\u65F6\u4FDD\u7559\u65E7\u503C\u3002",
           "IsMethod": true,
           "IsStatic": false,
           "Property": "",

@@ -7041,8 +7041,63 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
+    //调用 InstanceDrawList.SetDrawParameters 方法
+    static Reflection::Value Invoke_InstanceDrawList_SetDrawParameters_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        float32* arg0{};
+        if (!Reflection::SetFromValue(arg0, args[0])) return Reflection::Value();
+        int32 arg1{};
+        if (!Reflection::SetFromValue(arg1, args[1])) return Reflection::Value();
+        auto result = instance->SetDrawParameters(arg0, arg1);
+        success = true;
+        return Reflection::ToValue(result);
+    }
+
+    //直接调用 InstanceDrawList.SetDrawParameters 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_SetDrawParameters_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    {
+        InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+        float32* arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        int32 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->SetDrawParameters(arg0, arg1), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按原生 ABI 直接传值调用 InstanceDrawList.SetDrawParameters
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeValue_InstanceDrawList_SetDrawParameters_1(Object* object, float32* value0, int32 value1, void* output)
+    {
+        try
+        {
+            auto* instance = static_cast<InstanceDrawList*>(object);
+            ScriptInterop::WriteDirectValue(instance->SetDrawParameters(value0, value1), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //封送并调用 InstanceDrawList.SetDrawParameters
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_SetDrawParameters_1(Object* object, const void* input0, const void* input1, void* output)
+    {
+        try
+        {
+            InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+            float32* arg0{};
+            if (!ScriptInterop::ReadDirectValue(input0, arg0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            int32 arg1{};
+            if (!ScriptInterop::ReadDirectValue(input1, arg1)) return ScriptInterop::InteropStatus::InvalidArgument;
+            ScriptInterop::WriteDirectValue(instance->SetDrawParameters(arg0, arg1), output);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 InstanceDrawList.GetInstanceCount 方法
-    static Reflection::Value Invoke_InstanceDrawList_GetInstanceCount_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_InstanceDrawList_GetInstanceCount_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
@@ -7054,14 +7109,14 @@ public:
     }
 
     //直接调用 InstanceDrawList.GetInstanceCount 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_GetInstanceCount_1(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_GetInstanceCount_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
         return ScriptInterop::WriteResult(instance->GetInstanceCount(), Reflection::ValueKind::Int32, output, stringStorage);
     }
 
     //封送并调用 InstanceDrawList.GetInstanceCount
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_GetInstanceCount_1(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_GetInstanceCount_2(Object* object, void* output)
     {
         try
         {
@@ -7073,7 +7128,7 @@ public:
     }
 
     //调用 InstanceDrawList.Submit 方法
-    static Reflection::Value Invoke_InstanceDrawList_Submit_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_InstanceDrawList_Submit_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
@@ -7085,14 +7140,14 @@ public:
     }
 
     //直接调用 InstanceDrawList.Submit 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_Submit_2(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_Submit_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
         return ScriptInterop::WriteResult(instance->Submit(), Reflection::ValueKind::Bool, output, stringStorage);
     }
 
     //封送并调用 InstanceDrawList.Submit
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_Submit_2(Object* object, void* output)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_Submit_3(Object* object, void* output)
     {
         try
         {
@@ -7104,7 +7159,7 @@ public:
     }
 
     //调用 InstanceDrawList.Clear 方法
-    static Reflection::Value Invoke_InstanceDrawList_Clear_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_InstanceDrawList_Clear_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
@@ -7116,7 +7171,7 @@ public:
     }
 
     //直接调用 InstanceDrawList.Clear 的 ABI 入口
-    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_Clear_3(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
+    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_Clear_4(Object* object, const ScriptInterop::DynamicValueAbi* args, ScriptInterop::DynamicValueAbi* output, std::string& stringStorage)
     {
         InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
         instance->Clear();
@@ -7125,7 +7180,7 @@ public:
     }
 
     //封送并调用 InstanceDrawList.Clear
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_Clear_3(Object* object)
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_Clear_4(Object* object)
     {
         try
         {
@@ -16811,14 +16866,16 @@ namespace Reflection
                 FieldInfo("subMeshIndex", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("options", "InstanceDrawOptions", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("instances", "List<MeshInstanceData>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("drawParameters", "List<float32>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(InstanceDrawList::StaticType(),
             {
                 MethodInfo("SetInstances", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("data", "MeshInstanceData*", Reflection::ValueKind::Pointer), ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_InstanceDrawList_SetInstances_0, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_SetInstances_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_SetInstances_0), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_InstanceDrawList_SetInstances_0)),
-                MethodInfo("GetInstanceCount", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_GetInstanceCount_1, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_GetInstanceCount_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_GetInstanceCount_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_GetInstanceCount_1)),
-                MethodInfo("Submit", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Submit_2, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_Submit_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Submit_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Submit_2)),
-                MethodInfo("Clear", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Clear_3, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_Clear_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Clear_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Clear_3)),
+                MethodInfo("SetDrawParameters", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("data", "float32*", Reflection::ValueKind::Pointer), ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_InstanceDrawList_SetDrawParameters_1, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_SetDrawParameters_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_SetDrawParameters_1), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeValue_InstanceDrawList_SetDrawParameters_1)),
+                MethodInfo("GetInstanceCount", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_GetInstanceCount_2, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_GetInstanceCount_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_GetInstanceCount_2), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_GetInstanceCount_2)),
+                MethodInfo("Submit", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Submit_3, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_Submit_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Submit_3), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Submit_3)),
+                MethodInfo("Clear", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Clear_4, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_Clear_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Clear_4), reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Clear_4)),
             });
 
         RegisterTypeFields(Material::StaticType(),

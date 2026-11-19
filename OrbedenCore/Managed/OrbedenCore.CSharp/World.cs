@@ -40,6 +40,31 @@ public static unsafe class World
 {
     private static WorldBindApi api;
 
+    /// <summary>每个实例可选着色参数的 float 数量。</summary>
+    public const int DrawParameterFloatCount = 32;
+
+    //注册直接实例绘制的托管签名
+    static World()
+    {
+        NativeBindingRuntime.Register(typeof(World), "World.DrawMeshInstanced", 1, null);
+    }
+
+    /// <summary>提交世界空间实例供下一次渲染使用。实例缓冲可在返回后复用。可选参数按每实例 32 个 float 排列，提交失败返回 false。</summary>
+    public static bool DrawMeshInstanced(Mesh mesh, Material material, ReadOnlySpan<MeshInstanceData> instances,
+        ReadOnlySpan<float> drawParameters = default, uint subMeshIndex = 0, InstanceDrawOptions? options = null)
+    {
+        InstanceDrawOptions settings = options ?? InstanceDrawOptions.Default;
+        var draw = (delegate* unmanaged[Cdecl]<int, int, MeshInstanceData*, int, float*, int, uint, uint, byte, byte, EnsId, byte>)
+            NativeBindingRuntime.GetFunction(typeof(World), 0);
+        fixed (MeshInstanceData* data = instances)
+        fixed (float* parameters = drawParameters)
+        {
+            return draw(NativeBindingRuntime.GetObjectId(mesh), NativeBindingRuntime.GetObjectId(material),
+                data, instances.Length, parameters, drawParameters.Length, subMeshIndex, settings.drawLayer,
+                (byte)(settings.castShadows ? 1 : 0), (byte)(settings.receiveShadows ? 1 : 0), settings.camera) != 0;
+        }
+    }
+
     //连接世界加载函数表
     internal static void InitializeNativeApi(WorldBindApi value) { api = value; }
 

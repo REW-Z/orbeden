@@ -16,6 +16,8 @@ ProfileSample* Profiler::tailSample = nullptr;
 
 namespace
 {
+    thread_local bool drawCallsExcluded = false;
+
     //保留的帧数：走势图与单帧明细共用同一段历史，看得见的帧都点得开
     constexpr int32 FrameWindowCapacity = 1024;
 
@@ -485,9 +487,25 @@ void Profiler::AddFrameWait(int64 microseconds)
 void Profiler::RecordDrawCall()
 {
     CaptureState& state = GetCaptureState();
-    if (!state.capturing || state.currentFrameSlot < 0) return;
+    if (!state.capturing || state.currentFrameSlot < 0 || drawCallsExcluded)
+    {
+        return;
+    }
 
     ++state.frames[state.currentFrameSlot].drawCallCount;
+}
+
+//标记当前线程的编辑器绘制范围
+ScopedDrawCallExclusion::ScopedDrawCallExclusion(bool exclude)
+    : previouslyExcluded(drawCallsExcluded)
+{
+    drawCallsExcluded = previouslyExcluded || exclude;
+}
+
+//恢复外层的绘制计数状态
+ScopedDrawCallExclusion::~ScopedDrawCallExclusion()
+{
+    drawCallsExcluded = previouslyExcluded;
 }
 
 //开关按帧采集，停止时保留已采集的数据供查看

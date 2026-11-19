@@ -28068,6 +28068,25 @@
           "Parameters": []
         },
         {
+          "Name": "drawParameters",
+          "Type": "List\u003Cfloat32\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Configure",
           "Type": "bool",
           "Access": "public",
@@ -28128,6 +28147,36 @@
             {
               "Name": "data",
               "Type": "const MeshInstanceData*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "data",
+          "Count": "count",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const float32*",
               "DefaultValue": ""
             },
             {
@@ -28457,6 +28506,25 @@
         {
           "Name": "instances",
           "Type": "List\u003CMeshInstanceData\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "drawParameters",
+          "Type": "List\u003CDrawParameterData\u003E",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -31201,6 +31269,25 @@
           "IsMethod": false,
           "IsStatic": false,
           "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "IsValid",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
           "IsVirtual": false,
           "IsTemplate": false,
           "Serialize": false,
@@ -58463,6 +58550,66 @@
           ]
         },
         {
+          "Name": "SubmitInstances",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "world",
+              "Type": "World\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "options",
+              "Type": "const InstanceDrawOptions\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "mesh",
+              "Type": "Mesh*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "subMeshIndex",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "material",
+              "Type": "Material*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "instances",
+              "Type": "std::span\u003Cconst MeshInstanceData\u003E",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "sourceObjectId",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "drawParameters",
+              "Type": "std::span\u003Cconst float32\u003E",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "GetActiveInstanceSubmissions",
           "Type": "const List\u003CInstanceSubmission\u003E\u0026",
           "Access": "public",
@@ -63542,6 +63689,41 @@
               "DefaultValue": ""
             }
           ]
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "ScopedDrawCallExclusion",
+      "QualifiedName": "ScopedDrawCallExclusion",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Profiler/Profiler.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "previouslyExcluded",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []
@@ -85350,6 +85532,56 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "DrawMeshInstanced",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "mesh",
+              "Type": "Mesh*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "material",
+              "Type": "Material*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "instances",
+              "Type": "std::span\u003Cconst MeshInstanceData\u003E",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "drawParameters",
+              "Type": "std::span\u003Cconst float32\u003E",
+              "DefaultValue": "{}"
+            },
+            {
+              "Name": "subMeshIndex",
+              "Type": "uint32",
+              "DefaultValue": "0"
+            },
+            {
+              "Name": "options",
+              "Type": "const InstanceDrawOptions\u0026",
+              "DefaultValue": "{}"
+            }
+          ]
         },
         {
           "Name": "SetCurrentWorld",

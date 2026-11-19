@@ -11,9 +11,6 @@ OBJECT_TYPE_IMPLEMENT(InstanceDrawList, Object)
 
 namespace
 {
-    //单次提交的实例数量上限，与 GPU 单批上限是两件事
-    constexpr uint32 MaximumSubmittedInstances = 1048576u;
-
     //判断浮点数组是否全部有限
     bool IsFiniteVector3(const vector3& value)
     {
@@ -24,24 +21,16 @@ namespace
     {
         return std::isfinite(value.r) && std::isfinite(value.g) && std::isfinite(value.b) && std::isfinite(value.a);
     }
+}
 
-    //判断实例记录是否可用：数值有限、四元数非零、缩放非奇异
-    bool IsValidInstanceData(const MeshInstanceData& instance)
-    {
-        if (!IsFiniteVector3(instance.position) || !IsFiniteVector3(instance.scale)) return false;
-        if (!IsFiniteColor(instance.tint) || !IsFiniteColor(instance.uvRect)) return false;
-        if (!std::isfinite(instance.rotation.x) || !std::isfinite(instance.rotation.y) ||
-            !std::isfinite(instance.rotation.z) || !std::isfinite(instance.rotation.w)) return false;
-
-        float32 rotationLengthSquared = instance.rotation.x * instance.rotation.x + instance.rotation.y * instance.rotation.y +
-            instance.rotation.z * instance.rotation.z + instance.rotation.w * instance.rotation.w;
-        if (!(rotationLengthSquared > 1.0e-8f)) return false;
-
-        //任一轴接近零都会让世界矩阵不可逆，法线矩阵也就无从求起
-        return std::fabs(instance.scale.x) > 1.0e-8f
-            && std::fabs(instance.scale.y) > 1.0e-8f
-            && std::fabs(instance.scale.z) > 1.0e-8f;
-    }
+//检查有限数值、旋转长度和缩放
+bool MeshInstanceData::IsValid() const
+{
+    float32 rotationLengthSquared = rotation.x * rotation.x + rotation.y * rotation.y
+        + rotation.z * rotation.z + rotation.w * rotation.w;
+    return IsFiniteVector3(position) && IsFiniteVector3(scale) && IsFiniteColor(tint) && IsFiniteColor(uvRect)
+        && std::isfinite(rotationLengthSquared) && rotationLengthSquared > 1.0e-8f
+        && std::fabs(scale.x) > 1.0e-8f && std::fabs(scale.y) > 1.0e-8f && std::fabs(scale.z) > 1.0e-8f;
 }
 
 //配置绘制目标
@@ -74,17 +63,25 @@ bool InstanceDrawList::SetInstances(const MeshInstanceData* data, int32 count)
 
     if (count == 0)
     {
-        instances.clear();
+        Clear();
         return true;
     }
 
     //先全量校验再复制，失败时不改动旧数据
     for (int32 index = 0; index < count; ++index)
     {
-        if (!IsValidInstanceData(data[index])) return false;
+        if (!data[index].IsValid())
+        {
+            return false;
+        }
     }
 
+    const bool countChanged = instances.size() != static_cast<usize>(count);
     instances.assign(data, data + count);
+    if (countChanged)
+    {
+        drawParameters.clear();
+    }
     //四元数在此归一化，之后的转换与提交都按单位四元数处理
     for (MeshInstanceData& instance : instances)
     {
@@ -97,6 +94,23 @@ bool InstanceDrawList::SetInstances(const MeshInstanceData* data, int32 count)
         instance.rotation.w *= inverse;
     }
 
+    return true;
+}
+
+//替换实例列表的着色参数
+bool InstanceDrawList::SetDrawParameters(const float32* data, int32 count)
+{
+    if (count == 0)
+    {
+        drawParameters.clear();
+        return true;
+    }
+    if (!data || count < 0 || static_cast<usize>(count) != instances.size() * DrawParameterFloatCount)
+    {
+        return false;
+    }
+
+    drawParameters.assign(data, data + count);
     return true;
 }
 
@@ -118,11 +132,12 @@ bool InstanceDrawList::Submit()
     World* owner = GetWorld() ? GetWorld() : World::CurrentWorld();
     if (!owner || owner->IsPreparing()) return false;
 
-    return renderSystem->SubmitInstances(*owner, options, mesh.Get(), subMeshIndex, material.Get(), instances, GetObjectId());
+    return renderSystem->SubmitInstances(*owner, options, mesh.Get(), subMeshIndex, material.Get(), instances, GetObjectId(), drawParameters);
 }
 
 //清空对象内实例
 void InstanceDrawList::Clear()
 {
     instances.clear();
+    drawParameters.clear();
 }

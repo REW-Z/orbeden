@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Runtime/ComponentStorage.h"
+#include "Rendering/InstanceDrawData.h"
 #include "Runtime/Gui/RetainedGuiTypes.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/ITransformListener.h"
@@ -178,6 +179,10 @@ public:
 
     //获取当前活动世界
     static World* CurrentWorld();
+
+    /// <summary>提交世界空间实例供下一次渲染使用。可选参数按每实例 32 个 float 排列，提交失败返回 false。</summary>
+    bool DrawMeshInstanced(Mesh* mesh, Material* material, std::span<const MeshInstanceData> instances,
+        std::span<const float32> drawParameters = {}, uint32 subMeshIndex = 0, const InstanceDrawOptions& options = {});
 
     //设置当前活动世界
     static void SetCurrentWorld(World* world);

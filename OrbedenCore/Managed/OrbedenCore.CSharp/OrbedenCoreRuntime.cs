@@ -175,6 +175,7 @@ public static unsafe class OrbedenCoreRuntime
         ValidateSize<vector3>(nameof(vector3), 12);
         ValidateSize<quaternion>(nameof(quaternion), 16);
         ValidateSize<color>(nameof(color), 16);
+        ValidateSize<MeshInstanceData>(nameof(MeshInstanceData), 72);
 
         ValidateFunctionTable<WorldBindApi>(nameof(WorldBindApi), 7);
         ValidateFunctionTable<PathDefinesBindApi>(nameof(PathDefinesBindApi), 2);

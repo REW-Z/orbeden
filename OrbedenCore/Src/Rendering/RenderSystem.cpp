@@ -10,13 +10,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace
 {
     RenderSystem* currentRenderSystem = nullptr;
-    //每次 Render 接收的显式实例总量上限。它与 GPU 单批上限是两件事，
-    //超过这个数量的提交整体失败，之后按批切分。
-    constexpr uint64 MaximumSubmittedInstances = 1048576u;
     //计算视口轴像素范围
     void CalculateViewportAxis(float32 normalizedStart, float32 normalizedSize, int32 targetSize, int32& start, int32& size)
     {
@@ -424,6 +422,11 @@ void RenderSystem::Render(World& world, float deltaTime)
             PROFILE("Render/FramePreparation/InstanceSubmissions");
             pendingInstanceSubmissions.swap(activeInstanceSubmissions);
             pendingInstanceSubmissions.clear();
+            //丢弃已切换世界的提交
+            std::erase_if(activeInstanceSubmissions, [&world](const InstanceSubmission& submission)
+            {
+                return submission.world != &world;
+            });
             pendingSubmittedInstanceCount = 0;
             readingDrawSubmissions = true;
         }
@@ -526,6 +529,10 @@ void RenderSystem::Render(World& world, float deltaTime)
     {
         if (camera.viewportWidth <= 0 || camera.viewportHeight <= 0) continue;
 
+        //排除 Scene 视图相机及其线框、描边和输出绘制
+        const bool editorPreview = hasEditorPreviewTarget && camera.finalRenderTarget.id == editorPreviewTarget.renderTarget.id;
+        ScopedDrawCallExclusion excludeEditorDraws(editorPreview);
+
         //DepthOnly/None 的语义是保留显示目标已有的颜色。场景缓冲是每相机独立的，
         //首帧没有旧内容，必须先把显示目标当前内容搬进来，否则会画出未初始化的内存。
         if (camera.clearMode != ClearMode::SolidColor)
@@ -585,8 +592,10 @@ void RenderSystem::Render(World& world, float deltaTime)
         //世界空间画布写在输出 Pass 之前，与场景一起被转换到显示空间。
         backend->ProfileGpuStage("Render/GpuStage/DebugLines");
         uiRenderer.RenderWorldSpace(camera);
-        if (hasEditorPreviewTarget && camera.finalRenderTarget.id == editorPreviewTarget.renderTarget.id)
+        if (editorPreview)
+        {
             uiRenderer.RenderEditorPreview(camera);
+        }
         backend->ProfileGpuStage("Render/GpuStage/WorldUI");
 
         //转换完成扩展绘制、调试线与世界 UI 的场景缓冲
@@ -635,6 +644,13 @@ bool RenderSystem::ValidateInstanceSubmission(Mesh* mesh, Material* material, ui
 bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
     Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId)
 {
+    return SubmitInstances(world, options, mesh, subMeshIndex, material, instances, sourceObjectId, {});
+}
+
+//按实例顺序保存变换和可选的着色参数
+bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
+    Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId, std::span<const float32> drawParameters)
+{
     //渲染读取期间、世界准备阶段与不支持实例化的后端都拒绝接收
     if (readingDrawSubmissions || !initialized || !window) return false;
     if (world.IsPreparing() || !backend->SupportsInstancing()) return false;
@@ -642,6 +658,11 @@ bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& opti
     if (instances.size() > MaximumSubmittedInstances) return false;
     if (pendingSubmittedInstanceCount + instances.size() > MaximumSubmittedInstances) return false;
     if (!ValidateInstanceSubmission(mesh, material, subMeshIndex, instances)) return false;
+
+    if (!drawParameters.empty() && drawParameters.size() != instances.size() * DrawParameterFloatCount)
+    {
+        return false;
+    }
 
     InstanceSubmission submission;
     submission.sourceObjectId = sourceObjectId;
@@ -653,8 +674,13 @@ bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& opti
     submission.material.Set(material);
     submission.subMeshIndex = subMeshIndex;
     submission.instances.assign(instances.begin(), instances.end());
-    pendingSubmittedInstanceCount += submission.instances.size();
+    if (!drawParameters.empty())
+    {
+        submission.drawParameters.resize(instances.size());
+        std::memcpy(submission.drawParameters.data(), drawParameters.data(), drawParameters.size_bytes());
+    }
     pendingInstanceSubmissions.push_back(std::move(submission));
+    pendingSubmittedInstanceCount += instances.size();
     return true;
 }
 

@@ -296,6 +296,29 @@ Mesh、Texture、Skybox、Shader、Material 在第一次使用时上传到 GPU�
 | Vulkan | glslang 把独立参数归入 set 0 / binding 0 的动态 Uniform Buffer；反射偏移与 CPU 参数项只关联一次，变化项增量更新 std140 布局。参数变化后上传帧内不可变快照，以动态偏移选择当前绘制数据；同一帧的相同缓冲页、采样器、图像和存储缓冲组合复用 Descriptor Set。采样器绑定从 1 起自动分配 |
 | 固定功能状态 | 深度、混合、剔除、线框、图元类型与深度偏移共用 `PipelineState`；Vulkan 按 Shader、输入布局、附件格式和状态缓存管线 |
 
+## 直接提交网格实例
+
+在主线程上、渲染开始前调用 `DrawMeshInstanced`。一组实例共享网格、子网格和材质，使用单 Pass 且支持实例化的 Shader。调用成功时引擎复制实例缓冲，供下一次渲染使用。持续显示的内容每帧提交一次，调用方可以复用数组。
+
+C++ 通过要渲染的 `World&` 提交。以下 `mesh` 和 `material` 是已加载的资源指针。
+
+```cpp
+MeshInstanceData instances[2];
+instances[1].position = { 10.0f, 0.0f, 0.0f };
+bool submitted = world.DrawMeshInstanced(mesh, material, instances);
+```
+
+C# 通过当前世界提交。构造函数会填入单位旋转、单位缩放、白色和完整 UV 区域。
+
+```csharp
+MeshInstanceData[] instances = [new(new vector3(0, 0, 0)), new(new vector3(10, 0, 0))];
+bool submitted = World.DrawMeshInstanced(mesh, material, instances);
+```
+
+第四个参数可传连续的 `float` 缓冲，每个实例 32 个值，按实例输入顺序排列。Shader 的 `OrbedenDrawParameters` 块按每实例 8 个 `vec4` 读取。省略缓冲即可使用普通实例材质。后续两个可选参数指定子网格和绘制选项，默认绘制子网格 0、图层 1，参与所有相机及阴影。提交结果表示该组是否进入渲染队列，视锥剔除与透明排序在之后执行。
+
+复用 `InstanceDrawList` 时可先调用 `SetInstances`，再调用 `SetDrawParameters` 和 `Submit`。列表保留相同数量实例对应的参数，数量变化时清除参数。直接提交和列表提交共用每次 Render 累计 1,048,576 个实例的现有 CPU 队列预算。
+
 ## 几何合批与拓扑缓存
 
 - 主画面的绘制路径按渲染器的 `drawStrategy` 与批次可合并性选择：`Auto` 依次尝试持久静态批、实例批、动态展开批，都不成立才逐对象绘制；`Individual` 始终单绘制并作为排序屏障；`GpuInstancing` 在单 Pass 和后端支持实例变体时直接实例绘制，单个实例也走该路径，显式实例组按绘制接口及程序缓冲容量提交。`DynamicBatching` 采用动态展开，条件不足时退回单绘制。实例批要求同 Mesh、子网格区间与材质；动态展开批只要求同材质与同渲染状态，用 `DrawIndexedInstanced` 与 `DrawIndexed` 分别提交（持久静态批直接绑定缓存组的顶点输入）。Indirect Draw 尚未实现。

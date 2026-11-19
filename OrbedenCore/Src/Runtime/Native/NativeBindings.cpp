@@ -82,6 +82,28 @@ void NativeBindings::ReleaseBuffer(NativeBindingBuffer buffer) { delete[] buffer
 
 namespace
 {
+    //借用托管缓冲并提交到当前世界
+    uint8 ORBEDEN_NATIVE_CALL DrawMeshInstanced(int32 meshId, int32 materialId, const MeshInstanceData* instances,
+        int32 count, const float32* parameters, int32 floatCount, uint32 subMeshIndex, uint32 drawLayer,
+        uint8 castShadows, uint8 receiveShadows, EnsId camera)
+    {
+        World* world = World::CurrentWorld();
+        if (!world || !instances || count <= 0 || floatCount < 0 || (floatCount > 0 && !parameters))
+        {
+            return 0;
+        }
+        try
+        {
+            InstanceDrawOptions options { drawLayer, castShadows != 0, receiveShadows != 0, camera };
+            return world->DrawMeshInstanced(NativeBindings::Require<Mesh>(meshId), NativeBindings::Require<Material>(materialId),
+                { instances, static_cast<usize>(count) }, { parameters, static_cast<usize>(floatCount) }, subMeshIndex, options);
+        }
+        catch (...)
+        {
+            return 0;
+        }
+    }
+
     const char* ORBEDEN_NATIVE_CALL GetBindingObjectTypeName(int32 id)
     {
         Object* object = Object::FindObjectById(id);
@@ -153,6 +175,9 @@ void RegisterBindings_Orbeden();
 NativeBindingsApi NativeBindingsApi::Create()
 {
     RegisterBindings_Orbeden();
+    //登记直接实例绘制的独立函数表
+    void* drawFunctions[] = { reinterpret_cast<void*>(&DrawMeshInstanced) };
+    NativeBindings::Register("World.DrawMeshInstanced", 1, drawFunctions);
     NativeBindingsApi api;
     api.GetGeneration = reinterpret_cast<void*>(&NativeBindings::GetGeneration);
     api.ResolveType = reinterpret_cast<void*>(&NativeBindings::Resolve);

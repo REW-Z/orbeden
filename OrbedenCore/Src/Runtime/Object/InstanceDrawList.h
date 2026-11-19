@@ -16,14 +16,19 @@ private:
     uint32 subMeshIndex = 0;
     InstanceDrawOptions options;
     List<MeshInstanceData> instances;
+    List<float32> drawParameters;
 
 public:
     /// <summary>配置绘制目标；校验失败时保留旧配置，且不清空已设置的实例。</summary>
     bool Configure(Mesh* targetMesh, uint32 targetSubMeshIndex, Material* targetMaterial, const InstanceDrawOptions& drawOptions);
 
-    /// <summary>替换全部实例数据；任一条非法则整体拒绝并保留旧值。</summary>
+    /// <summary>替换实例数据，数量变化时清除旧着色参数，失败时保留旧值。</summary>
     ORBEDEN_BIND_BUFFER(data, count)
     bool SetInstances(const MeshInstanceData* data, int32 count);
+
+    /// <summary>按实例顺序设置着色参数，每实例 32 个 float。空缓冲清除参数，失败时保留旧值。</summary>
+    ORBEDEN_BIND_BUFFER(data, count)
+    bool SetDrawParameters(const float32* data, int32 count);
 
     /// <summary>读取当前实例数量。</summary>
     int32 GetInstanceCount() const;

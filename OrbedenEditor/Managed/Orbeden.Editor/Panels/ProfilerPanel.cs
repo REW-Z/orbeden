@@ -280,7 +280,7 @@ internal sealed class ProfilerPanel : EditorPanel
         //显示当前选中完整帧的实际绘制次数
         if (selectedFrame >= 0)
         {
-            EditorGUI.Label($"Draw Calls: {selectedFrameSummary.DrawCallCount:N0}");
+            EditorGUI.Label($"Game Draw Calls: {selectedFrameSummary.DrawCallCount:N0}");
         }
 
         int dropped = CountDroppedEvents();

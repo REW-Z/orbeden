@@ -2325,6 +2325,7 @@ void EditorGUI::Render()
     glfwGetFramebufferSize(glfwWindow, &framebufferWidth, &framebufferHeight);
     {
         PROFILE("Render/EditorGui/SubmitDraw");
+        ScopedDrawCallExclusion excludeEditorDraws;
         renderer.Render(ImGui::GetDrawData());
     }
 }

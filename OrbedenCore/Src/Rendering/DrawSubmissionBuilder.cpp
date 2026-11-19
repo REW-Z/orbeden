@@ -402,6 +402,11 @@ void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const Vis
                     item.linearTint = ColorSpace::SrgbToLinear(instance.tint);
                     item.linearTint.a = instance.tint.a;
                     item.uvRect = instance.uvRect;
+                    if (!submission.drawParameters.empty())
+                    {
+                        item.drawParameters = submission.drawParameters[index];
+                        item.hasDrawParameters = true;
+                    }
                     item.castShadows = submission.options.castShadows;
                     item.receiveShadows = submission.options.receiveShadows;
                     item.strategy = DrawStrategy::GpuInstancing;

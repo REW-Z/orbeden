@@ -1496,7 +1496,7 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.Component), "Component", 3730866753121215061UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 1271523575787013593UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Font), "Font", 8904294447050588615UL, (ens, pointer) => new global::Orbeden.Font(pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 17629515747893046868UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 11817979313244570025UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 3298412916009026265UL, (ens, pointer) => new global::Orbeden.Material(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Mesh), "Mesh", 10408349486667592532UL, (ens, pointer) => new global::Orbeden.Mesh(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Shader), "Shader", 15080754076493160853UL, (ens, pointer) => new global::Orbeden.Shader(pointer));
@@ -1525,7 +1525,7 @@ internal static class GeneratedBindingRegistration
 }
 namespace Orbeden
 {
-public struct RenderSettings
+public partial struct RenderSettings
 {
     public global::Orbeden.Skybox? @skybox;
     public bool @skyboxEnabled;
@@ -1547,7 +1547,7 @@ public enum SkyMode : uint
 }
 namespace Orbeden
 {
-public struct AtmosphereSettings
+public partial struct AtmosphereSettings
 {
     public bool @fogEnabled;
     public global::Orbeden.AtmosphereQuality @quality;
@@ -1570,7 +1570,7 @@ public enum AtmosphereQuality : uint
 }
 namespace Orbeden
 {
-public struct DenseFogSettings
+public partial struct DenseFogSettings
 {
     public bool @enabled;
     public global::Orbeden.DenseFogMode @mode;
@@ -1600,7 +1600,7 @@ public enum FontRasterMode : uint
 }
 namespace Orbeden
 {
-public struct InstanceDrawOptions
+public partial struct InstanceDrawOptions
 {
     public uint @drawLayer;
     public bool @castShadows;
@@ -1610,7 +1610,7 @@ public struct InstanceDrawOptions
 }
 namespace Orbeden
 {
-public struct MeshInstanceData
+public partial struct MeshInstanceData
 {
     public global::Orbeden.vector3 @position;
     public global::Orbeden.quaternion @rotation;
@@ -1630,7 +1630,7 @@ public enum DrawQueue : uint
 }
 namespace Orbeden
 {
-public struct MaterialTextureSlot
+public partial struct MaterialTextureSlot
 {
     public string @name;
     public global::Orbeden.Texture2D? @texture;
@@ -1638,7 +1638,7 @@ public struct MaterialTextureSlot
 }
 namespace Orbeden
 {
-public struct MaterialColorSlot
+public partial struct MaterialColorSlot
 {
     public string @name;
     public global::Orbeden.color @value;
@@ -1646,7 +1646,7 @@ public struct MaterialColorSlot
 }
 namespace Orbeden
 {
-public struct MaterialFloatSlot
+public partial struct MaterialFloatSlot
 {
     public string @name;
     public float @value;
@@ -1654,7 +1654,7 @@ public struct MaterialFloatSlot
 }
 namespace Orbeden
 {
-public struct SubMesh
+public partial struct SubMesh
 {
     public string @name;
     public uint @indexStart;
@@ -1663,7 +1663,7 @@ public struct SubMesh
 }
 namespace Orbeden
 {
-public struct bounds3
+public partial struct bounds3
 {
     public global::Orbeden.vector3 @center;
     public global::Orbeden.vector3 @extents;
@@ -1685,7 +1685,7 @@ public enum MeshDirtyFlags : uint
 }
 namespace Orbeden
 {
-public struct ShaderPass
+public partial struct ShaderPass
 {
     public string @name;
     public global::Orbeden.ShaderPassState @state;
@@ -1697,7 +1697,7 @@ public struct ShaderPass
 }
 namespace Orbeden
 {
-public struct ShaderPassState
+public partial struct ShaderPassState
 {
     public global::Orbeden.ShaderPassToggle @depthTest;
     public global::Orbeden.ShaderPassToggle @depthWrite;
@@ -1735,7 +1735,7 @@ public enum ShaderGeometryContract : uint
 }
 namespace Orbeden
 {
-public struct ShaderTextureSlot
+public partial struct ShaderTextureSlot
 {
     public string @name;
     public string @displayName;
@@ -1751,7 +1751,7 @@ public enum ShaderTextureDimension : int
 }
 namespace Orbeden
 {
-public struct ShaderColorSlot
+public partial struct ShaderColorSlot
 {
     public string @name;
     public string @displayName;
@@ -1760,7 +1760,7 @@ public struct ShaderColorSlot
 }
 namespace Orbeden
 {
-public struct ShaderFloatSlot
+public partial struct ShaderFloatSlot
 {
     public string @name;
     public string @displayName;
@@ -1814,7 +1814,7 @@ public enum ColliderGeometryType : uint
 }
 namespace Orbeden
 {
-public struct ParticleSettings
+public partial struct ParticleSettings
 {
     public global::Orbeden.ParticleMainSettings @main;
     public global::Orbeden.ParticleEmissionSettings @emission;
@@ -1828,7 +1828,7 @@ public struct ParticleSettings
 }
 namespace Orbeden
 {
-public struct ParticleMainSettings
+public partial struct ParticleMainSettings
 {
     public uint @maxParticles;
     public float @duration;
@@ -1854,7 +1854,7 @@ public enum ParticleSimulationSpace : uint
 }
 namespace Orbeden
 {
-public struct ParticleFloatRange
+public partial struct ParticleFloatRange
 {
     public float @min;
     public float @max;
@@ -1862,7 +1862,7 @@ public struct ParticleFloatRange
 }
 namespace Orbeden
 {
-public struct ParticleEmissionSettings
+public partial struct ParticleEmissionSettings
 {
     public bool @enabled;
     public float @rateOverTime;
@@ -1871,7 +1871,7 @@ public struct ParticleEmissionSettings
 }
 namespace Orbeden
 {
-public struct ParticleBurst
+public partial struct ParticleBurst
 {
     public float @time;
     public uint @count;
@@ -1882,7 +1882,7 @@ public struct ParticleBurst
 }
 namespace Orbeden
 {
-public struct ParticleShapeSettings
+public partial struct ParticleShapeSettings
 {
     public global::Orbeden.ParticleShape @shape;
     public float @radius;
@@ -1903,7 +1903,7 @@ public enum ParticleShape : uint
 }
 namespace Orbeden
 {
-public struct ParticleMotionSettings
+public partial struct ParticleMotionSettings
 {
     public float @gravityMultiplier;
     public global::Orbeden.vector3 @acceleration;
@@ -1915,14 +1915,14 @@ public struct ParticleMotionSettings
 }
 namespace Orbeden
 {
-public struct ParticleCurve
+public partial struct ParticleCurve
 {
     public global::Orbeden.ParticleCurveKey[] @keys;
 }
 }
 namespace Orbeden
 {
-public struct ParticleCurveKey
+public partial struct ParticleCurveKey
 {
     public float @time;
     public float @value;
@@ -1942,14 +1942,14 @@ public enum ParticleCurveInterpolation : uint
 }
 namespace Orbeden
 {
-public struct ParticleGradient
+public partial struct ParticleGradient
 {
     public global::Orbeden.ParticleGradientKey[] @keys;
 }
 }
 namespace Orbeden
 {
-public struct ParticleGradientKey
+public partial struct ParticleGradientKey
 {
     public float @time;
     public global::Orbeden.color @value;
@@ -1957,7 +1957,7 @@ public struct ParticleGradientKey
 }
 namespace Orbeden
 {
-public struct ParticleCollisionSettings
+public partial struct ParticleCollisionSettings
 {
     public bool @enabled;
     public uint @layerMask;
@@ -1978,7 +1978,7 @@ public enum ParticleCollisionResponse : uint
 }
 namespace Orbeden
 {
-public struct ParticleTrailSettings
+public partial struct ParticleTrailSettings
 {
     public bool @enabled;
     public float @lifetime;
@@ -1995,7 +1995,7 @@ public struct ParticleTrailSettings
 }
 namespace Orbeden
 {
-public struct ParticleRenderSettings
+public partial struct ParticleRenderSettings
 {
     public global::Orbeden.ParticleRenderPath @path;
     public global::Orbeden.ParticleRenderMode @mode;
@@ -2033,7 +2033,7 @@ public enum BlendMode : uint
 }
 namespace Orbeden
 {
-public struct ParticleSubEmitterRule
+public partial struct ParticleSubEmitterRule
 {
     public uint @targetSlot;
     public global::Orbeden.ParticleSubEmitterEvent @event;
@@ -2055,7 +2055,7 @@ public enum ParticleSubEmitterEvent : uint
 }
 namespace Orbeden
 {
-public struct ParticleSettingsParseResult
+public partial struct ParticleSettingsParseResult
 {
     public bool @success;
     public global::Orbeden.ParticleSettings @settings;
@@ -2064,7 +2064,7 @@ public struct ParticleSettingsParseResult
 }
 namespace Orbeden
 {
-public struct ParticlePlaybackInfo
+public partial struct ParticlePlaybackInfo
 {
     public global::Orbeden.ParticlePlaybackState @state;
     public float @time;
@@ -2642,6 +2642,16 @@ public unsafe partial class InstanceDrawList : global::Orbeden.Object
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (int)result;
     }
+    public bool @SetDrawParameters(ReadOnlySpan<float> @data)
+    {
+        fixed (float* pointer_data = @data)
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 3, this);
+        NativeBindingRuntime.Check(callback(InstanceId, pointer_data, @data.Length, &result));
+        return result != 0;
+        }
+    }
     public bool @SetInstances(ReadOnlySpan<global::Orbeden.MeshInstanceData> @data)
     {
         var writer_data = new NativeBindingWriter();
@@ -2651,7 +2661,7 @@ public unsafe partial class InstanceDrawList : global::Orbeden.Object
         fixed (byte* pointer_data = bytes_data)
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 3, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 4, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_data, bytes_data.Length), @data.Length, &result));
         return result != 0;
         }
@@ -2659,7 +2669,7 @@ public unsafe partial class InstanceDrawList : global::Orbeden.Object
     public bool @Submit()
     {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 4, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 5, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
     }
