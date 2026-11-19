@@ -2913,7 +2913,30 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_20(int32 objectId, NativeB
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_21(int32 objectId, NativeBindingBuffer* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_21(int32 objectId, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Material>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->allowBatchReordering);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_22(int32 objectId, uint8 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Material>(objectId);
+        instance->allowBatchReordering = static_cast<bool>(value);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_23(int32 objectId, NativeBindingBuffer* result)
 {
     try
     {
@@ -2925,7 +2948,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_21(int32 objectId, NativeB
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_22(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_24(int32 objectId, uint32* result)
 {
     try
     {
@@ -2937,7 +2960,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_22(int32 objectId, uint32*
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_23(int32 objectId, uint32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_25(int32 objectId, uint32 value)
 {
     try
     {
@@ -2948,7 +2971,30 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_23(int32 objectId, uint32 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_24(int32 objectId, NativeBindingBuffer* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_26(int32 objectId, int32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Material>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<int32>(instance->drawSubQueue);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_27(int32 objectId, int32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Material>(objectId);
+        instance->drawSubQueue = value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_28(int32 objectId, NativeBindingBuffer* result)
 {
     try
     {
@@ -2960,7 +3006,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_24(int32 objectId, NativeB
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_25(int32 objectId, NativeBindingBuffer* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_29(int32 objectId, NativeBindingBuffer* result)
 {
     try
     {
@@ -2972,7 +3018,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_25(int32 objectId, NativeB
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_26(int32 objectId, NativeBindingSlice value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_30(int32 objectId, NativeBindingSlice value)
 {
     try
     {
@@ -2986,7 +3032,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_26(int32 objectId, NativeB
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_27(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_31(int32 objectId, uint8* result)
 {
     try
     {
@@ -2998,7 +3044,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_27(int32 objectId, uint8* 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_28(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_32(int32 objectId, uint8 value)
 {
     try
     {
@@ -3009,7 +3055,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_28(int32 objectId, uint8 v
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_29(int32 objectId, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_33(int32 objectId, int32* result)
 {
     try
     {
@@ -3021,7 +3067,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_29(int32 objectId, int32* 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_30(int32 objectId, int32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_34(int32 objectId, int32 value)
 {
     try
     {
@@ -3032,7 +3078,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_30(int32 objectId, int32 v
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_31(int32 objectId, NativeBindingBuffer* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Material_35(int32 objectId, NativeBindingBuffer* result)
 {
     try
     {
@@ -7748,8 +7794,8 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(Font::StaticType(), 8904294447050588615ULL, { functions_Font, 25 });
     static void* functions_InstanceDrawList[] = { reinterpret_cast<void*>(&Call_InstanceDrawList_0), reinterpret_cast<void*>(&Call_InstanceDrawList_1), reinterpret_cast<void*>(&Call_InstanceDrawList_2), reinterpret_cast<void*>(&Call_InstanceDrawList_3), reinterpret_cast<void*>(&Call_InstanceDrawList_4), reinterpret_cast<void*>(&Call_InstanceDrawList_5) };
     NativeBindings::Register(InstanceDrawList::StaticType(), 11817979313244570025ULL, { functions_InstanceDrawList, 6 });
-    static void* functions_Material[] = { reinterpret_cast<void*>(&Call_Material_0), reinterpret_cast<void*>(&Call_Material_1), reinterpret_cast<void*>(&Call_Material_2), reinterpret_cast<void*>(&Call_Material_3), reinterpret_cast<void*>(&Call_Material_4), reinterpret_cast<void*>(&Call_Material_5), reinterpret_cast<void*>(&Call_Material_6), reinterpret_cast<void*>(&Call_Material_7), reinterpret_cast<void*>(&Call_Material_8), reinterpret_cast<void*>(&Call_Material_9), reinterpret_cast<void*>(&Call_Material_10), reinterpret_cast<void*>(&Call_Material_11), reinterpret_cast<void*>(&Call_Material_12), reinterpret_cast<void*>(&Call_Material_13), reinterpret_cast<void*>(&Call_Material_14), reinterpret_cast<void*>(&Call_Material_15), reinterpret_cast<void*>(&Call_Material_16), reinterpret_cast<void*>(&Call_Material_17), reinterpret_cast<void*>(&Call_Material_18), reinterpret_cast<void*>(&Call_Material_19), reinterpret_cast<void*>(&Call_Material_20), reinterpret_cast<void*>(&Call_Material_21), reinterpret_cast<void*>(&Call_Material_22), reinterpret_cast<void*>(&Call_Material_23), reinterpret_cast<void*>(&Call_Material_24), reinterpret_cast<void*>(&Call_Material_25), reinterpret_cast<void*>(&Call_Material_26), reinterpret_cast<void*>(&Call_Material_27), reinterpret_cast<void*>(&Call_Material_28), reinterpret_cast<void*>(&Call_Material_29), reinterpret_cast<void*>(&Call_Material_30), reinterpret_cast<void*>(&Call_Material_31) };
-    NativeBindings::Register(Material::StaticType(), 3298412916009026265ULL, { functions_Material, 32 });
+    static void* functions_Material[] = { reinterpret_cast<void*>(&Call_Material_0), reinterpret_cast<void*>(&Call_Material_1), reinterpret_cast<void*>(&Call_Material_2), reinterpret_cast<void*>(&Call_Material_3), reinterpret_cast<void*>(&Call_Material_4), reinterpret_cast<void*>(&Call_Material_5), reinterpret_cast<void*>(&Call_Material_6), reinterpret_cast<void*>(&Call_Material_7), reinterpret_cast<void*>(&Call_Material_8), reinterpret_cast<void*>(&Call_Material_9), reinterpret_cast<void*>(&Call_Material_10), reinterpret_cast<void*>(&Call_Material_11), reinterpret_cast<void*>(&Call_Material_12), reinterpret_cast<void*>(&Call_Material_13), reinterpret_cast<void*>(&Call_Material_14), reinterpret_cast<void*>(&Call_Material_15), reinterpret_cast<void*>(&Call_Material_16), reinterpret_cast<void*>(&Call_Material_17), reinterpret_cast<void*>(&Call_Material_18), reinterpret_cast<void*>(&Call_Material_19), reinterpret_cast<void*>(&Call_Material_20), reinterpret_cast<void*>(&Call_Material_21), reinterpret_cast<void*>(&Call_Material_22), reinterpret_cast<void*>(&Call_Material_23), reinterpret_cast<void*>(&Call_Material_24), reinterpret_cast<void*>(&Call_Material_25), reinterpret_cast<void*>(&Call_Material_26), reinterpret_cast<void*>(&Call_Material_27), reinterpret_cast<void*>(&Call_Material_28), reinterpret_cast<void*>(&Call_Material_29), reinterpret_cast<void*>(&Call_Material_30), reinterpret_cast<void*>(&Call_Material_31), reinterpret_cast<void*>(&Call_Material_32), reinterpret_cast<void*>(&Call_Material_33), reinterpret_cast<void*>(&Call_Material_34), reinterpret_cast<void*>(&Call_Material_35) };
+    NativeBindings::Register(Material::StaticType(), 10124473645180690159ULL, { functions_Material, 36 });
     static void* functions_Mesh[] = { reinterpret_cast<void*>(&Call_Mesh_0), reinterpret_cast<void*>(&Call_Mesh_1), reinterpret_cast<void*>(&Call_Mesh_2), reinterpret_cast<void*>(&Call_Mesh_3), reinterpret_cast<void*>(&Call_Mesh_4), reinterpret_cast<void*>(&Call_Mesh_5), reinterpret_cast<void*>(&Call_Mesh_6), reinterpret_cast<void*>(&Call_Mesh_7), reinterpret_cast<void*>(&Call_Mesh_8), reinterpret_cast<void*>(&Call_Mesh_9), reinterpret_cast<void*>(&Call_Mesh_10), reinterpret_cast<void*>(&Call_Mesh_11), reinterpret_cast<void*>(&Call_Mesh_12), reinterpret_cast<void*>(&Call_Mesh_13), reinterpret_cast<void*>(&Call_Mesh_14), reinterpret_cast<void*>(&Call_Mesh_15), reinterpret_cast<void*>(&Call_Mesh_16), reinterpret_cast<void*>(&Call_Mesh_17), reinterpret_cast<void*>(&Call_Mesh_18), reinterpret_cast<void*>(&Call_Mesh_19), reinterpret_cast<void*>(&Call_Mesh_20), reinterpret_cast<void*>(&Call_Mesh_21), reinterpret_cast<void*>(&Call_Mesh_22), reinterpret_cast<void*>(&Call_Mesh_23), reinterpret_cast<void*>(&Call_Mesh_24), reinterpret_cast<void*>(&Call_Mesh_25), reinterpret_cast<void*>(&Call_Mesh_26), reinterpret_cast<void*>(&Call_Mesh_27), reinterpret_cast<void*>(&Call_Mesh_28), reinterpret_cast<void*>(&Call_Mesh_29) };
     NativeBindings::Register(Mesh::StaticType(), 10408349486667592532ULL, { functions_Mesh, 30 });
     static void* functions_Shader[] = { reinterpret_cast<void*>(&Call_Shader_0), reinterpret_cast<void*>(&Call_Shader_1), reinterpret_cast<void*>(&Call_Shader_2), reinterpret_cast<void*>(&Call_Shader_3), reinterpret_cast<void*>(&Call_Shader_4), reinterpret_cast<void*>(&Call_Shader_5), reinterpret_cast<void*>(&Call_Shader_6), reinterpret_cast<void*>(&Call_Shader_7), reinterpret_cast<void*>(&Call_Shader_8), reinterpret_cast<void*>(&Call_Shader_9), reinterpret_cast<void*>(&Call_Shader_10), reinterpret_cast<void*>(&Call_Shader_11), reinterpret_cast<void*>(&Call_Shader_12), reinterpret_cast<void*>(&Call_Shader_13), reinterpret_cast<void*>(&Call_Shader_14), reinterpret_cast<void*>(&Call_Shader_15), reinterpret_cast<void*>(&Call_Shader_16), reinterpret_cast<void*>(&Call_Shader_17), reinterpret_cast<void*>(&Call_Shader_18), reinterpret_cast<void*>(&Call_Shader_19), reinterpret_cast<void*>(&Call_Shader_20), reinterpret_cast<void*>(&Call_Shader_21), reinterpret_cast<void*>(&Call_Shader_22), reinterpret_cast<void*>(&Call_Shader_23) };

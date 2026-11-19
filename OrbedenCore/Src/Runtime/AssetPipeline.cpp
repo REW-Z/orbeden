@@ -1869,6 +1869,14 @@ namespace
         output << '#' << material.name << "\n";
         output << "shader " << material.shader.GetInstanceId().GetPath() << "\n";
         output << "drawqueue " << (material.overrideDrawQueue ? GetDrawQueueName(material.drawQueue) : "Auto") << "\n";
+        if (material.drawSubQueue != 0)
+        {
+            output << "drawsubqueue " << material.drawSubQueue << "\n";
+        }
+        if (material.allowBatchReordering)
+        {
+            output << "allowbatchreordering true\n";
+        }
         for (const MaterialColorSlot& slot : material.colorSlots)
         {
             output << "color " << slot.name << ' ' << Reflection::ToXmlValue(slot.value) << "\n";
@@ -1905,6 +1913,8 @@ namespace
 
         material.SetShader(StringId());
         material.overrideDrawQueue = false;
+        material.drawSubQueue = 0;
+        material.allowBatchReordering = false;
 
         std::istringstream stream(text);
         std::string line;
@@ -1946,6 +1956,22 @@ namespace
                     return false;
                 }
                 material.overrideDrawQueue = true;
+            }
+            else if (command == "drawsubqueue")
+            {
+                if (words.size() != 2 || !Reflection::SetFromXmlValue(material.drawSubQueue, words[1]))
+                {
+                    error = "Line " + std::to_string(lineNumber) + ": drawsubqueue needs a signed 32-bit integer.";
+                    return false;
+                }
+            }
+            else if (command == "allowbatchreordering")
+            {
+                if (words.size() != 2 || !Reflection::SetFromXmlValue(material.allowBatchReordering, words[1]))
+                {
+                    error = "Line " + std::to_string(lineNumber) + ": allowbatchreordering needs a boolean.";
+                    return false;
+                }
             }
             else if (command == "color")
             {

@@ -456,6 +456,8 @@ void HeightField::RebuildNoiseTexture()
     runtimeMaterial->SetShader(source->shader.Get());
     runtimeMaterial->overrideDrawQueue = source->overrideDrawQueue;
     runtimeMaterial->drawQueue = source->drawQueue;
+    runtimeMaterial->drawSubQueue = source->drawSubQueue;
+    runtimeMaterial->allowBatchReordering = source->allowBatchReordering;
     runtimeMaterial->SetTexture("u_DiffuseTexture", noiseTexture);
     runtimeMaterial->MarkDirty();
 }

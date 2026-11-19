@@ -392,7 +392,7 @@ void ForwardPipeline::BuildFrameBatches(const RenderScene& scene, const VisibleS
     }
     {
         PROFILE("Render/Batching/SortItems");
-        submissionBuilder.SortItems(cameraItems);
+        submissionBuilder.SortItems(visibleSet.camera, cameraItems);
     }
     {
         PROFILE("Render/Batching/EmitBatches");

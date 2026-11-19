@@ -54,7 +54,7 @@ public:
     List<Ref<Material>> materials;
     bool castShadows = true;
     bool receiveShadows = true;
-    //这个渲染器允许的绘制策略；Individual 表示始终单绘制并作为排序屏障
+    //渲染器的绘制策略，Individual 表示独立提交每个绘制项
     DrawStrategy drawStrategy = DrawStrategy::Auto;
 
     /// <summary>设置非持久化渲染网格，传空恢复源网格；对象由调用方管理。</summary>

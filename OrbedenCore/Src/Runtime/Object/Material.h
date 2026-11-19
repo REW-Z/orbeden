@@ -54,6 +54,10 @@ public:
     std::string name;
     bool overrideDrawQueue = false;
     DrawQueue drawQueue = DrawQueue::Opaque;
+    //主绘制队列内按升序执行的子队列
+    int32 drawSubQueue = 0;
+    //允许兼容单 Pass 网格在 Opaque 子队列内参与分组
+    bool allowBatchReordering = false;
     ORBEDEN_BIND_ACCESSORS(Direct, None)
     List<MaterialTextureSlot> textureSlots;
     ORBEDEN_BIND_ACCESSORS(Direct, None)

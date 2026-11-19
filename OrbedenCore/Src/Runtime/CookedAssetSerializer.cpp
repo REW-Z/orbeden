@@ -276,6 +276,13 @@ namespace
         }
 
         writer.WriteRefKey(material->shader.GetInstanceId());
+
+        //为设置了子队列或重排的材质追加绘制配置
+        if (material->drawSubQueue != 0 || material->allowBatchReordering)
+        {
+            writer.WriteValue(material->drawSubQueue);
+            writer.WriteValue(static_cast<uint32>(material->allowBatchReordering));
+        }
         return true;
     }
 
@@ -330,6 +337,18 @@ namespace
         if (!reader.ReadRefKey(externalRefs, shaderId)) return false;
 
         material->SetShader(shaderId);
+
+        //读取可选的子队列与重排配置
+        if (!reader.AtEnd())
+        {
+            uint32 allowBatchReordering = 0;
+            if (!reader.ReadValue(material->drawSubQueue) || !reader.ReadValue(allowBatchReordering)
+                || allowBatchReordering > 1)
+            {
+                return false;
+            }
+            material->allowBatchReordering = allowBatchReordering != 0;
+        }
         return true;
     }
 

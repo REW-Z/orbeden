@@ -1061,6 +1061,18 @@
           ]
         },
         {
+          "Name": "allowBatchReordering",
+          "Doc": "\u5141\u8BB8\u517C\u5BB9\u5355 Pass \u7F51\u683C\u5728 Opaque \u5B50\u961F\u5217\u5185\u53C2\u4E0E\u5206\u7EC4",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "colorSlots",
           "Doc": "",
           "IsMethod": false,
@@ -1079,6 +1091,18 @@
           "IsStatic": false,
           "Property": "getset",
           "Type": "DrawQueue",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "drawSubQueue",
+          "Doc": "\u4E3B\u7ED8\u5236\u961F\u5217\u5185\u6309\u5347\u5E8F\u6267\u884C\u7684\u5B50\u961F\u5217",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
           "Serialize": false,
           "Changed": "",
           "Parameters": [],
@@ -4251,7 +4275,7 @@
         },
         {
           "Name": "drawStrategy",
-          "Doc": "\u8FD9\u4E2A\u6E32\u67D3\u5668\u5141\u8BB8\u7684\u7ED8\u5236\u7B56\u7565\uFF1BIndividual \u8868\u793A\u59CB\u7EC8\u5355\u7ED8\u5236\u5E76\u4F5C\u4E3A\u6392\u5E8F\u5C4F\u969C",
+          "Doc": "\u6E32\u67D3\u5668\u7684\u7ED8\u5236\u7B56\u7565\uFF0CIndividual \u8868\u793A\u72EC\u7ACB\u63D0\u4EA4\u6BCF\u4E2A\u7ED8\u5236\u9879",
           "IsMethod": false,
           "IsStatic": false,
           "Property": "getset",

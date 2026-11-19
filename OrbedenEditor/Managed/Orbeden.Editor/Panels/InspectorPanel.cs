@@ -416,6 +416,28 @@ internal sealed class InspectorPanel : EditorPanel
                     material.drawQueue = (DrawQueue)value;
                     return InteropStatus.Ok;
                 }),
+            new DelegatedProperty("drawSubQueue", NativeValueKind.Int32,
+                () => material.drawSubQueue,
+                updated =>
+                {
+                    if (!updated.TryGet(out int value))
+                    {
+                        return InteropStatus.TypeMismatch;
+                    }
+                    material.drawSubQueue = value;
+                    return InteropStatus.Ok;
+                }),
+            new DelegatedProperty("allowBatchReordering", NativeValueKind.Bool,
+                () => material.allowBatchReordering,
+                updated =>
+                {
+                    if (!updated.TryGet(out bool value))
+                    {
+                        return InteropStatus.TypeMismatch;
+                    }
+                    material.allowBatchReordering = value;
+                    return InteropStatus.Ok;
+                }),
         ];
 
         Shader? shader = material.shader;

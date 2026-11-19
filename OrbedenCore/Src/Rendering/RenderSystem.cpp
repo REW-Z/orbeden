@@ -548,15 +548,20 @@ void RenderSystem::Render(World& world, float deltaTime)
             backend->CopyRenderTarget(seedDesc);
         }
 
-        {
-            PROFILE("Render/Cull");
-            culler.Cull(scene, camera, visibleSet); //剔除
-            scene.BuildRenderItems(visibleSet);
-            sorter.Sort(visibleSet);//排序
-        }
-
         uint64 cameraKey = (static_cast<uint64>(camera.ens.id) << 32) | camera.ens.version;
         auto extension = cameraRenderExtensions.find(cameraKey);
+        {
+            PROFILE("Render/Cull");
+            culler.Cull(scene, camera, visibleSet);
+            scene.BuildRenderItems(visibleSet);
+
+            //保留相机扩展收到的可见项顺序
+            if (extension != cameraRenderExtensions.end())
+            {
+                sorter.Sort(visibleSet);
+            }
+        }
+
         const bool replaceSceneRendering = extension != cameraRenderExtensions.end()
             && extension->second.replaceSceneRendering;
         {

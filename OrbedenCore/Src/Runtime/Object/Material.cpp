@@ -87,6 +87,8 @@ void Material::CopyFrom(Material* source)
     name = source->name;
     overrideDrawQueue = source->overrideDrawQueue;
     drawQueue = source->drawQueue;
+    drawSubQueue = source->drawSubQueue;
+    allowBatchReordering = source->allowBatchReordering;
     shader.Set(source->shader.Get());
     textureSlots = source->textureSlots;
     colorSlots = source->colorSlots;

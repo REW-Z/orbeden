@@ -12,7 +12,7 @@ Orbeden 使用单线程 Forward Renderer，通过公共 `RenderBackend` 接口�
 | `Transform` | 修改时使子树世界变换缓存失效，读取时按需计算并缓存 |
 | `RenderScene` | 持久维护 Camera、DirectionalLight、StaticMeshRenderer 指针注册 |
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
-| `RenderItemSorter` | 相机可见项的队列与距离排序 |
+| `RenderItemSorter` | 相机扩展使用的可见项排序 |
 | `DrawSubmissionBuilder` | 绘制项收集、兼容性分组、材质排序与几何路径选择 |
 | `StaticBatchCache` / `GeometryExpander` | 持久静态批、拓扑缓存与 CPU 几何展开 |
 | `ParticleRenderer` | 粒子、拖尾的实例数据与展开几何 |
@@ -97,7 +97,7 @@ UI 命中检测另有单像素深度读取路径：`UIRenderer` 校验视图、�
 
 ### 3. 每相机裁剪与排序
 
-可见性筛选、RenderItem 展开与初始队列排序发生在 RenderSystem 的 Render/Cull 范围；主 Pass 的按材质重排和合批由 ForwardPipeline 的 BuildFrameBatches 执行。
+可见性筛选与 RenderItem 展开发生在 RenderSystem 的 Render/Cull 范围。绑定了相机扩展时，可见项按原队列与距离规则排序后交给扩展。ForwardPipeline 的 BuildFrameBatches 负责主 Pass 的排序和合批。
 
 裁剪规则：
 
@@ -108,13 +108,13 @@ UI 命中检测另有单像素深度读取路径：`UIRenderer` 校验视图、�
 
 排序规则：
 
-- Opaque：初始近到远排序；`DrawSubmissionBuilder` 随后在连续可重排区间内按 Shader 基础程序、Material 聚集网格组，同材质的组按最近距离排列，组内仍近到远。
-- Transparent：远到近。
-- Refraction：远到近。
+- Opaque 按子队列、材质和绘制策略收集组，再按组内最近的相机空间深度从近到远排列。组内按网格、索引范围与绘制状态聚集兼容批次。
+- Transparent 在子队列内按原距离逐项从远到近。
+- Refraction 在子队列内按原距离逐项从远到近。
 
-不透明重排仅用于单 Pass Standard、深度测试开、深度写开且混合关的项。`Individual`、多 Pass、特殊深度／混合状态项构成排序屏障，不跨区间聚合。相同 Material 的不同网格在可重排区间内保持相邻；Shader 基础程序用于分组，最终绘制仍选择各自的 Uniform／Instanced／Expanded 变体。材质排序的提交行为见下文「材质排序与 Uniform 提交」。
+普通单 Pass 不透明绘制和持久静态批可参与分组。多 Pass 与未启用重排的特殊深度或混合项按单项深度参与排序。有确定前后依赖的材质可以分配到不同子队列。`Individual` 保持独立提交，每个组仍按实际绘制策略选择 Uniform、Instanced 或 Expanded 变体。
 
-队列是离散语义标记，不提供自定义数值优先级。已有序列化数值保持 `Opaque=0`、`Transparent=1`，原生折射使用 `Refraction=2`。
+主队列的序列化数值为 `Opaque=0`、`Transparent=1`、`Refraction=2`，子队列提供主队列内的排序优先级。
 
 ### 4. 每相机级联阴影
 
@@ -168,6 +168,8 @@ OrbShader 在所有 Pass/阶段之前声明一次全局队列，适用于该 Sha
 ```
 
 队列支持 `Opaque`、`Transparent`、`Refraction`，不区分大小写；省略声明时使用 `Opaque`，重复声明、未知值或在 Pass/阶段之后声明会导入失败。材质内部格式 `.orbmat` 可用 `drawqueue Transparent` 指定材质覆盖，`drawqueue Auto` 或省略该行表示继承 Shader。运行时也可通过材质的两个字段设置；关闭覆盖后立即恢复当前 Shader 默认值，切换 Shader 不会清除已有材质覆盖。
+
+每个主队列按材质的有符号整数 `drawSubQueue` 升序绘制，默认为 0。可在材质 Inspector、脚本或 `.orbmat` 中设置，例如 `drawsubqueue 1`。子队列内沿用主队列的距离排序与 GPU 状态规则。材质可以启用 `allowBatchReordering`，或在 `.orbmat` 写 `allowbatchreordering true`，让兼容的单 Pass Standard 网格项参与 Opaque 分组。子队列边界同时划分顺序和批次。启用重排的混合表面应允许调整绘制顺序。
 
 每个 `RenderItem` 会按 Shader 中的 Pass 声明顺序连续绘制。Pass 可独立配置 `DepthTest`、`DepthWrite`、`Blend` 和 `Cull`；`Auto` 每次从当前 Opaque、Transparent 或 Refraction 队列基线解析，不继承前一个 Pass 的状态。
 
@@ -321,7 +323,7 @@ bool submitted = World.DrawMeshInstanced(mesh, material, instances);
 
 ## 几何合批与拓扑缓存
 
-- 主画面的绘制路径按渲染器的 `drawStrategy` 与批次可合并性选择：`Auto` 依次尝试持久静态批、实例批、动态展开批，都不成立才逐对象绘制；`Individual` 始终单绘制并作为排序屏障；`GpuInstancing` 在单 Pass 和后端支持实例变体时直接实例绘制，单个实例也走该路径，显式实例组按绘制接口及程序缓冲容量提交。`DynamicBatching` 采用动态展开，条件不足时退回单绘制。实例批要求同 Mesh、子网格区间与材质；动态展开批只要求同材质与同渲染状态，用 `DrawIndexedInstanced` 与 `DrawIndexed` 分别提交（持久静态批直接绑定缓存组的顶点输入）。Indirect Draw 尚未实现。
+- 主画面的绘制路径按渲染器的 `drawStrategy` 与批次可合并性选择：`Auto` 依次尝试持久静态批、实例批、动态展开批，都不成立才逐对象绘制；`Individual` 始终逐项提交；`GpuInstancing` 在单 Pass 和后端支持实例变体时直接实例绘制，单个实例也走该路径，显式实例组按绘制接口及程序缓冲容量提交。`DynamicBatching` 采用动态展开，条件不足时退回单绘制。实例批要求同 Mesh、子网格区间与材质；动态展开批只要求同材质与同渲染状态，用 `DrawIndexedInstanced` 与 `DrawIndexed` 分别提交（持久静态批直接绑定缓存组的顶点输入）。Indirect Draw 尚未实现。
 - 阴影中的 `Auto` 普通网格先复用有效持久静态批；其余项只尝试 GPU 实例批，条件不足时直接绘制原 GPU 网格，不逐级联进行 CPU 动态几何展开。显式 `DynamicBatching`、粒子与显式实例提交保持原路径；不修改 Renderer 保存的策略。`Render/Shadows` 记录阴影入口，`Cascade`、`BuildItems`、`BuildBatches`、`DrawBatches` 记录各级联；其中 `DrawBatches` 包含 Pass 建立、状态设置、绘制提交与结束，不是 GPU 时间查询。
 - 每次相机渲染只收集一次普通网格和显式实例的阴影候选，再按级联视锥筛选；同一 Renderer 的子网格共享一次包围盒判断。持久静态批和粒子保留逐级裁剪路径，投射物分区包围盒继续使用原筛选规则并复用存储容量。`Render/Shadows/CollectItems` 记录共享收集阶段，`BuildItems` 记录级联筛选和静态批／粒子追加；不跨相机或跨帧复用候选内容。
 - `StaticMeshRenderer` 只是组件类名，**不代表它所属的 Ens 已 static**：是否进入持久静态批由 Ens 的 `static` 约束和渲染器的 `drawStrategy` 共同决定。
@@ -423,7 +425,7 @@ CPU 数据是作用域墙钟时间，包括函数内部实际发生的 CPU 阻�
 | `Render/Backend/ResourceCache/*` | CreateBuffer/Image、ReuseBuffer/Image、CacheBuffer/Image、FreeBuffer/Image 的 CPU 时间和调用次数 |
 | `Render/Resources/ReleaseDestroyed/*` | 按材质、网格、纹理、附件目标、天空盒和 Shader 细分销毁对象的 GPU 缓存释放 |
 | `Render/CameraPreparation` | 相机渲染数据准备 |
-| `Render/SceneSync` / `Render/Cull` | 场景增量更新、可见性筛选和初始队列排序 |
+| `Render/SceneSync` / `Render/Cull` | 场景增量更新、可见性筛选、相机扩展使用的可见项排序 |
 | `Render/Shadows/*` | 阴影候选收集、级联构建、合批与绘制提交；DrawBatches 包含 Pass 建立、状态、提交和结束 |
 | `Render/BuildBatches` | 绘制项收集、细分排序与批次生成 |
 | `Render/DrawBatches/Uniform`、`Instanced`、`Expanded`、`TrailInstanced` | 各几何路径的 CPU 准备和绘制提交 |
@@ -431,7 +433,7 @@ CPU 数据是作用域墙钟时间，包括函数内部实际发生的 CPU 阻�
 | `Render/EditorGui/SubmitDraw` | Editor GUI 网格准备、上传与绘制调用的 CPU 耗时 |
 | `Render/Present` | CPU 在队列提交与呈现调用中的耗时，不是 GPU 绘制时长或屏幕显示延迟 |
 
-普通批次采样继续细分距离排序、按键分组、组构造与材质重排。展开路径细分拓扑读取／重建、索引校验、变换、索引重排、块提交、状态绑定和 Draw；`Render/ExpandParticles` 也包含普通网格动态展开。采样以批次或网格阶段为单位，不逐顶点记录。每帧最多 4096 条 CPU 事件，保留 1024 帧，原生事件数组约 160 MiB；丢样时 Self 和细分层级不再代表完整记录。
+主 Pass 分别记录绘制项收集、排序和批次生成。展开路径细分拓扑读取／重建、索引校验、变换、索引重排、块提交、状态绑定和 Draw；`Render/ExpandParticles` 也包含普通网格动态展开。采样以批次或网格阶段为单位，不逐顶点记录。每帧最多 4096 条 CPU 事件，保留 1024 帧，原生事件数组约 160 MiB；丢样时 Self 和细分层级不再代表完整记录。
 
 ### GPU 区间与异步回填
 

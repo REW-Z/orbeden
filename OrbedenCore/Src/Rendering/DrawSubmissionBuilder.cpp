@@ -15,6 +15,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
 
 namespace
 {
@@ -75,15 +78,17 @@ namespace
         return a.subMeshIndex < b.subMeshIndex;
     }
 
-    //批次内容比较：除几何模式与 program 之外的键字段
-    bool SameBatchContent(const DrawItem& a, const DrawItem& b)
+    //比较两个绘制项的实例批次兼容性
+    bool SameBatchContent(const DrawItem& a, const DrawItem& b, bool matchStrategy)
     {
         return a.queue == b.queue
+            && a.subQueue == b.subQueue
             && a.source == b.source
             && a.geometry == b.geometry
             && a.mode == b.mode
             && a.blendMode == b.blendMode
-            && (a.strategy == DrawStrategy::GpuInstancing) == (b.strategy == DrawStrategy::GpuInstancing)
+            && (matchStrategy ? a.strategy == b.strategy
+                : (a.strategy == DrawStrategy::GpuInstancing) == (b.strategy == DrawStrategy::GpuInstancing))
             && a.mesh == b.mesh
             && a.material == b.material
             && a.subMeshIndex == b.subMeshIndex
@@ -93,42 +98,37 @@ namespace
             && a.hasDrawParameters == b.hasDrawParameters;
     }
 
-    //批次分组用的键内容排序：队列、材质、网格与几何区间，再加绘制状态。
-    //不含对象身份——键里带上 owner 或 elementId，分组粒度就退化成一个对象一项，
-    //同键项永远凑不满两项，静态自动合批整个不生效。稳定键只用于同键项之间的排序。
-    bool KeyContentLess(const DrawItem& a, const DrawItem& b)
+    //按组内的绘制状态、网格与索引范围排列可合批项
+    bool BatchGeometryLess(const DrawItem& a, const DrawItem& b)
     {
-        if (a.queue != b.queue) return static_cast<uint32>(a.queue) < static_cast<uint32>(b.queue);
-        int32 materialA = a.material ? a.material->GetObjectId() : 0;
-        int32 materialB = b.material ? b.material->GetObjectId() : 0;
-        if (materialA != materialB) return materialA < materialB;
         int32 meshA = a.mesh ? a.mesh->GetObjectId() : 0;
         int32 meshB = b.mesh ? b.mesh->GetObjectId() : 0;
-        if (meshA != meshB) return meshA < meshB;
-        if (a.subMeshIndex != b.subMeshIndex) return a.subMeshIndex < b.subMeshIndex;
-        if (a.indexStart != b.indexStart) return a.indexStart < b.indexStart;
-        if (a.indexCount != b.indexCount) return a.indexCount < b.indexCount;
-        if (a.blendMode != b.blendMode) return static_cast<uint32>(a.blendMode) < static_cast<uint32>(b.blendMode);
-        if (a.receiveShadows != b.receiveShadows) return a.receiveShadows < b.receiveShadows;
-        if (a.hasDrawParameters != b.hasDrawParameters) return a.hasDrawParameters < b.hasDrawParameters;
-        bool explicitA = a.strategy == DrawStrategy::GpuInstancing;
-        bool explicitB = b.strategy == DrawStrategy::GpuInstancing;
-        if (explicitA != explicitB) return explicitA < explicitB;
-        if (a.geometry != b.geometry) return static_cast<uint32>(a.geometry) < static_cast<uint32>(b.geometry);
-        if (a.mode != b.mode) return static_cast<uint32>(a.mode) < static_cast<uint32>(b.mode);
-        return false;
+        return std::tie(a.source, a.geometry, a.mode, a.blendMode, a.receiveShadows, a.hasDrawParameters,
+                   meshA, a.subMeshIndex, a.indexStart, a.indexCount)
+            < std::tie(b.source, b.geometry, b.mode, b.blendMode, b.receiveShadows, b.hasDrawParameters,
+                   meshB, b.subMeshIndex, b.indexStart, b.indexCount);
     }
 
-    //键内容相等：排序后同键项必然相邻，据此切组
-    bool KeyContentEqual(const DrawItem& a, const DrawItem& b)
+    //判断单 Pass 绘制项能否参与不透明分组
+    bool AllowsOpaqueGrouping(const DrawItem& item, const GpuShader& shader)
     {
-        return !KeyContentLess(a, b) && !KeyContentLess(b, a);
+        if (item.queue != DrawQueue::Opaque || shader.passes.size() != 1)
+        {
+            return false;
+        }
+
+        const GpuShaderPass& pass = shader.passes.front();
+        bool usesOpaqueDepth = pass.state.depthTest != ShaderPassToggle::Off
+            && pass.state.depthWrite != ShaderPassToggle::Off && pass.state.blend != ShaderPassToggle::On;
+        return usesOpaqueDepth || (item.material->allowBatchReordering
+            && item.geometry == DrawGeometry::Mesh && pass.geometryContract == ShaderGeometryContract::Standard);
     }
 
     //动态批的内容比较：不要求同网格，只要求同材质、队列、几何种类与最终渲染状态
     bool SameDynamicContent(const DrawItem& a, const DrawItem& b)
     {
         return a.queue == b.queue
+            && a.subQueue == b.subQueue
             && a.source == b.source
             && a.geometry == b.geometry
             && a.blendMode == b.blendMode
@@ -161,7 +161,7 @@ namespace
 
     //按预算收编连续的同材质项，返回动态批的结束下标。
     //单项超预算不参与；整批达到任一上限就结束，由调用方在下一个下标重新开始。
-    usize CollectDynamicBatch(const List<DrawItem>& items, usize begin, bool allowed, bool preserveInstancing)
+    usize CollectDynamicBatch(const List<DrawItem>& items, usize begin, bool allowed, bool preserveInstancing, bool matchStrategy)
     {
         if (!allowed) return begin + 1;
 
@@ -173,7 +173,11 @@ namespace
         {
             const DrawItem& item = items[end];
             if (item.persistentGeometry || item.hasDrawParameters || item.geometry != DrawGeometry::Mesh || !item.mesh) break;
-            if (end > begin && (!SameDynamicContent(items[begin], item) || !AllowsDynamicBatching(item.strategy))) break;
+            if (end > begin && (!SameDynamicContent(items[begin], item) || !AllowsDynamicBatching(item.strategy)
+                || (matchStrategy && item.strategy != items[begin].strategy)))
+            {
+                break;
+            }
             if (item.indexCount == 0 || item.indexCount > MaximumDynamicBatchItemIndices) break;
 
             //保留后续可实例化的连续组
@@ -181,7 +185,7 @@ namespace
             {
                 checkedInstancingEnd = end + 1;
                 while (checkedInstancingEnd < items.size()
-                    && SameBatchContent(item, items[checkedInstancingEnd]))
+                    && SameBatchContent(item, items[checkedInstancingEnd], matchStrategy))
                     ++checkedInstancingEnd;
                 if (checkedInstancingEnd > end + 1 && AllAllowInstancing(items, end, checkedInstancingEnd))
                     break;
@@ -204,6 +208,7 @@ namespace
 bool DrawBatchKey::operator==(const DrawBatchKey& other) const
 {
     return queue == other.queue
+        && subQueue == other.subQueue
         && mode == other.mode
         && geometry == other.geometry
         && blendMode == other.blendMode
@@ -318,24 +323,10 @@ void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const Vis
                 item.cameraDistance = source.cameraDistance;
                 item.castShadows = source.castShadows;
                 item.receiveShadows = source.receiveShadows;
-                //指定只走单绘制的渲染器始终是屏障项，前后不合并
+                //读取渲染器的绘制策略
                 item.strategy = renderer->drawStrategy;
             }
-            //重排只允许单 Pass Standard、且最终状态为深度测试开、深度写开、混合关的不透明项
-            {
-                const GpuShaderPass& pass = material->shader->passes[0];
-                bool alphaBlended = item.queue != DrawQueue::Opaque;
-                bool resolvedDepthTest = pass.state.depthTest != ShaderPassToggle::Off;
-                bool resolvedDepthWrite = pass.state.depthWrite == ShaderPassToggle::On ||
-                    (pass.state.depthWrite == ShaderPassToggle::Auto && !alphaBlended);
-                bool resolvedBlend = pass.state.blend == ShaderPassToggle::On ||
-                    (pass.state.blend == ShaderPassToggle::Auto && alphaBlended);
-                item.reorderable = item.strategy != DrawStrategy::Individual
-                    && item.queue == DrawQueue::Opaque
-                    && material->shader->passes.size() == 1
-                    && pass.geometryContract == ShaderGeometryContract::Standard
-                    && resolvedDepthTest && resolvedDepthWrite && !resolvedBlend;
-            }
+            item.canGroupOpaque = AllowsOpaqueGrouping(item, *material->shader);
             items.push_back(item);
         }
     }
@@ -410,6 +401,7 @@ void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const Vis
                     item.castShadows = submission.options.castShadows;
                     item.receiveShadows = submission.options.receiveShadows;
                     item.strategy = DrawStrategy::GpuInstancing;
+                    item.canGroupOpaque = AllowsOpaqueGrouping(item, *gpuMaterial->shader);
                     items.push_back(item);
                 }
             }
@@ -428,118 +420,190 @@ void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const Vis
         PROFILE("Render/Batching/Collect/Particles");
         particleRenderer->AppendCameraItems(particles, camera, items);
     }
-}
 
-//按队列、距离与稳定键排序
-void DrawSubmissionBuilder::SortItems(List<DrawItem>& items)
-{
+    //应用子队列并标记静态批与粒子的分组资格
+    for (DrawItem& item : items)
     {
-        PROFILE("Render/Batching/Sort/ByDistance");
-        std::stable_sort(items.begin(), items.end(), [](const DrawItem& a, const DrawItem& b)
+        item.subQueue = item.material->drawSubQueue;
+        if (item.queue != DrawQueue::Opaque)
         {
-            if (a.queue != b.queue) return static_cast<uint32>(a.queue) < static_cast<uint32>(b.queue);
-
-            float32 distanceA = GetSortableDistance(a.cameraDistance);
-            float32 distanceB = GetSortableDistance(b.cameraDistance);
-            if (a.queue != DrawQueue::Opaque)
-            {
-                //透明与折射远到近
-                if (distanceA != distanceB) return distanceA > distanceB;
-                return StableKeyLess(a, b);
-            }
-
-            //不透明近到远
-            if (distanceA != distanceB) return distanceA < distanceB;
-            return StableKeyLess(a, b);
-        });
-    }
-
-    PROFILE("Render/Batching/Sort/Regroup");
-    //在不透明的连续可重排区间内按批次键分组
-    List<DrawItem> groupScratch;
-    usize begin = 0;
-    while (begin < items.size())
-    {
-        if (!items[begin].reorderable)
-        {
-            ++begin;
             continue;
         }
-        usize end = begin;
-        while (end < items.size() && items[end].reorderable) ++end;
 
+        if (item.persistentGeometry)
         {
-            groupScratch.assign(items.begin() + static_cast<isize>(begin), items.begin() + static_cast<isize>(end));
-            std::stable_sort(groupScratch.begin(), groupScratch.end(), KeyContentLess);
+            item.canGroupOpaque = true;
         }
-
-        //同键项在排序后必然相邻，按组收集下标再按组重排
-        struct Group
+        else if (item.source == DrawSource::Particle || item.source == DrawSource::Trail)
         {
-            uint32 programId = 0;
-            int32 materialObjectId = 0;
-            float32 minDistance = SortableDistanceLimit;
-            DrawItem first;
-        };
-        List<Group> groups;
-        List<List<uint32>> groupMembers;
-        usize cursor = 0;
-        {
-            while (cursor < groupScratch.size())
-            {
-                usize groupEnd = cursor;
-                while (groupEnd < groupScratch.size() && KeyContentEqual(groupScratch[cursor], groupScratch[groupEnd])) ++groupEnd;
-
-                Group group;
-                group.first = groupScratch[cursor];
-                group.materialObjectId = group.first.material ? group.first.material->GetObjectId() : 0;
-                const GpuMaterial* material = gpuResources ? gpuResources->GetMaterial(group.first.material) : nullptr;
-                if (material && material->shader && !material->shader->passes.empty())
-                    group.programId = material->shader->passes[0].shaderProgram.id;
-                List<uint32> members;
-                for (usize member = cursor; member < groupEnd; ++member)
-                {
-                    group.minDistance = std::min(group.minDistance, GetSortableDistance(groupScratch[member].cameraDistance));
-                    members.push_back(static_cast<uint32>(member));
-                }
-
-                groups.push_back(group);
-                groupMembers.push_back(std::move(members));
-                cursor = groupEnd;
-            }
+            const GpuMaterial* material = gpuResources->GetMaterial(item.material);
+            item.canGroupOpaque = material && material->shader && AllowsOpaqueGrouping(item, *material->shader);
         }
-
-        //按程序和材质聚集组，同材质的网格组按距离升序
-        List<uint32> order(groups.size());
-        for (uint32 index = 0; index < order.size(); ++index) order[index] = index;
-        {
-            std::stable_sort(order.begin(), order.end(), [&](uint32 a, uint32 b)
-            {
-                if (groups[a].programId != groups[b].programId) return groups[a].programId < groups[b].programId;
-                if (groups[a].materialObjectId != groups[b].materialObjectId)
-                    return groups[a].materialObjectId < groups[b].materialObjectId;
-                if (groups[a].minDistance != groups[b].minDistance) return groups[a].minDistance < groups[b].minDistance;
-                return StableKeyLess(groups[a].first, groups[b].first);
-            });
-        }
-
-        usize write = begin;
-        for (uint32 groupIndex : order)
-        {
-            List<uint32>& members = groupMembers[groupIndex];
-            std::stable_sort(members.begin(), members.end(), [&](uint32 a, uint32 b)
-            {
-                return GetSortableDistance(groupScratch[a].cameraDistance) < GetSortableDistance(groupScratch[b].cameraDistance);
-            });
-            for (uint32 member : members)
-            {
-                items[write] = groupScratch[member];
-                ++write;
-            }
-        }
-
-        begin = end;
     }
+}
+
+//按子队列组织不透明组并对透明项逐项排序
+void DrawSubmissionBuilder::SortItems(const RenderCamera& camera, List<DrawItem>& items)
+{
+    struct Group
+    {
+        int32 subQueue;
+        float32 nearestDepth;
+        usize firstItem;
+        usize lastItem;
+        bool geometryOrdered = true;
+    };
+
+    //准备共享索引和相机空间深度轴
+    const usize itemCount = items.size();
+    sortItemLinks.resize(itemCount);
+    const matrix4x4& view = camera.viewMatrix;
+    const vector3 depthAxis = { -view.m[2], -view.m[6], -view.m[10] };
+    const float32 depthOffset = -view.m[14];
+
+    //索引不透明组并保留其他队列的绘制项
+    using GroupKey = std::pair<uint64, int32>;
+    auto hashGroupKey = [](const GroupKey& key)
+    {
+        return std::hash<uint64>{}(key.first) ^ (std::hash<int32>{}(key.second) << 1);
+    };
+    std::unordered_map<GroupKey, usize, decltype(hashGroupKey)> groupIndices(0, hashGroupKey);
+    List<Group> groups;
+    usize lastGroupIndex = itemCount;
+    for (usize index = 0; index < itemCount; ++index)
+    {
+        const DrawItem& item = items[index];
+        if (item.queue != DrawQueue::Opaque)
+        {
+            sortItemOrder.push_back(index);
+            continue;
+        }
+
+        const vector3 center = item.worldBounds.valid ? item.worldBounds.center
+            : vector3{ item.model.m[12], item.model.m[13], item.model.m[14] };
+        float32 depth = GetSortableDistance(RenderMath::Dot(depthAxis, center) + depthOffset);
+        sortItemLinks[index] = itemCount;
+        if (!item.canGroupOpaque)
+        {
+            groups.push_back({ item.subQueue, depth, index, index });
+            continue;
+        }
+
+        //连续同组时复用组索引
+        if (lastGroupIndex != itemCount)
+        {
+            const DrawItem& last = items[groups[lastGroupIndex].lastItem];
+            if (item.material != last.material || item.strategy != last.strategy || item.subQueue != last.subQueue)
+            {
+                lastGroupIndex = itemCount;
+            }
+        }
+        if (lastGroupIndex == itemCount)
+        {
+            uint64 materialId = static_cast<uint32>(item.material->GetObjectId());
+            uint64 materialAndStrategy = (materialId << 32) | static_cast<uint32>(item.strategy);
+            auto [entry, inserted] = groupIndices.try_emplace(GroupKey{ materialAndStrategy, item.subQueue }, groups.size());
+            lastGroupIndex = entry->second;
+            if (inserted)
+            {
+                groups.push_back({ item.subQueue, depth, index, index });
+                continue;
+            }
+        }
+
+        //追加组成员并记录组内几何键顺序
+        Group& group = groups[lastGroupIndex];
+        group.nearestDepth = std::min(group.nearestDepth, depth);
+        group.geometryOrdered = group.geometryOrdered && !BatchGeometryLess(item, items[group.lastItem]);
+        sortItemLinks[group.lastItem] = index;
+        group.lastItem = index;
+    }
+
+    //按子队列与组内最近深度排列不透明组
+    std::sort(groups.begin(), groups.end(), [&](const Group& a, const Group& b)
+    {
+        if (a.subQueue != b.subQueue)
+        {
+            return a.subQueue < b.subQueue;
+        }
+        if (a.nearestDepth != b.nearestDepth)
+        {
+            return a.nearestDepth < b.nearestDepth;
+        }
+
+        const DrawItem& firstA = items[a.firstItem];
+        const DrawItem& firstB = items[b.firstItem];
+        if (firstA.material != firstB.material)
+        {
+            return firstA.material->GetObjectId() < firstB.material->GetObjectId();
+        }
+        if (firstA.strategy != firstB.strategy)
+        {
+            return static_cast<uint32>(firstA.strategy) < static_cast<uint32>(firstB.strategy);
+        }
+        return StableKeyLess(firstA, firstB);
+    });
+
+    //在不透明组内聚集兼容批次并输出绘制项
+    sortedCameraItems.reserve(items.size());
+    const auto batchLess = [&](usize a, usize b)
+    {
+        return BatchGeometryLess(items[a], items[b]);
+    };
+    const usize orderedItemCount = sortItemOrder.size();
+    for (const Group& group : groups)
+    {
+        if (group.geometryOrdered)
+        {
+            for (usize index = group.firstItem; index != itemCount; index = sortItemLinks[index])
+            {
+                sortedCameraItems.push_back(std::move(items[index]));
+            }
+            continue;
+        }
+
+        //复用索引缓冲整理混合网格组
+        for (usize index = group.firstItem; index != itemCount; index = sortItemLinks[index])
+        {
+            sortItemOrder.push_back(index);
+        }
+        std::stable_sort(sortItemOrder.begin() + static_cast<isize>(orderedItemCount), sortItemOrder.end(), batchLess);
+        for (usize index = orderedItemCount; index < sortItemOrder.size(); ++index)
+        {
+            sortedCameraItems.push_back(std::move(items[sortItemOrder[index]]));
+        }
+        sortItemOrder.resize(orderedItemCount);
+    }
+
+    //按原距离规则逐项排列透明与折射绘制
+    std::stable_sort(sortItemOrder.begin(), sortItemOrder.end(), [&](usize a, usize b)
+    {
+        const DrawItem& first = items[a];
+        const DrawItem& second = items[b];
+        if (first.queue != second.queue)
+        {
+            return static_cast<uint32>(first.queue) < static_cast<uint32>(second.queue);
+        }
+        if (first.subQueue != second.subQueue)
+        {
+            return first.subQueue < second.subQueue;
+        }
+
+        float32 distanceA = GetSortableDistance(first.cameraDistance);
+        float32 distanceB = GetSortableDistance(second.cameraDistance);
+        if (distanceA != distanceB)
+        {
+            return distanceA > distanceB;
+        }
+        return StableKeyLess(first, second);
+    });
+    for (usize index : sortItemOrder)
+    {
+        sortedCameraItems.push_back(std::move(items[index]));
+    }
+    items.swap(sortedCameraItems);
+    sortedCameraItems.clear();
+    sortItemOrder.clear();
 }
 
 //按排序结果顺序扫描生成批次
@@ -695,12 +759,25 @@ void DrawSubmissionBuilder::EmitBatches(const List<DrawItem>& items, const GpuSh
     if (!gpuResources) return;
 
     usize index = 0;
+    usize compatibleEnd = 0;
     while (index < items.size())
     {
-        usize end = index;
-        while (end < items.size() && SameBatchContent(items[index], items[end])) ++end;
-
         const DrawItem& first = items[index];
+        bool matchStrategy = !depthShader && first.queue == DrawQueue::Opaque;
+
+        //复用 Opaque 单绘制回退前已扫描的兼容范围
+        if (!matchStrategy || index >= compatibleEnd)
+        {
+            bool scanInstances = !matchStrategy || AllowsInstancing(first.strategy);
+            compatibleEnd = index + 1;
+            while (scanInstances && compatibleEnd < items.size()
+                && SameBatchContent(first, items[compatibleEnd], matchStrategy))
+            {
+                ++compatibleEnd;
+            }
+        }
+        usize end = compatibleEnd;
+
         //持久静态批各自成批：索引区间直接指向缓存组，不参与动态/实例合并
         if (first.persistentGeometry)
         {
@@ -716,6 +793,7 @@ void DrawSubmissionBuilder::EmitBatches(const List<DrawItem>& items, const GpuSh
 
             DrawBatch batch;
             batch.key.queue = first.queue;
+            batch.key.subQueue = first.subQueue;
             batch.key.mode = GeometryMode::Expanded;
             batch.key.geometry = first.geometry;
             batch.key.indexStart = first.indexStart;
@@ -737,7 +815,7 @@ void DrawSubmissionBuilder::EmitBatches(const List<DrawItem>& items, const GpuSh
         const GpuShaderPass* pass = (shader && !shader->passes.empty()) ? &shader->passes[0] : nullptr;
         bool singlePass = shader && shader->passes.size() == 1;
 
-        //合批只处理单 Pass 的 Shader。其余来源是排序屏障：多 Pass 必须每个对象依次跑完全部 Pass。
+        //多 Pass Shader 逐对象依次绘制全部 Pass
         if (!singlePass || !pass)
         {
             end = index + 1;
@@ -756,7 +834,7 @@ void DrawSubmissionBuilder::EmitBatches(const List<DrawItem>& items, const GpuSh
         {
             mode = GeometryMode::Uniform;
             bool instancingRequested = first.strategy == DrawStrategy::GpuInstancing
-                || (end > index + 1 && AllAllowInstancing(items, index, end));
+                || (end > index + 1 && (matchStrategy ? AllowsInstancing(first.strategy) : AllAllowInstancing(items, index, end)));
             if (instancingRequested && instancedCapable)
             {
                 mode = GeometryMode::Instanced;
@@ -766,8 +844,10 @@ void DrawSubmissionBuilder::EmitBatches(const List<DrawItem>& items, const GpuSh
                 if (instancingRequested && geometryAbiMissing)
                     ReportMissingGeometryAbi(shader, *pass, GeometryMode::Instanced, first);
                 //动态批放宽到同材质与同状态，不要求同网格；按预算收编连续项
-                bool dynamicAllowed = meshDynamicBatchingEnabled && AllAllowDynamicBatching(items, index, end);
-                usize dynamicEnd = CollectDynamicBatch(items, index, expandedCapable && dynamicAllowed, instancedCapable);
+                bool dynamicAllowed = meshDynamicBatchingEnabled
+                    && (matchStrategy ? AllowsDynamicBatching(first.strategy) : AllAllowDynamicBatching(items, index, end));
+                bool preserveInstancing = instancedCapable && (!matchStrategy || AllowsInstancing(first.strategy));
+                usize dynamicEnd = CollectDynamicBatch(items, index, expandedCapable && dynamicAllowed, preserveInstancing, matchStrategy);
                 if (dynamicEnd - index >= MinimumDynamicBatchItems)
                 {
                     end = dynamicEnd;
@@ -809,6 +889,7 @@ void DrawSubmissionBuilder::EmitBatches(const List<DrawItem>& items, const GpuSh
 
             DrawBatch batch;
             batch.key.queue = first.queue;
+            batch.key.subQueue = first.subQueue;
             batch.key.mode = mode;
             batch.key.geometry = first.geometry;
             batch.key.blendMode = first.blendMode;
@@ -855,7 +936,8 @@ void DrawSubmissionBuilder::EmitBatches(const List<DrawItem>& items, const GpuSh
         }
 
         //透明与折射在全局排序后断开的同键段计入统计
-        if (!depthShader && first.queue != DrawQueue::Opaque && end < items.size() && items[end].queue == first.queue)
+        if (!depthShader && first.queue != DrawQueue::Opaque && end < items.size()
+            && items[end].queue == first.queue && items[end].subQueue == first.subQueue)
         {
             ++stats.transparentBatchBreaks;
         }

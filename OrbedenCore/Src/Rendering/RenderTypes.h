@@ -86,7 +86,7 @@ enum class DrawStrategy : uint32
 {
     //自动：能用静态批就用，其余按实例批、动态批、单绘制的顺序退化
     Auto = 0,
-    //仅单绘制：不参与任何合批，作为排序屏障
+    //仅单绘制：独立提交每个绘制项
     Individual = 1,
     //只允许实例批，条件不足时退回单绘制
     GpuInstancing = 2,

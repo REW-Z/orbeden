@@ -170,6 +170,7 @@ public:
     Mesh* mesh = nullptr;
     Material* material = nullptr;
     DrawQueue queue = DrawQueue::Opaque;
+    int32 subQueue = 0;
     GeometryMode mode = GeometryMode::Uniform;
     BlendMode blendMode = BlendMode::Alpha;
     matrix4x4 model;
@@ -184,15 +185,14 @@ public:
     color uvRect = { 0.0f, 0.0f, 1.0f, 1.0f };
     bool castShadows = true;
     bool receiveShadows = true;
-    //来源是否允许参与自动合批；关闭时该项永远是普通绘制与排序屏障
     //这个绘制项允许的绘制策略；决定它能进哪类批次
     DrawStrategy strategy = DrawStrategy::Auto;
     //是否使用静态几何缓存的持久顶点；此时索引区间指向缓存组
     bool persistentGeometry = false;
     //静态组下标，persistentGeometry 为真时有效
     uint32 staticGroup = 0xFFFFFFFFu;
-    //只有最终状态为深度测试开、深度写开、混合关的单 Pass Standard 项才允许重排
-    bool reorderable = false;
+    //记录绘制项能否参与不透明材质与策略分组
+    bool canGroupOpaque = false;
     //指向本帧粒子或拖尾几何记录的下标，不能跨 Render 保存
     uint32 sourceIndex = 0;
 };
@@ -202,6 +202,7 @@ struct DrawBatchKey
 {
 public:
     DrawQueue queue = DrawQueue::Opaque;
+    int32 subQueue = 0;
     GeometryMode mode = GeometryMode::Uniform;
     DrawGeometry geometry = DrawGeometry::Mesh;
     BlendMode blendMode = BlendMode::Alpha;
@@ -254,6 +255,10 @@ private:
     StaticBatchCache* staticBatches = nullptr;
     //已经上报过「没有接入几何 ABI」的 Shader 与几何模式组合，取值是来源 ObjectId 与模式的合成键
     std::unordered_set<uint64> reportedMissingGeometryAbi;
+    //复用相机排序的成员索引与绘制项缓冲
+    List<usize> sortItemLinks;
+    List<usize> sortItemOrder;
+    List<DrawItem> sortedCameraItems;
 
 public:
     //切换普通网格的 CPU 动态合批
@@ -270,8 +275,8 @@ public:
     void BuildCameraItems(const RenderScene& scene, const VisibleSet& visibleSet,
         const List<InstanceSubmission>& submissions, const ParticleFrameSnapshot& particles, List<DrawItem>& items);
 
-    //按队列、距离与稳定键排序；不透明只在连续可重排区间内按批次键分组
-    void SortItems(List<DrawItem>& items);
+    //在子队列内分组排列不透明项并按距离排列透明项
+    void SortItems(const RenderCamera& camera, List<DrawItem>& items);
 
     //按排序结果顺序扫描生成批次，同时决定每个批次使用哪种几何模式
     void BuildBatches(const List<DrawItem>& items, List<DrawBatch>& batches, RenderBatchStats& stats);
