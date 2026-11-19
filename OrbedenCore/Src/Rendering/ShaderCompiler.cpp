@@ -96,11 +96,19 @@ vec4 OrbedenGetFragCoord()
             }
             output.parameterSize = std::max(output.parameterSize, static_cast<uint32>(block.size));
         }
-        if (program.getNumBufferBlocks() != 0 && (!program.getIntermediate(EShLangCompute)
-            || program.getNumBufferBlocks() != 1 || program.getBufferBlock(0).getBinding() != 31))
+        //图形阶段接收运行时长度的实例记录，计算阶段保留原有存储槽
+        if (program.getNumBufferBlocks() != 0)
         {
-            error = "Storage buffers require a backend resource layout.";
-            return false;
+            const auto& block = program.getBufferBlock(0);
+            bool graphics = !program.getIntermediate(EShLangCompute);
+            bool instanceBlock = graphics && block.name == "OrbedenDrawParameters"
+                && block.getBinding() == static_cast<int32>(DrawParameterBinding) && !output.drawParameterSize;
+            if (program.getNumBufferBlocks() != 1 || !(instanceBlock || (!graphics && block.getBinding() == 31)))
+            {
+                error = "Storage buffers require a backend resource layout.";
+                return false;
+            }
+            output.storageDrawParameters = instanceBlock;
         }
         for (int32 index = 0; index < program.getNumUniformVariables(); ++index)
         {
@@ -119,7 +127,7 @@ vec4 OrbedenGetFragCoord()
                     error = "Unsupported shader sampler layout: " + reflected.name;
                     return false;
                 }
-                if (output.drawParameterSize && reflected.getBinding() == static_cast<int32>(DrawParameterBinding))
+                if ((output.drawParameterSize || output.storageDrawParameters) && reflected.getBinding() == static_cast<int32>(DrawParameterBinding))
                 {
                     error = "Sampler binding overlaps the draw parameter block.";
                     return false;

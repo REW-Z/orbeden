@@ -266,7 +266,9 @@ public:
     virtual void BindCubeTexture(uint32 slot, GpuCubeTextureID id) = 0;
     //设置像素裁剪区域，坐标以目标左下角为原点
     virtual void SetScissor(bool enabled, int32 x = 0, int32 y = 0, int32 width = 0, int32 height = 0) = 0;
-    //提交当前程序的逐绘制 std140 数据块，按实例顺序排列
+    //读取已编译程序在当前设备上的单次实例绘制容量
+    virtual uint32 GetInstanceCapacity(GpuShaderProgramID program) const = 0;
+    //按实例顺序提交当前程序的逐绘制参数
     virtual bool BindDrawParameters(std::span<const DrawParameterData> data, usize& uploadedBytes) = 0;
     virtual void DrawIndexed(uint32 indexStart, uint32 indexCount) = 0;
     //实例化索引绘制，实例数据由 BindInstanceBuffer 提供。

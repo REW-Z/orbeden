@@ -184,7 +184,7 @@ void ForwardPipeline::InvalidateResourceCaches()
     particleSnapshot = ParticleFrameSnapshot();
     //Shader 重新导入后同一个材质可能已经补上变体，允许再报一次
     reportedMissingVariants.clear();
-    batchBuilder.InvalidateReports();
+    submissionBuilder.InvalidateReports();
     reportedTextureOverflow.clear();
     atmosphere.InvalidateResources();
     expandedChunks.clear();
@@ -223,7 +223,7 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
         particleRendererReady = true;
     }
 
-    batchBuilder.Initialize(&gpuResourceManager, backend->SupportsInstancing(), &particleRenderer, &staticBatches);
+    submissionBuilder.Initialize(&gpuResourceManager, backend->SupportsInstancing(), &particleRenderer, &staticBatches);
     shadows.BeginFrame(scene);
 
     //静态几何缓存每帧刷新一次：收集候选、按内容版本重建受影响的组
@@ -264,7 +264,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
             ResolveBuiltinShaderKey(ShadowDepthShaderFileName, GetBuiltinShaderKeys().shadowDepth));
         static const List<InstanceSubmission> NoSubmissions;
         shadows.Render(scene, drawSubmissions ? *drawSubmissions : NoSubmissions, particleSnapshot, camera,
-            *shadowLight, depthShader, gpuResourceManager, particleRenderer, &staticBatches, batchBuilder,
+            *shadowLight, depthShader, gpuResourceManager, particleRenderer, &staticBatches, submissionBuilder,
             drawStream, batchStats);
     }
 
@@ -387,20 +387,20 @@ void ForwardPipeline::BuildFrameBatches(const RenderScene& scene, const VisibleS
     static const List<InstanceSubmission> EmptySubmissions;
     {
         PROFILE("Render/Batching/CollectItems");
-        batchBuilder.BuildCameraItems(scene, visibleSet, drawSubmissions ? *drawSubmissions : EmptySubmissions,
+        submissionBuilder.BuildCameraItems(scene, visibleSet, drawSubmissions ? *drawSubmissions : EmptySubmissions,
             particleSnapshot, cameraItems);
     }
     {
         PROFILE("Render/Batching/SortItems");
-        batchBuilder.SortItems(cameraItems);
+        submissionBuilder.SortItems(cameraItems);
     }
     {
         PROFILE("Render/Batching/EmitBatches");
-        batchBuilder.BuildBatches(cameraItems, cameraBatches, batchStats);
+        submissionBuilder.BuildBatches(cameraItems, cameraBatches, batchStats);
     }
     {
         PROFILE("Render/Batching/Clear");
-        batchBuilder.Clear();
+        submissionBuilder.Clear();
     }
 }
 

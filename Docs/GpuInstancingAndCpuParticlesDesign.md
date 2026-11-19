@@ -80,7 +80,7 @@ flowchart TD
 | `ParticleEmitterState` | 对应 context | 紧凑粒子池、拖尾池、发射时间、随机流、包围盒、统计 |
 | `ParticleRenderer` | RenderSystem | CPU 快照到逐相机 DrawItem、Billboard/Mesh/Trail 几何；不推进时间 |
 | `InstanceDrawList : Object` | 创建它的 World 或孤立对象所有者 | 显式实例数据；Submit 时复制出一次 Render 快照 |
-| `DrawBatchBuilder` | ForwardPipeline | 可绘制项排序后的批次构造；每相机重用临时容器 |
+| `DrawSubmissionBuilder` | ForwardPipeline | 可绘制项排序后的批次构造；每相机重用临时容器 |
 | `GpuDrawStream` | ForwardPipeline | 实例 VBO、动态 VBO/IBO、动态 VAO；阴影和主 Pass 共用，但逐批上传 |
 | `GpuResourceManager` | RenderSystem | 静态 Mesh 的普通/实例 VAO、Shader 变体、材质缓存 |
 | `ParticleSystemEditor` | CustomEditorRegistry | 模块 UI、图形曲线与渐变控件、预览按钮 |
@@ -103,7 +103,7 @@ runtime 与 preview 不共享粒子数组、随机状态、发射时间、拖尾
 | `OrbedenCore/Src/Runtime/Particles/ParticleSimulationSystem` | ParticleSimulationSystem |
 | `OrbedenCore/Src/Runtime/Particles/ParticleSimulationContext` | ParticleSimulationContext、EmitterState、粒子/拖尾记录 |
 | `OrbedenCore/Src/Rendering/InstanceDrawData` | MeshInstanceData、InstanceDrawOptions、提交快照 |
-| `OrbedenCore/Src/Rendering/DrawBatchBuilder` | DrawItem、DrawBatchKey、DrawBatch、DrawBatchBuilder |
+| `OrbedenCore/Src/Rendering/DrawSubmissionBuilder` | DrawItem、DrawBatchKey、DrawBatch、DrawSubmissionBuilder |
 | `OrbedenCore/Src/Rendering/GpuDrawStream` | GpuDrawStream、GPU 布局结构 |
 | `OrbedenCore/Src/Rendering/ParticleRenderer` | ParticleRenderer |
 | `OrbedenCore/Src/Rendering/ShaderGeometryVariant` | ShaderGeometryVariant 源码生成函数 |
@@ -167,7 +167,7 @@ runtime 与 preview 不共享粒子数组、随机状态、发射时间、拖尾
 
 `GpuDrawStream` 公共接口：`Initialize(RenderBackend*)`、`UploadMeshInstances(std::span<const GpuMeshInstance>)`、`UploadTrailInstances(std::span<const GpuTrailInstance>)`、`UploadExpanded(std::span<const GpuExpandedVertex>, std::span<const uint32>)`、`Shutdown()`，三个 Upload 返回 bool；内部持有 instanceBuffer、expandedVertexBuffer、expandedIndexBuffer、expandedVertexInput 以及三个 byteCapacity。
 
-每次上传写入 offset=0，一次上传之后完成该批绘制再进行下一次 orphan。OpenGL 负责在途旧存储的寿命；首版不实现映射环形缓冲、fence 等待或 glFinish。容量从 64 KiB 按 2 倍增长到所需大小，保留到缓存失效/Shutdown。单次 instanceCount≤65536；单次 expanded 顶点≤262144、索引≤786432。构建器在完整实例或完整三角形边界切批；一个巨大 Mesh 展开时逐三角形写入，不越限、不丢面。
+每次上传写入 offset=0，一次上传之后完成该批绘制再进行下一次 orphan。OpenGL 负责在途旧存储的寿命；首版不实现映射环形缓冲、fence 等待或 glFinish。容量从 64 KiB 按 2 倍增长到所需大小，保留到缓存失效/Shutdown。自动策略的单次 instanceCount≤65536；单次 expanded 顶点≤262144、索引≤786432。构建器在完整实例或完整三角形边界切批；一个巨大 Mesh 展开时逐三角形写入，不越限、不丢面。
 
 失败时本批不画，记录一次带资源 ID 的错误与失败计数；当前帧继续执行其他批。默认状态恢复含 BlendMode::Alpha，避免加法污染天空盒、描边、输出和 GUI。
 
@@ -217,7 +217,7 @@ Uniform 的 u_InstanceTint 默认显式绑定白色，u_InstanceUvRect 绑定 `(
 
 `DrawBatch` 保存 key、连续输入索引列表 `List<uint32> items`、instanceCount、expandedVertexCount、expandedIndexCount。不得用 ObjectId 的大小代替完整 key 比较；hash 冲突时比较全部字段。
 
-### 7.2 DrawBatchBuilder 函数
+### 7.2 DrawSubmissionBuilder 函数
 
 | 签名 | 实现步骤 |
 |---|---|
@@ -265,7 +265,7 @@ C# 使用生成接口 `Object.CreateInstance<InstanceDrawList>()`、`SetInstance
 6. 原选择描边仍遍历静态 RenderItem；粒子选中反馈在编辑器画包围盒、发射形状、拖尾线框，不把每个粒子放进实体描边遮罩。
 7. 原调试线和 OutputPass；所有相机结束后清 active 显式提交、粒子临时快照、DrawItem，配对 EndRead。
 
-ForwardPipeline 新增 `DrawBatchBuilder batchBuilder; GpuDrawStream drawStream;`。将现有 RenderQueueItems 的公共 uniform、材质纹理绑定保留在 `BindDrawState(const DrawBatch&, const RenderCamera&, ...)` 中，新增 `ExecuteBatch(const DrawBatch&, ...)`：
+ForwardPipeline 新增 `DrawSubmissionBuilder submissionBuilder; GpuDrawStream drawStream;`。将现有 RenderQueueItems 的公共 uniform、材质纹理绑定保留在 `BindDrawState(const DrawBatch&, const RenderCamera&, ...)` 中，新增 `ExecuteBatch(const DrawBatch&, ...)`：
 
 - Uniform：使用原模型 uniform 和 DrawIndexed；多 Pass 来源仍在这一分支逐对象执行。
 - Instanced：构造 GpuMeshInstance 数组，UploadMeshInstances，绑定 instancedVertexInput/实例 buffer，DrawIndexedInstanced。
@@ -727,7 +727,7 @@ PROFILE区域固定名称：`Render/BuildBatches`、`Render/UploadInstances`、`
 
 `ExpandedGeometryChunk { List<GpuExpandedVertex> vertices; List<uint32> indices; }`；ExecuteBatch依次上传并画每个chunk，统计actualDraw次数。一个源三角形必须完整进入一个chunk。DynamicBatch不同mesh的geometry成员不参与key，但源indices必须在CPU校验。
 
-`DrawBatchBuilder::BuildCameraItems` 的粒子追加由上面的AppendCameraItems完成，builder持有非拥有型ParticleRenderer*，ForwardPipeline初始化时注入，避免再写第二份Billboard算法。`ParticleRenderer::BuildMeshInstances` 也处理静态/显式DrawItem，名字表示GPU结构，不限制来源。
+`DrawSubmissionBuilder::BuildCameraItems` 的粒子追加由上面的AppendCameraItems完成，builder持有非拥有型ParticleRenderer*，ForwardPipeline初始化时注入，避免再写第二份Billboard算法。`ParticleRenderer::BuildMeshInstances` 也处理静态/显式DrawItem，名字表示GPU结构，不限制来源。
 
 新增 `ForwardPipeline::BindDrawState(const DrawBatch&, const RenderScene&, const RenderCamera&, const RenderDirectionalLight*, bool cameraTexturesReady)` 和 `ExecuteBatch(const DrawBatch&, const List<DrawItem>&, GpuResourceManager&)`。原公共uniform逻辑迁入BindDrawState。ForwardPipeline保存当前相机环境/阴影上下文，只在一次Render内有效。CascadedShadowMap使用相同stream和BuildMeshInstances，但绑定自身深度program，不调用主Pass的BindDrawState。
 
@@ -776,7 +776,7 @@ RenderSystem对Submit使用 `bool readingDrawSubmissions`，从消费active到En
 | 编号 | 输入/操作 | 通过条件 |
 |---|---|---|
 | G01 | 同Mesh/Material的10000个Opaque对象，无阴影单相机 | eligibleSources=10000，实际主几何instancedDraws=1，普通几何draw=0；与禁用实例图像一致 |
-| G02 | 65536/65537实例，1个子网格 | 实际draw分别1/2，所有实例出现，无范围越界 |
+| G02 | 自动策略 65536/65537实例，1个子网格 | 实际draw分别1/2，所有实例出现，无范围越界 |
 | G03 | 两个材质对象参数相同；相同材质两种子网格区间 | 不跨Material对象、不跨区间合并；DynamicBatch仅按本文去除mesh键 |
 | G04 | receiveShadows不同、不同blend、不同显式Pass状态 | key正确拆分，不发生uniform继承错误 |
 | G05 | Legacy与两Pass Shader夹在可合批Opaque项中 | 两者逐对象绘制；屏障不被跨越；Pass顺序与原始一致 |

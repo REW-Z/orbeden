@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Rendering/Backend/RenderBackend.h"
-#include "Rendering/DrawBatchBuilder.h"
+#include "Rendering/DrawSubmissionBuilder.h"
 #include "Rendering/InstanceDrawData.h"
 #include "Rendering/RenderScene.h"
 

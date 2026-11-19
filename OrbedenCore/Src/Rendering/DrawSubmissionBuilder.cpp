@@ -1,4 +1,4 @@
-#include "Rendering/DrawBatchBuilder.h"
+#include "Rendering/DrawSubmissionBuilder.h"
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
@@ -83,6 +83,7 @@ namespace
             && a.geometry == b.geometry
             && a.mode == b.mode
             && a.blendMode == b.blendMode
+            && (a.strategy == DrawStrategy::GpuInstancing) == (b.strategy == DrawStrategy::GpuInstancing)
             && a.mesh == b.mesh
             && a.material == b.material
             && a.subMeshIndex == b.subMeshIndex
@@ -110,6 +111,9 @@ namespace
         if (a.blendMode != b.blendMode) return static_cast<uint32>(a.blendMode) < static_cast<uint32>(b.blendMode);
         if (a.receiveShadows != b.receiveShadows) return a.receiveShadows < b.receiveShadows;
         if (a.hasDrawParameters != b.hasDrawParameters) return a.hasDrawParameters < b.hasDrawParameters;
+        bool explicitA = a.strategy == DrawStrategy::GpuInstancing;
+        bool explicitB = b.strategy == DrawStrategy::GpuInstancing;
+        if (explicitA != explicitB) return explicitA < explicitB;
         if (a.geometry != b.geometry) return static_cast<uint32>(a.geometry) < static_cast<uint32>(b.geometry);
         if (a.mode != b.mode) return static_cast<uint32>(a.mode) < static_cast<uint32>(b.mode);
         return false;
@@ -216,7 +220,7 @@ bool DrawBatchKey::operator==(const DrawBatchKey& other) const
         && receiveShadows == other.receiveShadows;
 }
 
-void DrawBatchBuilder::Initialize(GpuResourceManager* resources, bool instancing, ParticleRenderer* particles,
+void DrawSubmissionBuilder::Initialize(GpuResourceManager* resources, bool instancing, ParticleRenderer* particles,
     StaticBatchCache* staticCache)
 {
     gpuResources = resources;
@@ -225,18 +229,18 @@ void DrawBatchBuilder::Initialize(GpuResourceManager* resources, bool instancing
     staticBatches = staticCache;
 }
 
-void DrawBatchBuilder::Clear()
+void DrawSubmissionBuilder::Clear()
 {
 }
 
-void DrawBatchBuilder::InvalidateReports()
+void DrawSubmissionBuilder::InvalidateReports()
 {
     reportedMissingGeometryAbi.clear();
 }
 
 //上报一次「这个 Pass 没有接入几何 ABI，因此没能按指定模式合批」。
 //去重键是来源 ObjectId 与几何模式的合成，同一 Shader 的同一模式只报一条，避免每帧刷屏。
-void DrawBatchBuilder::ReportMissingGeometryAbi(const GpuShader* shader, const GpuShaderPass& pass, GeometryMode mode, const DrawItem& first)
+void DrawSubmissionBuilder::ReportMissingGeometryAbi(const GpuShader* shader, const GpuShaderPass& pass, GeometryMode mode, const DrawItem& first)
 {
     int32 sourceId = (shader && shader->source) ? shader->source->GetObjectId() : 0;
     uint64 key = (static_cast<uint64>(static_cast<uint32>(sourceId)) << 8) | static_cast<uint64>(static_cast<uint32>(mode));
@@ -260,7 +264,7 @@ void DrawBatchBuilder::ReportMissingGeometryAbi(const GpuShader* shader, const G
 }
 
 //把当前相机的可见静态项展开为统一绘制项
-void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleSet& visibleSet,
+void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const VisibleSet& visibleSet,
     const List<InstanceSubmission>& submissions, const ParticleFrameSnapshot& particles, List<DrawItem>& items)
 {
     items.clear();
@@ -282,7 +286,7 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
             const GpuMaterial* material = gpuResources->GetMaterial(source.material);
             if (!material || !material->shader || material->shader->passes.empty())
             {
-                Log::Error("DrawBatchBuilder skipped a draw item: the material GPU resources are invalid.");
+                Log::Error("DrawSubmissionBuilder skipped a draw item: the material GPU resources are invalid.");
                 continue;
             }
 
@@ -345,7 +349,7 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
             Material* material = submission.material.Get();
             if (!mesh || !material)
             {
-                Log::Error("DrawBatchBuilder skipped an instance submission: its mesh or material was destroyed.");
+                Log::Error("DrawSubmissionBuilder skipped an instance submission: its mesh or material was destroyed.");
                 continue;
             }
             if (submission.world && submission.world->GetContentRevision() != submission.contentRevision) continue;
@@ -400,7 +404,7 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
                     item.uvRect = instance.uvRect;
                     item.castShadows = submission.options.castShadows;
                     item.receiveShadows = submission.options.receiveShadows;
-                    item.strategy = DrawStrategy::Auto;
+                    item.strategy = DrawStrategy::GpuInstancing;
                     items.push_back(item);
                 }
             }
@@ -422,7 +426,7 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
 }
 
 //按队列、距离与稳定键排序
-void DrawBatchBuilder::SortItems(List<DrawItem>& items)
+void DrawSubmissionBuilder::SortItems(List<DrawItem>& items)
 {
     {
         PROFILE("Render/Batching/Sort/ByDistance");
@@ -534,14 +538,14 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
 }
 
 //按排序结果顺序扫描生成批次
-void DrawBatchBuilder::BuildBatches(const List<DrawItem>& items, List<DrawBatch>& batches, RenderBatchStats& stats)
+void DrawSubmissionBuilder::BuildBatches(const List<DrawItem>& items, List<DrawBatch>& batches, RenderBatchStats& stats)
 {
     PROFILE(meshDynamicBatchingEnabled ? "Render/Batching/MeshDynamicOn" : "Render/Batching/MeshDynamicOff");
     EmitBatches(items, nullptr, batches, stats);
 }
 
 //收集当前相机的普通网格与显式实例阴影候选
-void DrawBatchBuilder::CollectShadowCandidates(const RenderScene& scene, const List<InstanceSubmission>& submissions,
+void DrawSubmissionBuilder::CollectShadowCandidates(const RenderScene& scene, const List<InstanceSubmission>& submissions,
     const RenderCamera& camera, List<DrawItem>& candidates)
 {
     candidates.clear();
@@ -638,7 +642,7 @@ void DrawBatchBuilder::CollectShadowCandidates(const RenderScene& scene, const L
 }
 
 //筛选当前级联的共享候选并追加静态批与粒子
-void DrawBatchBuilder::BuildShadowItems(const List<DrawItem>& candidates, const ParticleFrameSnapshot& particles,
+void DrawSubmissionBuilder::BuildShadowItems(const List<DrawItem>& candidates, const ParticleFrameSnapshot& particles,
     const RenderCamera& camera, const frustum& lightFrustum, List<DrawItem>& items)
 {
     items.clear();
@@ -672,14 +676,14 @@ void DrawBatchBuilder::BuildShadowItems(const List<DrawItem>& candidates, const 
 }
 
 //按阴影键分组生成批次
-void DrawBatchBuilder::BuildShadowBatches(const List<DrawItem>& items, const GpuShader& depthShader,
+void DrawSubmissionBuilder::BuildShadowBatches(const List<DrawItem>& items, const GpuShader& depthShader,
     List<DrawBatch>& batches, RenderBatchStats& stats)
 {
     EmitBatches(items, &depthShader, batches, stats);
 }
 
 //生成批次
-void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader* depthShader,
+void DrawSubmissionBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader* depthShader,
     List<DrawBatch>& batches, RenderBatchStats& stats)
 {
     batches.clear();
@@ -746,7 +750,8 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
         if (first.source == DrawSource::StaticMesh)
         {
             mode = GeometryMode::Uniform;
-            bool instancingRequested = end > index + 1 && AllAllowInstancing(items, index, end);
+            bool instancingRequested = first.strategy == DrawStrategy::GpuInstancing
+                || (end > index + 1 && AllAllowInstancing(items, index, end));
             if (instancingRequested && instancedCapable)
             {
                 mode = GeometryMode::Instanced;
@@ -782,12 +787,16 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
             ReportMissingGeometryAbi(shader, *pass, mode, first);
         }
 
-        //实例上限之外的连续项拆成多个同键批次
+        //显式实例按程序与设备容量提交，自动策略保留原有分批预算
+        uint32 instanceLimit = first.hasDrawParameters && !depthShader ? MaximumDrawParameterInstances : MaximumBatchInstances;
+        if (mode == GeometryMode::Instanced && first.strategy == DrawStrategy::GpuInstancing && pass)
+        {
+            instanceLimit = pass->instanceCapacity;
+        }
         usize cursor = index;
         while (cursor < end)
         {
             usize chunkEnd = end;
-            uint32 instanceLimit = first.hasDrawParameters && !depthShader ? MaximumDrawParameterInstances : MaximumBatchInstances;
             if (mode == GeometryMode::Instanced && chunkEnd - cursor > instanceLimit)
             {
                 chunkEnd = cursor + instanceLimit;
@@ -994,11 +1003,6 @@ bool GpuDrawStream::UploadMeshInstances(std::span<const GpuMeshInstance> instanc
         return false;
     }
     if (instances.empty()) return true;
-    if (instances.size() > MaximumBatchInstances)
-    {
-        Log::Error("GpuDrawStream upload rejected: the mesh instance count exceeds the single-batch limit.");
-        return false;
-    }
 
     usize bytes = instances.size() * sizeof(GpuMeshInstance);
     usize capacity = GrowCapacity(instanceCapacity, bytes);

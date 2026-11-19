@@ -220,7 +220,7 @@
     <ClInclude Include="Src\Rendering\CascadedShadowMap.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Rendering\DrawBatchBuilder.h">
+    <ClInclude Include="Src\Rendering\DrawSubmissionBuilder.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\ForwardPipeline.h">
@@ -493,7 +493,7 @@
     <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Rendering\DrawBatchBuilder.cpp">
+    <ClCompile Include="Src\Rendering\DrawSubmissionBuilder.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp">

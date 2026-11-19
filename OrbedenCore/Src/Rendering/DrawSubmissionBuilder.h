@@ -68,7 +68,7 @@ static_assert(offsetof(GpuTrailInstance, uvRange) == 96);
 //矩阵非有限或奇异时返回 false，该实例不提交。
 bool BuildGpuMeshInstance(const matrix4x4& model, const color& linearTint, const color& uvRect, GpuMeshInstance& instance);
 
-//单批实例数量上限。批次切分与流式缓冲的越界检查共用同一个值，不能各写一份。
+//自动实例策略和辅助绘制的分批预算
 constexpr uint32 MaximumBatchInstances = 65536u;
 
 //流式绘制缓冲：一份实例 VBO、一份展开顶点 VBO 与其索引 IBO、一份展开顶点输入。
@@ -238,8 +238,8 @@ public:
     uint32 expandedIndexCount = 0;
 };
 
-//把可绘制项排成批次。临时容器按相机重用，不持有跨帧指针。
-class DrawBatchBuilder
+//按绘制策略组织相机或阴影的提交项，临时容器在相机之间复用
+class DrawSubmissionBuilder
 {
 private:
     //GPU 资源解析由外部注入，批次键需要在构建期就拿到 program ID

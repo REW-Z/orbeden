@@ -13,7 +13,7 @@ Orbeden 使用单线程 Forward Renderer，通过公共 `RenderBackend` 接口�
 | `RenderScene` | 持久维护 Camera、DirectionalLight、StaticMeshRenderer 指针注册 |
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
 | `RenderItemSorter` | 相机可见项的队列与距离排序 |
-| `DrawBatchBuilder` | 绘制项收集、兼容性分组、材质排序与几何路径选择 |
+| `DrawSubmissionBuilder` | 绘制项收集、兼容性分组、材质排序与几何路径选择 |
 | `StaticBatchCache` / `GeometryExpander` | 持久静态批、拓扑缓存与 CPU 几何展开 |
 | `ParticleRenderer` | 粒子、拖尾的实例数据与展开几何 |
 | `ForwardPipeline` | 阴影、天空盒、环境反射绑定、Forward Main Pass 与原生 Refraction Pass |
@@ -108,7 +108,7 @@ UI 命中检测另有单像素深度读取路径：`UIRenderer` 校验视图、�
 
 排序规则：
 
-- Opaque：初始近到远排序；`DrawBatchBuilder` 随后在连续可重排区间内按 Shader 基础程序、Material 聚集网格组，同材质的组按最近距离排列，组内仍近到远。
+- Opaque：初始近到远排序；`DrawSubmissionBuilder` 随后在连续可重排区间内按 Shader 基础程序、Material 聚集网格组，同材质的组按最近距离排列，组内仍近到远。
 - Transparent：远到近。
 - Refraction：远到近。
 
@@ -298,7 +298,7 @@ Mesh、Texture、Skybox、Shader、Material 在第一次使用时上传到 GPU�
 
 ## 几何合批与拓扑缓存
 
-- 主画面的绘制路径按渲染器的 `drawStrategy` 与批次可合并性选择：`Auto` 依次尝试持久静态批、实例批、动态展开批，都不成立才逐对象绘制；`Individual` 始终单绘制并作为排序屏障；`GpuInstancing` 与 `DynamicBatching` 各自限定一种合批方式，条件不足时退回单绘制。实例批要求同 Mesh、子网格区间与材质；动态展开批只要求同材质与同渲染状态，用 `DrawIndexedInstanced` 与 `DrawIndexed` 分别提交（持久静态批直接绑定缓存组的顶点输入）。Indirect Draw 尚未实现。
+- 主画面的绘制路径按渲染器的 `drawStrategy` 与批次可合并性选择：`Auto` 依次尝试持久静态批、实例批、动态展开批，都不成立才逐对象绘制；`Individual` 始终单绘制并作为排序屏障；`GpuInstancing` 在单 Pass 和后端支持实例变体时直接实例绘制，单个实例也走该路径，显式实例组按绘制接口及程序缓冲容量提交。`DynamicBatching` 采用动态展开，条件不足时退回单绘制。实例批要求同 Mesh、子网格区间与材质；动态展开批只要求同材质与同渲染状态，用 `DrawIndexedInstanced` 与 `DrawIndexed` 分别提交（持久静态批直接绑定缓存组的顶点输入）。Indirect Draw 尚未实现。
 - 阴影中的 `Auto` 普通网格先复用有效持久静态批；其余项只尝试 GPU 实例批，条件不足时直接绘制原 GPU 网格，不逐级联进行 CPU 动态几何展开。显式 `DynamicBatching`、粒子与显式实例提交保持原路径；不修改 Renderer 保存的策略。`Render/Shadows` 记录阴影入口，`Cascade`、`BuildItems`、`BuildBatches`、`DrawBatches` 记录各级联；其中 `DrawBatches` 包含 Pass 建立、状态设置、绘制提交与结束，不是 GPU 时间查询。
 - 每次相机渲染只收集一次普通网格和显式实例的阴影候选，再按级联视锥筛选；同一 Renderer 的子网格共享一次包围盒判断。持久静态批和粒子保留逐级裁剪路径，投射物分区包围盒继续使用原筛选规则并复用存储容量。`Render/Shadows/CollectItems` 记录共享收集阶段，`BuildItems` 记录级联筛选和静态批／粒子追加；不跨相机或跨帧复用候选内容。
 - `StaticMeshRenderer` 只是组件类名，**不代表它所属的 Ens 已 static**：是否进入持久静态批由 Ens 的 `static` 约束和渲染器的 `drawStrategy` 共同决定。
@@ -447,7 +447,7 @@ GPU 区间从首个 GPU 时间戳起算，与 CPU 时间线使用不同的时钟
 | 持久场景与组件快照 | [RenderScene.cpp](../OrbedenCore/Src/Rendering/RenderScene.cpp) |
 | 每相机阴影、主 Pass 与折射 | [ForwardPipeline.cpp](../OrbedenCore/Src/Rendering/ForwardPipeline.cpp) |
 | 级联阴影与深度统计 | [CascadedShadowMap.cpp](../OrbedenCore/Src/Rendering/CascadedShadowMap.cpp) |
-| 绘制项与合批策略 | [DrawBatchBuilder.cpp](../OrbedenCore/Src/Rendering/DrawBatchBuilder.cpp) |
+| 绘制项与合批策略 | [DrawSubmissionBuilder.cpp](../OrbedenCore/Src/Rendering/DrawSubmissionBuilder.cpp) |
 | 拓扑缓存与 CPU 几何展开 | [GeometryExpander.cpp](../OrbedenCore/Src/Rendering/GeometryExpander.cpp) |
 | GPU 资源缓存与绑定布局 | [GpuResourceManager.cpp](../OrbedenCore/Src/Rendering/GpuResourceManager.cpp) |
 | 公共渲染接口 | [RenderBackend.h](../OrbedenCore/Src/Rendering/Backend/RenderBackend.h) |

@@ -8,7 +8,7 @@ class Material;
 class Mesh;
 class StaticMeshRenderer;
 
-//逐绘制参数的 std140 布局：8 个 vec4，每批最多 32 个实例
+//每实例 8 个 vec4；旧式固定 UBO 的容量也用于自动策略的默认预算
 constexpr uint32 DrawParameterFloatCount = 32;
 constexpr uint32 MaximumDrawParameterInstances = 32;
 constexpr uint32 DrawParameterBinding = 30;

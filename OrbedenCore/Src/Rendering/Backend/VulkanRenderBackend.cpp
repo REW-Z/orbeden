@@ -137,6 +137,7 @@ struct VulkanRenderBackend::State
         VkDescriptorSet lastDescriptors = VK_NULL_HANDLE;
         VkBuffer lastParameterBuffer = VK_NULL_HANDLE;
         VkBuffer lastDrawParameterBuffer = VK_NULL_HANDLE;
+        VkDeviceSize lastDrawParameterRange = 0;
         VkDescriptorBufferInfo lastStorage = {};
         uint64 textureBindingsRevision = 0, imageAccessRevision = 0;
         const ShaderParameterValue* framebufferParameter = nullptr;
@@ -408,7 +409,7 @@ struct VulkanRenderBackend::State
             if (Align(candidate.used, alignment) + size <= candidate.capacity) { page = &candidate; break; }
         if (!page)
         {
-            constexpr VkBufferUsageFlags usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            constexpr VkBufferUsageFlags usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
             page = &frame.uploads.emplace_back(AllocateBuffer(std::max(size, UploadPageSize), usage, true));
         }
         Buffer result = *page;
@@ -845,9 +846,9 @@ struct VulkanRenderBackend::State
         {
             if (frame.descriptorPoolIndex == frame.descriptorPools.size())
             {
-                VkDescriptorPoolSize sizes[] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1024 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16384 }, { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 } };
+                VkDescriptorPoolSize sizes[] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1024 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16384 }, { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 }, { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1024 } };
                 VkDescriptorPoolCreateInfo info = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-                info.maxSets = 1024; info.poolSizeCount = 3; info.pPoolSizes = sizes;
+                info.maxSets = 1024; info.poolSizeCount = 4; info.pPoolSizes = sizes;
                 VkDescriptorPool pool;
                 Check(vkCreateDescriptorPool(device, &info, nullptr, &pool), "vkCreateDescriptorPool");
                 frame.descriptorPools.push_back(pool);
@@ -878,6 +879,7 @@ struct VulkanRenderBackend::State
         List<VkDescriptorSetLayoutBinding> bindings;
         if (program.compiled.parameterSize) bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, stages, nullptr });
         for (const auto& sampler : program.compiled.samplers) bindings.push_back({ sampler.binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, stages, nullptr });
+        if (program.compiled.storageDrawParameters) bindings.push_back({ DrawParameterBinding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, stages, nullptr });
         if (program.compiled.drawParameterSize) bindings.push_back({ DrawParameterBinding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, stages, nullptr });
         if (program.compute) bindings.push_back({ 31, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, stages, nullptr });
         VkDescriptorSetLayoutCreateInfo descriptors = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
@@ -1841,9 +1843,9 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         parameterInfo = { program.parameterData.handle, 0, program.compiled.parameterSize };
     }
 
-    if (program.compiled.drawParameterSize)
+    if (program.compiled.drawParameterSize || program.compiled.storageDrawParameters)
     {
-        drawParameterInfo = { program.drawParameterData.handle, 0, program.compiled.drawParameterSize };
+        drawParameterInfo = { program.drawParameterData.handle, 0, program.drawParameterData.capacity };
     }
 
     //生成资源组合键并准备图像依赖
@@ -1857,7 +1859,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     if (program.lastDescriptors && !resourcesChanged
         && program.textureBindingsRevision == textureBindingsRevision && program.imageAccessRevision == imageAccessRevision
         && program.lastParameterBuffer == parameterInfo.buffer
-        && program.lastDrawParameterBuffer == drawParameterInfo.buffer
+        && program.lastDrawParameterBuffer == drawParameterInfo.buffer && program.lastDrawParameterRange == drawParameterInfo.range
         && program.lastStorage.buffer == storageInfo.buffer && program.lastStorage.offset == storageInfo.offset && program.lastStorage.range == storageInfo.range)
         return program.lastDescriptors;
 
@@ -1867,6 +1869,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         program.lastDescriptors = set;
         program.lastParameterBuffer = parameterInfo.buffer;
         program.lastDrawParameterBuffer = drawParameterInfo.buffer;
+        program.lastDrawParameterRange = drawParameterInfo.range;
         program.lastStorage = storageInfo;
         program.textureBindingsRevision = textureBindingsRevision;
         program.imageAccessRevision = imageAccessRevision;
@@ -1877,6 +1880,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     auto append = [&key](auto value) { key.append(reinterpret_cast<const char*>(&value), sizeof(value)); };
     append(parameterInfo.buffer);
     append(drawParameterInfo.buffer);
+    append(drawParameterInfo.range);
     for (usize index = 0; index < program.compiled.samplers.size(); ++index)
     {
         const auto& sampler = program.compiled.samplers[index];
@@ -1914,11 +1918,12 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; write.pImageInfo = &program.imageInfos[index];
         writes.push_back(write);
     }
-    if (program.compiled.drawParameterSize)
+    if (program.compiled.drawParameterSize || program.compiled.storageDrawParameters)
     {
         VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet = set; write.dstBinding = DrawParameterBinding; write.descriptorCount = 1;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; write.pBufferInfo = &drawParameterInfo;
+        write.descriptorType = program.compiled.storageDrawParameters ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        write.pBufferInfo = &drawParameterInfo;
         writes.push_back(write);
     }
     if (storage)
@@ -2057,7 +2062,7 @@ void VulkanRenderBackend::State::Draw(uint32 indexStart, uint32 indexCount, uint
     {
         parameterOffsets[parameterCount++] = parameterOffset;
     }
-    if (program.compiled.drawParameterSize)
+    if (program.compiled.drawParameterSize || program.compiled.storageDrawParameters)
     {
         parameterOffsets[parameterCount++] = drawParameterOffset;
     }
@@ -2206,6 +2211,14 @@ bool VulkanRenderBackend::TryReadDepthDistribution(GpuDepthDistributionID id, Gp
     return true;
 }
 
+//按设备描述符范围和着色器布局计算实例容量
+uint32 VulkanRenderBackend::GetInstanceCapacity(GpuShaderProgramID id) const
+{
+    const auto& layout = state->programs.at(id.id).compiled;
+    if (layout.storageDrawParameters) return state->properties.limits.maxStorageBufferRange / sizeof(DrawParameterData);
+    return layout.drawParameterSize ? MaximumDrawParameterInstances : UINT32_MAX;
+}
+
 //上传当前绘制的不可变参数块快照
 bool VulkanRenderBackend::BindDrawParameters(std::span<const DrawParameterData> data, usize& uploadedBytes)
 {
@@ -2216,14 +2229,20 @@ bool VulkanRenderBackend::BindDrawParameters(std::span<const DrawParameterData> 
         return false;
     }
     auto& program = *s.programBinding;
-    if (!program.compiled.drawParameterSize)
+    if (!program.compiled.drawParameterSize && !program.compiled.storageDrawParameters)
     {
         return true;
     }
-    if (data.empty() || data.size() > MaximumDrawParameterInstances)
+    if (data.empty() || data.size() > GetInstanceCapacity({ s.currentProgram }))
     {
         Log::Error("Vulkan draw parameter data is missing or exceeds the batch limit.");
         return false;
+    }
+    if (program.compiled.storageDrawParameters)
+    {
+        program.drawParameterData = s.Upload(data.data(), data.size_bytes(), s.properties.limits.minStorageBufferOffsetAlignment);
+        uploadedBytes = program.drawParameterData.handle ? data.size_bytes() : 0;
+        return program.drawParameterData.handle != VK_NULL_HANDLE;
     }
     std::memcpy(s.drawParameterBytes.data(), data.data(), data.size_bytes());
     program.drawParameterData = s.Upload(s.drawParameterBytes.data(), DrawParameterBlockSize,

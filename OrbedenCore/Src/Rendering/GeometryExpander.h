@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Rendering/DrawBatchBuilder.h"
+#include "Rendering/DrawSubmissionBuilder.h"
 
 class Mesh;
 

@@ -232,6 +232,9 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     fragmentTextureUnitCount = static_cast<uint32>(std::max(maxFragmentTextures, 0));
 
     //最大纹理边长同样查一次并登记到后端基类：动态纹理与字体图集要按它决定分页上限。
+    GLint64 storageBytes = 0;
+    glGetInteger64v(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &storageBytes);
+    storageInstanceCapacity = static_cast<uint32>(std::min<GLint64>(INT32_MAX, storageBytes / sizeof(DrawParameterData)));
     GLint maxTextureSize = 0;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
     SetMaxTextureSize(static_cast<int32>(std::max(maxTextureSize, 0)));
@@ -895,7 +898,15 @@ GpuShaderProgramID OpenGLRenderBackend::CreateShaderProgram(const GpuShaderProgr
         }
         glUniformBlockBinding(program, drawBlock, DrawParameterBinding);
     }
-    programUniforms.try_emplace(program).first->second.hasDrawParameters = drawBlock != GL_INVALID_INDEX;
+    //存储块使用 GL 独立的 SSBO 绑定空间，保留计算着色器的槽 0
+    GLuint storageBlock = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, "OrbedenDrawParameters");
+    auto& layout = programUniforms.try_emplace(program).first->second;
+    layout.storageDrawParameters = storageBlock != GL_INVALID_INDEX;
+    layout.hasDrawParameters = layout.storageDrawParameters || drawBlock != GL_INVALID_INDEX;
+    if (layout.storageDrawParameters)
+    {
+        glShaderStorageBlockBinding(program, storageBlock, 1);
+    }
     return { program };
 }
 
@@ -1638,7 +1649,14 @@ void OpenGLRenderBackend::SetSurface(GpuSurfaceID id)
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
 
-//按实例顺序提交独立绘制参数块
+//按着色器布局和设备存储范围读取实例容量
+uint32 OpenGLRenderBackend::GetInstanceCapacity(GpuShaderProgramID program) const
+{
+    const auto& layout = programUniforms.at(program.id);
+    if (layout.storageDrawParameters) return storageInstanceCapacity;
+    return layout.hasDrawParameters ? MaximumDrawParameterInstances : INT32_MAX;
+}
+
 bool OpenGLRenderBackend::BindDrawParameters(std::span<const DrawParameterData> data, usize& uploadedBytes)
 {
     uploadedBytes = 0;
@@ -1650,7 +1668,7 @@ bool OpenGLRenderBackend::BindDrawParameters(std::span<const DrawParameterData> 
     {
         return true;
     }
-    if (data.empty() || data.size() > MaximumDrawParameterInstances)
+    if (data.empty() || data.size() > GetInstanceCapacity(currentShaderProgram))
     {
         Log::Error("OpenGL draw parameter data is missing or exceeds the batch limit.");
         return false;
@@ -1658,6 +1676,14 @@ bool OpenGLRenderBackend::BindDrawParameters(std::span<const DrawParameterData> 
     if (!drawParameterBuffer)
     {
         glGenBuffers(1, &drawParameterBuffer);
+    }
+    if (currentUniforms->storageDrawParameters)
+    {
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, drawParameterBuffer);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, static_cast<GLsizeiptr>(data.size_bytes()), data.data(), GL_STREAM_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, drawParameterBuffer);
+        uploadedBytes = data.size_bytes();
+        return true;
     }
     glBindBuffer(GL_UNIFORM_BUFFER, drawParameterBuffer);
     glBufferData(GL_UNIFORM_BUFFER, DrawParameterBlockSize, nullptr, GL_STREAM_DRAW);

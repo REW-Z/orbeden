@@ -1,5 +1,5 @@
 #pragma once
-#include "Rendering/DrawBatchBuilder.h"
+#include "Rendering/DrawSubmissionBuilder.h"
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/InstanceDrawData.h"
 #include "Rendering/ParticleRenderer.h"
@@ -54,7 +54,7 @@ public:
     void Render(const RenderScene& scene, const List<InstanceSubmission>& submissions,
         const ParticleFrameSnapshot& particles, const RenderCamera& camera,
         const RenderDirectionalLight& light, Shader* depthShader, GpuResourceManager& resources,
-        ParticleRenderer& particleRenderer, StaticBatchCache* staticBatches, DrawBatchBuilder& builder,
+        ParticleRenderer& particleRenderer, StaticBatchCache* staticBatches, DrawSubmissionBuilder& builder,
         GpuDrawStream& stream, RenderBatchStats& stats);
     //绑定当前相机阴影查询参数
     void BindUniforms(const RenderCamera& camera);

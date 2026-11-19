@@ -46,6 +46,8 @@ public:
     GpuShaderProgramID shaderProgram;
     //实例绘制程序，Standard 与 Particle 都有
     GpuShaderProgramID instancedProgram;
+    //可提交的实例数由后端 API、设备与着色器的参数布局决定
+    uint32 instanceCapacity = 1;
     //展开顶点程序，Standard 声明 expandedGeometry on 时也有，Particle 始终有
     GpuShaderProgramID expandedProgram;
     //拖尾实例程序，只有 Particle 才有

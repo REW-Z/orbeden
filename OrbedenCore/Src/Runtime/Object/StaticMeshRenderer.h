@@ -34,7 +34,7 @@ private:
     friend class ForwardPipeline;
     friend class CascadedShadowMap;
     //阴影候选从完整场景直接读取渲染器快照，不经过主相机的可见集合
-    friend class DrawBatchBuilder;
+    friend class DrawSubmissionBuilder;
     //静态几何缓存直接读取渲染器快照收集候选
     friend class StaticBatchCache;
 

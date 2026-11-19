@@ -3,7 +3,7 @@
 #include "Rendering/AtmosphereRenderer.h"
 #include "Rendering/Backend/RenderBackend.h"
 #include "Rendering/CascadedShadowMap.h"
-#include "Rendering/DrawBatchBuilder.h"
+#include "Rendering/DrawSubmissionBuilder.h"
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/ParticleRenderer.h"
 #include "Rendering/StaticBatchCache.h"
@@ -41,7 +41,7 @@ private:
     std::unordered_set<uint32> reportedCaptureTargets;
 
     //可绘制项合并与批次构建，按相机重用临时容器。
-    DrawBatchBuilder batchBuilder;
+    DrawSubmissionBuilder submissionBuilder;
     //实例与展开几何的流式绘制缓冲。
     GpuDrawStream drawStream;
     bool drawStreamReady = false;
@@ -88,10 +88,10 @@ private:
 
 public:
     //切换普通网格的 CPU 动态合批
-    void SetMeshDynamicBatchingEnabled(bool value) { batchBuilder.SetMeshDynamicBatchingEnabled(value); }
+    void SetMeshDynamicBatchingEnabled(bool value) { submissionBuilder.SetMeshDynamicBatchingEnabled(value); }
 
     //读取普通网格的 CPU 动态合批开关
-    bool IsMeshDynamicBatchingEnabled() const { return batchBuilder.IsMeshDynamicBatchingEnabled(); }
+    bool IsMeshDynamicBatchingEnabled() const { return submissionBuilder.IsMeshDynamicBatchingEnabled(); }
 
     //初始化后端引用并等待首次绘制时加载内置 shader。
     void Initialize(RenderBackend* renderBackend);

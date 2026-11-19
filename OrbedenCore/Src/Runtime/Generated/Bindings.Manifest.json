@@ -6726,7 +6726,7 @@
             },
             {
               "Name": "builder",
-              "Type": "DrawBatchBuilder\u0026",
+              "Type": "DrawSubmissionBuilder\u0026",
               "DefaultValue": ""
             },
             {
@@ -9394,6 +9394,25 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "storageDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []
@@ -11393,7 +11412,7 @@
       "Kind": "struct",
       "EnumBase": "int32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -11536,575 +11555,13 @@
       "EnumValues": []
     },
     {
-      "Name": "DrawBatchBuilder",
-      "QualifiedName": "DrawBatchBuilder",
-      "BaseName": "",
-      "Kind": "class",
-      "EnumBase": "int32",
-      "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
-      "IsObject": false,
-      "IsAbstract": false,
-      "IsUnique": false,
-      "IsFinal": false,
-      "Members": [
-        {
-          "Name": "gpuResources",
-          "Type": "GpuResourceManager*",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "instancingAvailable",
-          "Type": "bool",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "meshDynamicBatchingEnabled",
-          "Type": "bool",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "particleRenderer",
-          "Type": "ParticleRenderer*",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "staticBatches",
-          "Type": "StaticBatchCache*",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "reportedMissingGeometryAbi",
-          "Type": "std::unordered_set\u003Cuint64\u003E",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "SetMeshDynamicBatchingEnabled",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "value",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "IsMeshDynamicBatchingEnabled",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": true,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "Initialize",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "resources",
-              "Type": "GpuResourceManager*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "instancing",
-              "Type": "bool",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "particles",
-              "Type": "ParticleRenderer*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "staticCache",
-              "Type": "StaticBatchCache*",
-              "DefaultValue": "nullptr"
-            }
-          ]
-        },
-        {
-          "Name": "BuildCameraItems",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "scene",
-              "Type": "const RenderScene\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "visibleSet",
-              "Type": "const VisibleSet\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "submissions",
-              "Type": "const List\u003CInstanceSubmission\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "particles",
-              "Type": "const ParticleFrameSnapshot\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "items",
-              "Type": "List\u003CDrawItem\u003E\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SortItems",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "items",
-              "Type": "List\u003CDrawItem\u003E\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "BuildBatches",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "items",
-              "Type": "const List\u003CDrawItem\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "batches",
-              "Type": "List\u003CDrawBatch\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "stats",
-              "Type": "RenderBatchStats\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "CollectShadowCandidates",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "scene",
-              "Type": "const RenderScene\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "submissions",
-              "Type": "const List\u003CInstanceSubmission\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "camera",
-              "Type": "const RenderCamera\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "candidates",
-              "Type": "List\u003CDrawItem\u003E\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "BuildShadowItems",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "candidates",
-              "Type": "const List\u003CDrawItem\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "particles",
-              "Type": "const ParticleFrameSnapshot\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "camera",
-              "Type": "const RenderCamera\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "lightFrustum",
-              "Type": "const frustum\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "items",
-              "Type": "List\u003CDrawItem\u003E\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "BuildShadowBatches",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "items",
-              "Type": "const List\u003CDrawItem\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "depthShader",
-              "Type": "const GpuShader\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "batches",
-              "Type": "List\u003CDrawBatch\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "stats",
-              "Type": "RenderBatchStats\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "Clear",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "InvalidateReports",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "EmitBatches",
-          "Type": "void",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "items",
-              "Type": "const List\u003CDrawItem\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "depthShader",
-              "Type": "const GpuShader*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "batches",
-              "Type": "List\u003CDrawBatch\u003E\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "stats",
-              "Type": "RenderBatchStats\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "ReportMissingGeometryAbi",
-          "Type": "void",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "shader",
-              "Type": "const GpuShader*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "pass",
-              "Type": "const GpuShaderPass\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "mode",
-              "Type": "GeometryMode",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "first",
-              "Type": "const DrawItem\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        }
-      ],
-      "EnumValues": []
-    },
-    {
       "Name": "DrawBatchKey",
       "QualifiedName": "DrawBatchKey",
       "BaseName": "",
       "Kind": "struct",
       "EnumBase": "int32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -12405,7 +11862,7 @@
       "Kind": "enum",
       "EnumBase": "uint32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -12433,7 +11890,7 @@
       "Kind": "struct",
       "EnumBase": "int32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -13044,7 +12501,7 @@
       "Kind": "enum",
       "EnumBase": "uint32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -13100,6 +12557,568 @@
           "Value": "3"
         }
       ]
+    },
+    {
+      "Name": "DrawSubmissionBuilder",
+      "QualifiedName": "DrawSubmissionBuilder",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/DrawSubmissionBuilder.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "gpuResources",
+          "Type": "GpuResourceManager*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "instancingAvailable",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "meshDynamicBatchingEnabled",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "particleRenderer",
+          "Type": "ParticleRenderer*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "staticBatches",
+          "Type": "StaticBatchCache*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "reportedMissingGeometryAbi",
+          "Type": "std::unordered_set\u003Cuint64\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "SetMeshDynamicBatchingEnabled",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "IsMeshDynamicBatchingEnabled",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Initialize",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "resources",
+              "Type": "GpuResourceManager*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "instancing",
+              "Type": "bool",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "particles",
+              "Type": "ParticleRenderer*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "staticCache",
+              "Type": "StaticBatchCache*",
+              "DefaultValue": "nullptr"
+            }
+          ]
+        },
+        {
+          "Name": "BuildCameraItems",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "scene",
+              "Type": "const RenderScene\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "visibleSet",
+              "Type": "const VisibleSet\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "submissions",
+              "Type": "const List\u003CInstanceSubmission\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "particles",
+              "Type": "const ParticleFrameSnapshot\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "items",
+              "Type": "List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SortItems",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "items",
+              "Type": "List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BuildBatches",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "items",
+              "Type": "const List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "batches",
+              "Type": "List\u003CDrawBatch\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "stats",
+              "Type": "RenderBatchStats\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CollectShadowCandidates",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "scene",
+              "Type": "const RenderScene\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "submissions",
+              "Type": "const List\u003CInstanceSubmission\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "camera",
+              "Type": "const RenderCamera\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "candidates",
+              "Type": "List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BuildShadowItems",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "candidates",
+              "Type": "const List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "particles",
+              "Type": "const ParticleFrameSnapshot\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "camera",
+              "Type": "const RenderCamera\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "lightFrustum",
+              "Type": "const frustum\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "items",
+              "Type": "List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BuildShadowBatches",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "items",
+              "Type": "const List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "depthShader",
+              "Type": "const GpuShader\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "batches",
+              "Type": "List\u003CDrawBatch\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "stats",
+              "Type": "RenderBatchStats\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Clear",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "InvalidateReports",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "EmitBatches",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "items",
+              "Type": "const List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "depthShader",
+              "Type": "const GpuShader*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "batches",
+              "Type": "List\u003CDrawBatch\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "stats",
+              "Type": "RenderBatchStats\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "ReportMissingGeometryAbi",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "shader",
+              "Type": "const GpuShader*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "pass",
+              "Type": "const GpuShaderPass\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "mode",
+              "Type": "GeometryMode",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "first",
+              "Type": "const DrawItem\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        }
+      ],
+      "EnumValues": []
     },
     {
       "Name": "DynamicLibrary",
@@ -16750,8 +16769,8 @@
           "Parameters": []
         },
         {
-          "Name": "batchBuilder",
-          "Type": "DrawBatchBuilder",
+          "Name": "submissionBuilder",
+          "Type": "DrawSubmissionBuilder",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -19363,7 +19382,7 @@
       "Kind": "class",
       "EnumBase": "int32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -19880,7 +19899,7 @@
       "Kind": "struct",
       "EnumBase": "int32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -20600,7 +20619,7 @@
       "Kind": "struct",
       "EnumBase": "int32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -22646,6 +22665,25 @@
           "Parameters": []
         },
         {
+          "Name": "instanceCapacity",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "expandedProgram",
           "Type": "GpuShaderProgramID",
           "Access": "public",
@@ -23197,7 +23235,7 @@
       "Kind": "struct",
       "EnumBase": "int32",
       "IsExported": false,
-      "Include": "Rendering/DrawBatchBuilder.h",
+      "Include": "Rendering/DrawSubmissionBuilder.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -32312,6 +32350,25 @@
           "Parameters": []
         },
         {
+          "Name": "storageInstanceCapacity",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "drawParameterBuffer",
           "Type": "uint32",
           "Access": "private",
@@ -34173,6 +34230,31 @@
           ]
         },
         {
+          "Name": "GetInstanceCapacity",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "program",
+              "Type": "GpuShaderProgramID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "BindDrawParameters",
           "Type": "bool",
           "Access": "public",
@@ -35349,6 +35431,25 @@
       "Members": [
         {
           "Name": "hasDrawParameters",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "storageDrawParameters",
           "Type": "bool",
           "Access": "public",
           "IsMethod": false,
@@ -53492,6 +53593,31 @@
               "Name": "height",
               "Type": "int32",
               "DefaultValue": "0"
+            }
+          ]
+        },
+        {
+          "Name": "GetInstanceCapacity",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "program",
+              "Type": "GpuShaderProgramID",
+              "DefaultValue": ""
             }
           ]
         },
@@ -82100,6 +82226,31 @@
             {
               "Name": "id",
               "Type": "GpuCubeTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GetInstanceCapacity",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "program",
+              "Type": "GpuShaderProgramID",
               "DefaultValue": ""
             }
           ]

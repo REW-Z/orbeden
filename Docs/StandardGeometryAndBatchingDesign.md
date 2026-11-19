@@ -10,7 +10,7 @@
 ## 2. 已核实的现状
 - `OrbedenCore/Src/Runtime/Object/Shader.h:28`：Legacy=0、Standard=1、Particle=2；Pass 默认 Legacy。
 - `OrbedenCore/Src/Rendering/GpuResourceManager.cpp:402`：Legacy 只编译原始 Program；Standard 编译 Uniform/Instanced；Particle 额外编译 Expanded/TrailInstanced。
-- `OrbedenCore/Src/Rendering/DrawBatchBuilder.cpp:471`：EmitBatches 选择批次；静态网格来源至少两个兼容项才自动实例化。
+- `OrbedenCore/Src/Rendering/DrawSubmissionBuilder.cpp:471`：EmitBatches 选择批次；静态网格来源至少两个兼容项才自动实例化。
 - `OrbedenCore/Src/Runtime/Object/StaticMeshRenderer.h:52`：Renderer 已有 enableInstancing，默认 true。
 - `OrbedenCore/Src/Rendering/ForwardPipeline.cpp:400`：展开绘制要求 expandedProgram；`:499`：单绘制逐 Pass 写 u_Model。
 - `OrbedenEditor/Templates/Builtin/geometry_input.orbinc:36`：统一模型矩阵接口已在 Expanded 下返回单位矩阵。
@@ -49,7 +49,7 @@
 - Auto（阴影）：先使用有效静态批；其余普通网格在阴影绘制项内按 GpuInstancing 策略选择实例或 Uniform，直接复用 GPU 网格，不逐级联执行 CPU 动态展开。显式 DynamicBatching、粒子与显式实例提交保持各自路径，Renderer 保存的策略不变。
 - static+GpuInstancing 使用实例批；static+Individual 使用单绘制；static+DynamicBatching 使用动态批，保持 static 变换约束。
 - 普通 Renderer 实例批至少包含两个绘制项，CPU 动态批至少包含八个兼容的小网格绘制项；显式实例提交与粒子指定 Instanced 时，单实例仍允许走 Instanced。
-- GPU 实例批要求同 Mesh、子网格索引区间、Material、Pass、队列、最终渲染状态与 receiveShadows；每批最多 65536 实例。
+- GPU 实例批要求同 Mesh、子网格索引区间、Material、Pass、队列、最终渲染状态与 receiveShadows；自动策略使用实例数量预算；显式 GpuInstancing 按当前程序和设备的实际容量提交。
 - 动态/静态展开批不要求相同 Mesh；要求同 Material、单 Pass、队列、最终渲染状态与 receiveShadows。
 - 多 Pass Renderer 始终逐对象完成全部 Pass，不进入任何合批；不改变现有粒子/显式实例对多 Pass 的限制。
 - 不透明项仅在允许重排的连续区域中分组；Individual、多 Pass、特殊深度/混合状态构成屏障，不跨越屏障聚合。
@@ -102,7 +102,7 @@
 - 每帧准备时移除已销毁 Mesh 的拓扑缓存，内容根切换／资源失效／Shutdown 时统一清空；不持有 Mesh 所有权。几何修改沿用 Mesh.MarkDirty 与 GetContentVersion 的既有版本契约。
 - ParticleRenderer 回收已消费展开块的空顶点／索引容量，后续批次复用；AppendExpandedMesh 按缓存引用数量预留几何增长容量、批量复制局部索引并应用顶点基址偏移。当前新增缓存仅保存索引拓扑，不缓存世界坐标计算结果；GPU 顶点 ABI、32 位索引和分块规则保持不变。
 - DrawItem 携带 drawStrategy、静态组句柄/索引范围；DrawBatch 新增 `bool persistentGeometry=false` 及静态组句柄。
-- DrawBatchBuilder 将静态缓存项与剩余项分开处理；实例/动态键比较独立实现，禁止继续用必须相同 Mesh 的键筛选动态批。
+- DrawSubmissionBuilder 将静态缓存项与剩余项分开处理；实例/动态键比较独立实现，禁止继续用必须相同 Mesh 的键筛选动态批。
 - ExecuteExpandedBatch 对动态批执行展开上传；对持久批绑定缓存 VAO 并绘制范围；二者共用材质状态与 Expanded Program。
 - OpenGL 复用按程序和实际位置保存的 uniform 类型／值缓存，完全相同时跳过驱动提交；名称异构查找不创建命中路径上的临时字符串，数组名称别名指向同一个位置缓存。缓存随程序删除或后端关闭清理，不依赖 Material 指针相同，也不跳过改变的模型、材质、相机和阴影数据。不引入 UBO 或改变 Shader 输入契约。
 - 每帧 CPU 展开结果按批保存，在该帧多相机/阴影输入相同时复用；键包含有序成员、几何版本、变换、tint 和 UV。

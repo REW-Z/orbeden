@@ -129,7 +129,7 @@ void CascadedShadowMap::ReportShadowSkip(uint32 reason, const DrawBatch& batch, 
 void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubmission>& submissions,
     const ParticleFrameSnapshot& particles, const RenderCamera& camera, const RenderDirectionalLight& light,
     Shader* depthShader, GpuResourceManager& resources, ParticleRenderer& particleRenderer,
-    StaticBatchCache* staticBatches, DrawBatchBuilder& builder, GpuDrawStream& stream, RenderBatchStats& stats)
+    StaticBatchCache* staticBatches, DrawSubmissionBuilder& builder, GpuDrawStream& stream, RenderBatchStats& stats)
 {
     ready = false;
     staticBatchCache = staticBatches;

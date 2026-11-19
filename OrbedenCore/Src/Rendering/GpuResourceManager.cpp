@@ -496,6 +496,10 @@ namespace
             {
                 compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Instanced, pass.instancedProgram);
             }
+            if (pass.instancedProgram.IsValid())
+            {
+                pass.instanceCapacity = backend->GetInstanceCapacity(pass.instancedProgram);
+            }
             //展开变体按开关编译：关闭它的 Shader 依赖模型空间顶点，不参与合批
             if (compiled && pass.usesGeometryAbi && sourcePass.supportsExpandedGeometry)
             {

@@ -194,7 +194,7 @@
     <ClInclude Include="Src\Rendering\AtmosphereRenderer.h" />
     <ClInclude Include="Src\Rendering\CascadedShadowMap.h" />
     <ClInclude Include="Src\Rendering\ColorSpace.h" />
-    <ClInclude Include="Src\Rendering\DrawBatchBuilder.h" />
+    <ClInclude Include="Src\Rendering\DrawSubmissionBuilder.h" />
     <ClInclude Include="Src\Rendering\ForwardPipeline.h" />
     <ClInclude Include="Src\Rendering\FullscreenQuad.h" />
     <ClInclude Include="Src\Rendering\GeometryExpander.h" />
@@ -301,7 +301,7 @@
     <ClCompile Include="Src\Rendering\ShadowCascadeBuilder.cpp" />
     <ClCompile Include="Src\Rendering\AtmosphereRenderer.cpp" />
     <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp" />
-    <ClCompile Include="Src\Rendering\DrawBatchBuilder.cpp" />
+    <ClCompile Include="Src\Rendering\DrawSubmissionBuilder.cpp" />
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp" />
     <ClCompile Include="Src\Rendering\FullscreenQuad.cpp" />
     <ClCompile Include="Src\Rendering\GeometryExpander.cpp" />
