@@ -4,7 +4,6 @@
 #include "Platform/GlfwWindow.h"
 #include "Rendering/ShaderCompiler.h"
 #include "Rendering/VertexLayout.h"
-#include "Rendering/DepthDistributionShader.h"
 #include "Profiler/Profiler.h"
 
 #include <glad/vulkan.h>
@@ -118,7 +117,7 @@ struct VulkanRenderBackend::State
             ShaderParameterType type = ShaderParameterType::Float;
         };
         CompiledShader compiled;
-        VkShaderModule vertex = VK_NULL_HANDLE, fragment = VK_NULL_HANDLE, compute = VK_NULL_HANDLE;
+        VkShaderModule vertex = VK_NULL_HANDLE, fragment = VK_NULL_HANDLE;
         VkDescriptorSetLayout descriptors = VK_NULL_HANDLE;
         VkPipelineLayout layout = VK_NULL_HANDLE;
         std::unordered_map<std::string, VkPipeline> pipelines;
@@ -139,7 +138,6 @@ struct VulkanRenderBackend::State
         VkBuffer lastParameterBuffer = VK_NULL_HANDLE;
         VkBuffer lastDrawParameterBuffer = VK_NULL_HANDLE;
         VkDeviceSize lastDrawParameterRange = 0;
-        VkDescriptorBufferInfo lastStorage = {};
         uint64 textureBindingsRevision = 0, imageAccessRevision = 0;
         const ShaderParameterValue* framebufferParameter = nullptr;
         uint64 framebufferInfoRevision = 0, framebufferParameterRevision = 0;
@@ -195,13 +193,6 @@ struct VulkanRenderBackend::State
         bool rebuild = false;
         uint32 depth = 0;
     };
-    struct Distribution
-    {
-        Buffer bins;
-        uint64 serial = 0;
-        float32 nearPlane = 0.1f, farPlane = 1000.0f;
-    };
-
     VulkanRenderBackend& backend;
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice physical = VK_NULL_HANDLE;
@@ -247,8 +238,7 @@ struct VulkanRenderBackend::State
     std::unordered_map<uint32, VertexInput> inputs;
     std::unordered_map<uint32, Program> programs;
     std::unordered_map<uint32, uint32> textures;
-    std::unordered_map<uint32, Distribution> distributions;
-    uint32 whiteTexture = 0, blackCube = 0, distributionProgram = 0;
+    uint32 whiteTexture = 0, blackCube = 0;
 
     //绑定后端接口
     explicit State(VulkanRenderBackend& value) : backend(value) {}
@@ -877,14 +867,14 @@ struct VulkanRenderBackend::State
             VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO }; info.codeSize = code.size() * sizeof(uint32); info.pCode = code.data();
             Check(vkCreateShaderModule(device, &info, nullptr, &output), "vkCreateShaderModule");
         };
-        module(program.compiled.vertex, program.vertex); module(program.compiled.fragment, program.fragment); module(program.compiled.compute, program.compute);
-        VkShaderStageFlags stages = program.compute ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        module(program.compiled.vertex, program.vertex);
+        module(program.compiled.fragment, program.fragment);
+        constexpr VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         List<VkDescriptorSetLayoutBinding> bindings;
         if (program.compiled.parameterSize) bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, stages, nullptr });
         for (const auto& sampler : program.compiled.samplers) bindings.push_back({ sampler.binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, stages, nullptr });
         if (program.compiled.storageDrawParameters) bindings.push_back({ DrawParameterBinding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, stages, nullptr });
         if (program.compiled.drawParameterSize) bindings.push_back({ DrawParameterBinding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, stages, nullptr });
-        if (program.compute) bindings.push_back({ 31, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, stages, nullptr });
         VkDescriptorSetLayoutCreateInfo descriptors = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
         descriptors.bindingCount = static_cast<uint32>(bindings.size()); descriptors.pBindings = bindings.data();
         Check(vkCreateDescriptorSetLayout(device, &descriptors, nullptr, &program.descriptors), "vkCreateDescriptorSetLayout");
@@ -901,7 +891,6 @@ struct VulkanRenderBackend::State
         for (auto& [key, pipeline] : program.pipelines) vkDestroyPipeline(device, pipeline, nullptr);
         if (program.vertex) vkDestroyShaderModule(device, program.vertex, nullptr);
         if (program.fragment) vkDestroyShaderModule(device, program.fragment, nullptr);
-        if (program.compute) vkDestroyShaderModule(device, program.compute, nullptr);
         if (program.layout) vkDestroyPipelineLayout(device, program.layout, nullptr);
         if (program.descriptors) vkDestroyDescriptorSetLayout(device, program.descriptors, nullptr);
     }
@@ -909,7 +898,7 @@ struct VulkanRenderBackend::State
     //生成纹理的逐级缩小图
     void GenerateMipmaps(Image& image);
     //准备当前绘制的资源描述
-    VkDescriptorSet PrepareDescriptors(Program& program, Buffer* storage = nullptr);
+    VkDescriptorSet PrepareDescriptors(Program& program);
     //获取当前固定功能状态对应的图形管线
     VkPipeline GetGraphicsPipeline(Program& program, const GpuVertexInputDesc& input);
     //提交索引图元
@@ -964,7 +953,7 @@ bool VulkanRenderBackend::Initialize(IWindow* window)
             {
                 VkBool32 present;
                 Check(vkGetPhysicalDeviceSurfaceSupportKHR(candidate, family, s.surfaces.at(0).handle, &present), "vkGetPhysicalDeviceSurfaceSupportKHR");
-                if (!present || (families[family].queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) != (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) continue;
+                if (!present || !(families[family].queueFlags & VK_QUEUE_GRAPHICS_BIT)) continue;
                 int32 score = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 2 : 1;
                 if (score > bestScore)
                 {
@@ -977,7 +966,7 @@ bool VulkanRenderBackend::Initialize(IWindow* window)
                 }
             }
         }
-        if (!s.physical) throw std::runtime_error("Vulkan 1.3 device with graphics, compute, presentation and wireframe support was not found.");
+        if (!s.physical) throw std::runtime_error("Vulkan 1.3 device with graphics, presentation and wireframe support was not found.");
         vkGetPhysicalDeviceMemoryProperties(s.physical, &s.memoryProperties);
         float32 priority = 1.0f;
         VkDeviceQueueCreateInfo queue = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
@@ -1048,7 +1037,6 @@ void VulkanRenderBackend::Shutdown()
         }
         for (auto& buffer : s.bufferCache) s.DestroyBuffer(std::move(buffer));
         for (auto& image : s.imageCache) s.DestroyImage(image);
-        for (auto& [id, distribution] : s.distributions) s.DestroyBuffer(distribution.bins);
         for (auto& [id, program] : s.programs) { s.DestroyProgram(std::move(program)); ReleaseShaderParameters({ id }); }
         for (auto& [id, buffer] : s.buffers) s.DestroyBuffer(buffer);
         for (auto& [id, image] : s.images) s.DestroyImage(image);
@@ -1792,21 +1780,20 @@ uint32 VulkanRenderBackend::GetFragmentTextureUnitCount() const
 }
 
 //更新变化参数并复用帧内资源描述
-VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program, Buffer* storage)
+VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program)
 {
     ShaderParameters& parameters = backend.GetParameters();
-    if (!program.compute)
+    CachePassAttachments();
+    if (!program.framebufferParameter)
     {
-        CachePassAttachments();
-        if (!program.framebufferParameter)
-            program.framebufferParameter = &parameters.GetOrCreate("u_OrbedenFramebufferInfo");
-        if (program.framebufferInfoRevision != framebufferInfoRevision
-            || program.framebufferParameterRevision != program.framebufferParameter->revision)
-        {
-            parameters.SetVector3("u_OrbedenFramebufferInfo", framebufferInfo);
-            program.framebufferInfoRevision = framebufferInfoRevision;
-            program.framebufferParameterRevision = program.framebufferParameter->revision;
-        }
+        program.framebufferParameter = &parameters.GetOrCreate("u_OrbedenFramebufferInfo");
+    }
+    if (program.framebufferInfoRevision != framebufferInfoRevision
+        || program.framebufferParameterRevision != program.framebufferParameter->revision)
+    {
+        parameters.SetVector3("u_OrbedenFramebufferInfo", framebufferInfo);
+        program.framebufferInfoRevision = framebufferInfoRevision;
+        program.framebufferParameterRevision = program.framebufferParameter->revision;
     }
 
     //注册反射参数的稳定索引与缓冲偏移
@@ -1860,7 +1847,7 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     if (changed) ++program.parameterRevision;
 
     //上传当前绘制的不可变参数快照
-    VkDescriptorBufferInfo parameterInfo = {}, drawParameterInfo = {}, storageInfo = {};
+    VkDescriptorBufferInfo parameterInfo = {}, drawParameterInfo = {};
     if (program.compiled.parameterSize)
     {
         if (program.parameterSerial != submittedSerial + 1 || program.uploadedParameterRevision != program.parameterRevision)
@@ -1884,12 +1871,10 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         program.descriptorSerial = submittedSerial + 1;
         program.lastDescriptors = VK_NULL_HANDLE;
     }
-    if (storage) storageInfo = { storage->handle, storage->offset, storage->capacity };
     if (program.lastDescriptors && !resourcesChanged
         && program.textureBindingsRevision == textureBindingsRevision && program.imageAccessRevision == imageAccessRevision
         && program.lastParameterBuffer == parameterInfo.buffer
-        && program.lastDrawParameterBuffer == drawParameterInfo.buffer && program.lastDrawParameterRange == drawParameterInfo.range
-        && program.lastStorage.buffer == storageInfo.buffer && program.lastStorage.offset == storageInfo.offset && program.lastStorage.range == storageInfo.range)
+        && program.lastDrawParameterBuffer == drawParameterInfo.buffer && program.lastDrawParameterRange == drawParameterInfo.range)
         return program.lastDescriptors;
 
     //缓存当前资源组合与访问版本
@@ -1899,7 +1884,6 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         program.lastParameterBuffer = parameterInfo.buffer;
         program.lastDrawParameterBuffer = drawParameterInfo.buffer;
         program.lastDrawParameterRange = drawParameterInfo.range;
-        program.lastStorage = storageInfo;
         program.textureBindingsRevision = textureBindingsRevision;
         program.imageAccessRevision = imageAccessRevision;
         return set;
@@ -1920,19 +1904,18 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         auto image = images.find(texture);
         if (image == images.end() || (image->second.layers == 6) != sampler.cube) image = images.find(sampler.cube ? blackCube : whiteTexture);
         if (image == images.end()) throw std::runtime_error("Vulkan default sampled image is unavailable.");
-        UseImage(image->second, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, program.compute ? VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+        UseImage(image->second, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
         auto& info = program.imageInfos[index];
         info = { image->second.sampler, image->second.view, image->second.layout };
         append(info.sampler); append(info.imageView); append(info.imageLayout);
     }
-    append(storageInfo.buffer); append(storageInfo.offset); append(storageInfo.range);
     auto found = program.descriptorSets.find(key);
     if (found != program.descriptorSets.end()) return cacheDescriptors(found->second);
 
     //写入首次使用的资源组合
     VkDescriptorSet set = AllocateDescriptors(program.descriptors);
     List<VkWriteDescriptorSet> writes;
-    writes.reserve(program.compiled.samplers.size() + 3);
+    writes.reserve(program.compiled.samplers.size() + 2);
     if (program.compiled.parameterSize)
     {
         VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -1953,13 +1936,6 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
         write.dstSet = set; write.dstBinding = DrawParameterBinding; write.descriptorCount = 1;
         write.descriptorType = program.compiled.storageDrawParameters ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         write.pBufferInfo = &drawParameterInfo;
-        writes.push_back(write);
-    }
-    if (storage)
-    {
-        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-        write.dstSet = set; write.dstBinding = 31; write.descriptorCount = 1;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; write.pBufferInfo = &storageInfo;
         writes.push_back(write);
     }
     vkUpdateDescriptorSets(device, static_cast<uint32>(writes.size()), writes.data(), 0, nullptr);
@@ -2153,90 +2129,6 @@ bool VulkanRenderBackend::ReadDepthPixel(GpuRenderTargetID target, int32 x, int3
     vkCmdPipelineBarrier2(s.RecordCommands(), &dependency);
     s.Flush();
     std::memcpy(&depth, readback.mapped, sizeof(depth)); s.DestroyBuffer(readback);
-    return true;
-}
-
-//创建异步深度统计缓冲
-GpuDepthDistributionID VulkanRenderBackend::CreateDepthDistribution()
-{
-    auto& s = *state;
-    if (!s.distributionProgram)
-    {
-        std::string source = DepthDistributionSource;
-        source.insert(source.find('\n') + 1, "#define ORBEDEN_DISTRIBUTION_BINDING 31\n");
-        CompiledShader compiled; std::string error;
-        if (!ShaderCompiler::CompileCompute(source.c_str(), compiled, error)) { Log::Error(error.c_str()); return {}; }
-        s.distributionProgram = s.CreateProgram(std::move(compiled));
-        auto& program = s.programs.at(s.distributionProgram);
-        VkComputePipelineCreateInfo pipeline = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
-        pipeline.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        pipeline.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT; pipeline.stage.module = program.compute; pipeline.stage.pName = "main";
-        pipeline.layout = program.layout;
-        VkPipeline handle;
-        Check(vkCreateComputePipelines(s.device, s.pipelineCache, 1, &pipeline, nullptr, &handle), "vkCreateComputePipelines");
-        program.pipelines.emplace("", handle);
-    }
-    State::Distribution distribution;
-    distribution.bins = s.AllocateBuffer(GpuDepthDistribution::BinCount * sizeof(uint32), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, true);
-    uint32 id = s.nextId++; s.distributions.emplace(id, distribution);
-    return { id };
-}
-
-//释放异步深度统计缓冲
-void VulkanRenderBackend::DeleteDepthDistribution(GpuDepthDistributionID id)
-{
-    auto& s = *state; auto found = s.distributions.find(id.id); if (found == s.distributions.end()) return;
-    auto buffer = found->second.bins; s.distributions.erase(found); s.RetireBuffer(std::move(buffer));
-}
-
-//提交冻结深度的对数直方图
-bool VulkanRenderBackend::SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
-    const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane, bool reversedDepth)
-{
-    auto& s = *state; auto found = s.distributions.find(id.id); auto image = s.images.find(depth.id);
-    if (found == s.distributions.end() || found->second.serial || image == s.images.end() || !(nearPlane > 0.0f && farPlane > nearPlane)) return false;
-    BeginFrame(); s.PauseRendering();
-    auto& distribution = found->second;
-    VkCommandBuffer commands = s.RecordCommands();
-    vkCmdFillBuffer(commands, distribution.bins.handle, 0, distribution.bins.capacity, 0);
-    VkBufferMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 };
-    barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT; barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT; barrier.dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
-    barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; barrier.buffer = distribution.bins.handle; barrier.size = distribution.bins.capacity;
-    VkDependencyInfo dependency = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO }; dependency.bufferMemoryBarrierCount = 1; dependency.pBufferMemoryBarriers = &barrier;
-    vkCmdPipelineBarrier2(commands, &dependency);
-    uint32 previousProgram = s.currentProgram;
-    auto previousTexture = s.textures.find(0); uint32 texture = previousTexture == s.textures.end() ? 0 : previousTexture->second;
-    BindShaderProgram({ s.distributionProgram }); BindDepthTexture(0, depth);
-    GetParameters().SetInt("u_Depth", 0); GetParameters().SetMatrix4("u_InverseProjection", inverseProjection);
-    GetParameters().SetFloat("u_Near", nearPlane); GetParameters().SetFloat("u_Far", farPlane);
-    GetParameters().SetInt("u_ReversedDepth", reversedDepth ? 1 : 0);
-    auto& program = s.programs.at(s.distributionProgram);
-    VkDescriptorSet descriptors = s.PrepareDescriptors(program, &distribution.bins);
-    vkCmdBindPipeline(commands, VK_PIPELINE_BIND_POINT_COMPUTE, program.pipelines.at(""));
-    uint32 parameterOffset = static_cast<uint32>(program.parameterData.offset);
-    uint32 parameterCount = program.compiled.parameterSize ? 1 : 0;
-    vkCmdBindDescriptorSets(commands, VK_PIPELINE_BIND_POINT_COMPUTE, program.layout, 0, 1, &descriptors, parameterCount, &parameterOffset);
-    vkCmdDispatch(commands, (image->second.width + 15) / 16, (image->second.height + 15) / 16, 1);
-    barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT; barrier.srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_HOST_BIT; barrier.dstAccessMask = VK_ACCESS_2_HOST_READ_BIT;
-    vkCmdPipelineBarrier2(commands, &dependency);
-    distribution.serial = s.submittedSerial + 1; distribution.nearPlane = nearPlane; distribution.farPlane = farPlane;
-    BindShaderProgram({ previousProgram }); BindTexture(0, { texture });
-    return true;
-}
-
-//零等待读取已完成统计
-bool VulkanRenderBackend::TryReadDepthDistribution(GpuDepthDistributionID id, GpuDepthDistribution& output)
-{
-    auto& s = *state; auto found = s.distributions.find(id.id);
-    if (found == s.distributions.end() || !found->second.serial) return false;
-    for (auto& frame : s.frames)
-        if (frame.serial > s.completedSerial && vkGetFenceStatus(s.device, frame.fence) == VK_SUCCESS) s.completedSerial = std::max(s.completedSerial, frame.serial);
-    auto& distribution = found->second;
-    if (distribution.serial > s.completedSerial) return false;
-    std::memcpy(output.bins, distribution.bins.mapped, sizeof(output.bins));
-    output.nearPlane = distribution.nearPlane; output.farPlane = distribution.farPlane; distribution.serial = 0;
     return true;
 }
 

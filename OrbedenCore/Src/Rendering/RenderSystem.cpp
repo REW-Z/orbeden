@@ -471,6 +471,9 @@ void RenderSystem::Render(World& world, float deltaTime)
         scene.Update(world);
     }
 
+    //准备直接绘制的实例数据
+    PrepareDirectInstances();
+
     //准备相机渲染数据
     {
         PROFILE("Render/CameraPreparation");
@@ -619,6 +622,91 @@ void RenderSystem::Render(World& world, float deltaTime)
 }
 
 //清空本帧使用的显式提交并解除读取状态
+//打包直接绘制的实例并合并包围盒
+void RenderSystem::PrepareDirectInstances()
+{
+    PROFILE("Render/PrepareDirectInstances");
+    for (InstanceSubmission& submission : activeInstanceSubmissions)
+    {
+        if (!submission.drawQueue || submission.world->GetContentRevision() != submission.contentRevision)
+        {
+            continue;
+        }
+
+        Mesh* mesh = submission.mesh.Get();
+        if (!mesh || !submission.material.Get())
+        {
+            continue;
+        }
+
+        //按提交顺序打包有效变换
+        const bounds3& localBounds = mesh->GetLocalBounds();
+        vector3 minimum{};
+        vector3 maximum{};
+        bool hasBounds = false;
+        const bool hasParameters = !submission.drawParameters.empty();
+        submission.gpuInstances.reserve(submission.instances.size());
+        for (usize index = 0; index < submission.instances.size(); ++index)
+        {
+            const MeshInstanceData& source = submission.instances[index];
+            const matrix4x4 model = Orbeden::Math::TRS(source.position, source.rotation, source.scale);
+            GpuMeshInstance instance;
+            if (!BuildGpuMeshInstance(model, ColorSpace::SrgbToLinear(source.tint), source.uvRect, instance))
+            {
+                ++forwardPipeline.MutableBatchStats().invalidTransforms;
+                continue;
+            }
+
+            const usize target = submission.gpuInstances.size();
+            submission.gpuInstances.push_back(instance);
+            if (target != index)
+            {
+                submission.instances[target] = source;
+                if (hasParameters)
+                {
+                    submission.drawParameters[target] = submission.drawParameters[index];
+                }
+            }
+
+            //合并此实例的世界包围盒
+            if (localBounds.valid)
+            {
+                const bounds3 bounds = Orbeden::Math::TransformBounds(model, localBounds);
+                const vector3 low = { bounds.center.x - bounds.extents.x, bounds.center.y - bounds.extents.y,
+                    bounds.center.z - bounds.extents.z };
+                const vector3 high = { bounds.center.x + bounds.extents.x, bounds.center.y + bounds.extents.y,
+                    bounds.center.z + bounds.extents.z };
+                if (hasBounds)
+                {
+                    minimum = { std::min(minimum.x, low.x), std::min(minimum.y, low.y), std::min(minimum.z, low.z) };
+                    maximum = { std::max(maximum.x, high.x), std::max(maximum.y, high.y), std::max(maximum.z, high.z) };
+                }
+                else
+                {
+                    minimum = low;
+                    maximum = high;
+                    hasBounds = true;
+                }
+            }
+        }
+
+        //保持实例与着色参数的索引一致
+        submission.instances.resize(submission.gpuInstances.size());
+        if (hasParameters)
+        {
+            submission.drawParameters.resize(submission.gpuInstances.size());
+        }
+        if (hasBounds)
+        {
+            submission.worldBounds.center = { (minimum.x + maximum.x) * 0.5f, (minimum.y + maximum.y) * 0.5f,
+                (minimum.z + maximum.z) * 0.5f };
+            submission.worldBounds.extents = { (maximum.x - minimum.x) * 0.5f, (maximum.y - minimum.y) * 0.5f,
+                (maximum.z - minimum.z) * 0.5f };
+            submission.worldBounds.valid = true;
+        }
+    }
+}
+
 void RenderSystem::FinishDrawSubmissions()
 {
     activeInstanceSubmissions.clear();
@@ -654,7 +742,8 @@ bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& opti
 
 //按实例顺序保存变换和可选的着色参数
 bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
-    Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId, std::span<const float32> drawParameters)
+    Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId,
+    std::span<const float32> drawParameters, std::optional<DrawQueue> drawQueue, int32 drawSubQueue)
 {
     //渲染读取期间、世界准备阶段与不支持实例化的后端都拒绝接收
     if (readingDrawSubmissions || !initialized || !window) return false;
@@ -678,6 +767,8 @@ bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& opti
     submission.mesh.Set(mesh);
     submission.material.Set(material);
     submission.subMeshIndex = subMeshIndex;
+    submission.drawQueue = drawQueue;
+    submission.drawSubQueue = drawSubQueue;
     submission.instances.assign(instances.begin(), instances.end());
     if (!drawParameters.empty())
     {

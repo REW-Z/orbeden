@@ -60,11 +60,8 @@
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="shadowBias" type="float32" value="0.000500000024" />
                 <Field name="shadowStrength" type="float32" value="0.449999988" />
-                <Field name="shadowDistance" type="float32" value="20000" />
-                <Field name="shadowCascadeCount" type="int32" value="4" />
+                <Field name="shadowCascadeEnds" type="List&lt;float32&gt;" value="4:7:1.087768:11.832169:128.705185:20000" />
                 <Field name="shadowMapResolution" type="int32" value="2048" />
-                <Field name="shadowSplitLambda" type="float32" value="1" />
-                <Field name="shadowAdaptive" type="bool" value="true" />
                 <Field name="shadowNormalBias" type="float32" value="0.25" />
                 <Field name="shadowBlendRatio" type="float32" value="0.100000001" />
             </Component>

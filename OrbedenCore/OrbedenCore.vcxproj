@@ -453,7 +453,6 @@
     <ClCompile Include="Src\Rendering\ShaderCompiler.cpp" />
     <ClInclude Include="Src\Rendering\VertexLayout.h" />
     <ClCompile Include="Src\Rendering\VertexLayout.cpp" />
-    <ClInclude Include="Src\Rendering\DepthDistributionShader.h" />
     <ClInclude Include="Src\Rendering\ImGuiRenderer.h" />
     <ClCompile Include="Src\Rendering\ImGuiRenderer.cpp" />
     <ClInclude Include="Src\Rendering\Backend\VulkanRenderBackend.h" />

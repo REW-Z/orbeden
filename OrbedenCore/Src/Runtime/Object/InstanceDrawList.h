@@ -19,7 +19,13 @@ private:
     List<float32> drawParameters;
 
 public:
-    /// <summary>配置绘制目标；校验失败时保留旧配置，且不清空已设置的实例。</summary>
+    /// <summary>指定实例列表的绘制队列。</summary>
+    DrawQueue drawQueue = DrawQueue::Opaque;
+
+    /// <summary>指定子队列，实例列表在该子队列末尾按提交顺序绘制。</summary>
+    int32 drawSubQueue = 0;
+
+    /// <summary>配置绘制目标并从材质初始化绘制队列；校验失败时保留旧配置。</summary>
     bool Configure(Mesh* targetMesh, uint32 targetSubMeshIndex, Material* targetMaterial, const InstanceDrawOptions& drawOptions);
 
     /// <summary>替换实例数据，数量变化时清除旧着色参数，失败时保留旧值。</summary>
@@ -33,7 +39,7 @@ public:
     /// <summary>读取当前实例数量。</summary>
     int32 GetInstanceCount() const;
 
-    /// <summary>把配置与实例复制到下一次 Render 的提交列表。</summary>
+    /// <summary>提交绘制快照，在下一次 Render 的指定子队列末尾直接绘制。</summary>
     bool Submit();
 
     /// <summary>清空对象内实例，不撤回已经提交的快照。</summary>

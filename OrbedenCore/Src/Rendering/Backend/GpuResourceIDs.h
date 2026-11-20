@@ -9,13 +9,6 @@ struct GpuSurfaceID
     bool IsValid() const { return id != 0; }
 };
 
-//异步深度分布统计对象
-struct GpuDepthDistributionID
-{
-    uint32 id = 0;
-    bool IsValid() const { return id != 0; }
-};
-
 //GPU 顶点缓冲对象的不透明句柄
 struct GpuVertexBufferID
 {

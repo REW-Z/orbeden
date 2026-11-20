@@ -7,6 +7,8 @@
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/RenderSettings.h"
 
+#include <array>
+
 class Camera;
 class Component;
 class StaticMeshRenderer;
@@ -113,11 +115,9 @@ public:
     //世界单位的深度偏移
     float32 shadowBias = 0.0005f;
     float32 shadowStrength = 0.45f;
-    float32 shadowDistance = 20000.0f;
-    int32 shadowCascadeCount = 4;
+    std::array<float32, MaximumShadowCascades> shadowCascadeEnds{};
+    int32 shadowCascadeCapacity = 0;
     int32 shadowMapResolution = 2048;
-    float32 shadowSplitLambda = 1.0f;
-    bool shadowAdaptive = true;
     float32 shadowNormalBias = 0.25f;
     float32 shadowBlendRatio = 0.1f;
 };

@@ -7,7 +7,6 @@
 #include "Profiler/Profiler.h"
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 #include <string>
 
 void CascadedShadowMap::Initialize(RenderBackend* value)
@@ -19,11 +18,9 @@ void CascadedShadowMap::Shutdown()
 {
     if (backend)
     {
-        for (const CameraHistory& history : histories) backend->DeleteDepthDistribution(history.query);
         backend->DeleteRenderTarget(target);
         backend->DeleteDepthTexture(atlas);
     }
-    histories.clear();
     shadowCandidates.clear();
     casterBounds.clear();
     target = {};
@@ -33,50 +30,16 @@ void CascadedShadowMap::Shutdown()
     backend = nullptr;
 }
 
-void CascadedShadowMap::BeginFrame(const RenderScene& scene)
+//重置本帧阴影状态
+void CascadedShadowMap::BeginFrame()
 {
     ready = false;
-    shadowCandidates.clear();
-    casterBounds.clear();
-    if (!backend) return;
-    //移除已销毁相机的统计资源
-    for (auto iterator = histories.begin(); iterator != histories.end();)
-    {
-        bool present = std::any_of(scene.cameras.begin(), scene.cameras.end(),
-            [&](const RenderCamera& camera) { return camera.ens == iterator->camera.ens; });
-        bool enabled = std::any_of(scene.directionalLights.begin(), scene.directionalLights.end(),
-            [](const RenderDirectionalLight& light) { return light.castShadows; });
-        if (!present || !enabled)
-        {
-            backend->DeleteDepthDistribution(iterator->query);
-            iterator = histories.erase(iterator);
-        }
-        else ++iterator;
-    }
 }
 
-bool CascadedShadowMap::CanReuseView(const RenderCamera& previous, const RenderCamera& current, float32 maxDistance)
-{
-    if (previous.ens != current.ens || previous.drawLayerMask != current.drawLayerMask ||
-        previous.viewportWidth != current.viewportWidth || previous.viewportHeight != current.viewportHeight ||
-        previous.nearPlane != current.nearPlane || previous.farPlane != current.farPlane ||
-        std::memcmp(previous.projectionMatrix.m, current.projectionMatrix.m, sizeof(matrix4x4)) != 0) return false;
-    vector3 offset{ previous.position.x-current.position.x, previous.position.y-current.position.y, previous.position.z-current.position.z };
-    if (Orbeden::Math::Dot(offset, offset) > maxDistance * maxDistance) return false;
-    for (int32 axis : {0, 2})
-    {
-        vector3 a{previous.worldMatrix.m[axis*4],previous.worldMatrix.m[axis*4+1],previous.worldMatrix.m[axis*4+2]};
-        vector3 b{current.worldMatrix.m[axis*4],current.worldMatrix.m[axis*4+1],current.worldMatrix.m[axis*4+2]};
-        if (Orbeden::Math::Dot(Orbeden::Math::Normalize(a), Orbeden::Math::Normalize(b)) < 0.95f) return false;
-    }
-    float32 elapsed = current.elapsedTime - previous.elapsedTime;
-    return elapsed >= 0.0f && elapsed <= 1.0f;
-}
-
-bool CascadedShadowMap::CreateAtlas()
+bool CascadedShadowMap::CreateAtlas(int32 capacity)
 {
     int32 width = settings.resolution * 2;
-    int32 height = settings.resolution * ((settings.count + 1) / 2);
+    int32 height = settings.resolution * ((capacity + 1) / 2);
     if (atlas.IsValid() && target.IsValid() && width == atlasWidth && height == atlasHeight) return true;
     backend->DeleteRenderTarget(target);
     backend->DeleteDepthTexture(atlas);
@@ -126,84 +89,41 @@ void CascadedShadowMap::ReportShadowSkip(uint32 reason, const DrawBatch& batch, 
     Log::Error(message.c_str());
 }
 
-void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubmission>& submissions,
+void CascadedShadowMap::Render(const RenderScene& scene, std::span<const InstanceSubmission* const> batchedSubmissions,
+    std::span<const InstanceSubmission* const> directSubmissions,
     const ParticleFrameSnapshot& particles, const RenderCamera& camera, const RenderDirectionalLight& light,
     Shader* depthShader, GpuResourceManager& resources, ParticleRenderer& particleRenderer,
     StaticBatchCache* staticBatches, DrawSubmissionBuilder& builder, GpuDrawStream& stream, RenderBatchStats& stats)
 {
     ready = false;
     staticBatchCache = staticBatches;
-    if (!backend || !depthShader || !std::isfinite(camera.nearPlane) || !std::isfinite(camera.farPlane) ||
-        camera.nearPlane <= 0.0f || camera.farPlane <= camera.nearPlane) return;
-    settings.count = light.shadowCascadeCount;
+    if (!backend || !depthShader)
+    {
+        return;
+    }
+
+    //读取手动分区并裁剪到相机范围
+    float32 splits[MaximumShadowCascades]{};
+    settings.count = ShadowCascadeBuilder::BuildSplits(light.shadowCascadeEnds, camera.nearPlane, camera.farPlane, splits);
+    if (settings.count == 0)
+    {
+        return;
+    }
     settings.resolution = light.shadowMapResolution;
-    settings.distance = light.shadowDistance;
-    settings.splitLambda = light.shadowSplitLambda;
     settings.blendRatio = light.shadowBlendRatio;
     settings.depthBias = light.shadowBias;
     settings.normalBias = light.shadowNormalBias;
-    settings.adaptive = light.shadowAdaptive;
     settings = ShadowCascadeBuilder::ValidateSettings(settings);
-    if (settings.distance <= camera.nearPlane) return;
     const GpuShader* shader = resources.GetShader(depthShader);
-    if (!shader || shader->passes.empty() || !CreateAtlas()) return;
-
-    //建立相机独立分区历史
-    auto found = std::find_if(histories.begin(), histories.end(),
-        [&](const CameraHistory& history) { return history.camera.ens == camera.ens; });
-    if (found == histories.end())
+    if (!shader || shader->passes.empty() || !CreateAtlas(light.shadowCascadeCapacity))
     {
-        histories.emplace_back();
-        found = histories.end()-1;
-        found->camera = camera;
+        return;
     }
-    CameraHistory& history = *found;
-    float32 maxDistance = std::max(2.0f, history.splits[0] * 0.25f);
-    bool reset = !history.initialized || !CanReuseView(history.camera, camera, maxDistance) ||
-        history.settings.count != settings.count || history.settings.distance != settings.distance ||
-        history.settings.splitLambda != settings.splitLambda || history.settings.adaptive != settings.adaptive;
-    if (reset)
-    {
-        history.hasDistribution = false;
-        backend->DeleteDepthDistribution(history.query);
-        history.query = {};
-    }
-    if (!settings.adaptive && history.query.IsValid())
-    {
-        backend->DeleteDepthDistribution(history.query);
-        history.query = {};
-        history.hasDistribution = false;
-    }
-    if (settings.adaptive)
-    {
-        if (!history.query.IsValid())
-        {
-            history.query = backend->CreateDepthDistribution();
-            if (!history.query.IsValid()) Log::Error("SDSM histogram unavailable; stable CSM remains active.");
-        }
-        GpuDepthDistribution result;
-        if (backend->TryReadDepthDistribution(history.query, result))
-        {
-            history.hasDistribution = CanReuseView(history.submittedCamera, camera, maxDistance);
-            history.distribution = result;
-            history.sampledCamera = history.submittedCamera;
-        }
-        if (history.hasDistribution && !CanReuseView(history.sampledCamera, camera, maxDistance))
-            history.hasDistribution = false;
-    }
-    float32 splits[ShadowCascadeSettings::MaxCascades]{};
-    ShadowCascadeBuilder::BuildSplits(settings, camera.nearPlane, camera.farPlane,
-        history.hasDistribution ? &history.distribution : nullptr, reset ? nullptr : history.splits,
-        camera.elapsedTime-history.camera.elapsedTime, splits);
-    std::copy_n(splits, settings.count, history.splits);
-    history.camera = camera;
-    history.settings = settings;
-    history.initialized = true;
 
     //收集当前相机的共享阴影候选
     {
         PROFILE("Render/Shadows/CollectItems");
-        builder.CollectShadowCandidates(scene, submissions, camera, shadowCandidates);
+        builder.CollectShadowCandidates(scene, batchedSubmissions, camera, shadowCandidates);
     }
 
     //收集全场景同层不透明投射物的分区包围盒
@@ -276,6 +196,47 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
             backend->GetParameters().SetMatrix4("u_LightViewProjection", cascades[index].worldToShadow);
         };
 
+        //绑定深度变体并执行实例化阴影绘制
+        auto drawInstances = [&](const DrawBatch& batch, Mesh* sourceMesh, std::span<const GpuMeshInstance> instances)
+        {
+            if (instances.empty())
+            {
+                ReportShadowSkip(ShadowSkipInstances, batch, "no instance survived");
+                return false;
+            }
+
+            const GpuMesh* mesh = resources.GetMesh(sourceMesh);
+            if (!mesh || !mesh->instancedVertexInput.IsValid())
+            {
+                ++stats.invalidResources;
+                ReportShadowSkip(ShadowSkipMesh, batch, "the instanced vertex input is invalid");
+                return false;
+            }
+            if (!stream.UploadMeshInstances(instances))
+            {
+                ++stats.failedUploads;
+                ReportShadowSkip(ShadowSkipUpload, batch, "the instance upload was rejected");
+                return false;
+            }
+
+            //提交当前级联的实例数据
+            bindDepthProgram(depthPass.instancedProgram);
+            stats.uploadedBytes += instances.size_bytes();
+            stats.submittedInstances += instances.size();
+            backend->BindVertexInput(mesh->instancedVertexInput);
+            if (!backend->BindInstanceBuffer(stream.GetInstanceBuffer(), 0))
+            {
+                ++stats.failedUploads;
+                ReportShadowSkip(ShadowSkipBind, batch, "the instance buffer bind was rejected");
+                return false;
+            }
+
+            backend->DrawIndexedInstanced(batch.key.indexStart, batch.key.indexCount, static_cast<uint32>(instances.size()));
+            ++stats.instancedDraws;
+            ++stats.shadowDraws;
+            return true;
+        };
+
         for (const DrawBatch& batch : shadowBatches)
         {
             //持久静态批：直接绑定缓存组，按级联裁剪出的索引区间绘制
@@ -298,46 +259,9 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
 
             if (batch.key.mode == GeometryMode::Instanced && depthPass.instancedProgram.IsValid())
             {
-                //实例化阴影：同一深度程序，实例数据走流式缓冲
-                //被拒绝的项已经计入 invalidTransforms，这里没有可画的实例就直接跳过
+                //打包通用阴影批次的实例
                 stats.invalidTransforms += particleRenderer.BuildMeshInstances(batch, shadowItems, shadowInstances);
-                if (shadowInstances.empty())
-                {
-                    ReportShadowSkip(ShadowSkipInstances, batch, "no instance survived");
-                    continue;
-                }
-
-                const DrawItem& first = shadowItems[batch.items[0]];
-                const GpuMesh* mesh = resources.GetMesh(first.mesh);
-                if (!mesh || !mesh->instancedVertexInput.IsValid())
-                {
-                    ++stats.invalidResources;
-                    ReportShadowSkip(ShadowSkipMesh, batch, "the instanced vertex input is invalid");
-                    continue;
-                }
-
-                if (!stream.UploadMeshInstances(shadowInstances))
-                {
-                    ++stats.failedUploads;
-                    ReportShadowSkip(ShadowSkipUpload, batch, "the instance upload was rejected");
-                    continue;
-                }
-
-                bindDepthProgram(depthPass.instancedProgram);
-                stats.uploadedBytes += static_cast<uint64>(shadowInstances.size()) * sizeof(GpuMeshInstance);
-                stats.submittedInstances += shadowInstances.size();
-                backend->BindVertexInput(mesh->instancedVertexInput);
-                if (!backend->BindInstanceBuffer(stream.GetInstanceBuffer(), 0))
-                {
-                    ++stats.failedUploads;
-                    ReportShadowSkip(ShadowSkipBind, batch, "the instance buffer bind was rejected");
-                    continue;
-                }
-
-                backend->DrawIndexedInstanced(batch.key.indexStart, batch.key.indexCount,
-                    static_cast<uint32>(shadowInstances.size()));
-                ++stats.instancedDraws;
-                ++stats.shadowDraws;
+                drawInstances(batch, shadowItems[batch.items[0]].mesh, shadowInstances);
                 continue;
             }
 
@@ -389,6 +313,52 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
             }
         }
 
+        //追加直接提交的不透明投射物
+        if (depthPass.instancedProgram.IsValid() && depthPass.instanceCapacity > 0)
+        {
+            for (const InstanceSubmission* direct : directSubmissions)
+            {
+                const InstanceSubmission& submission = *direct;
+                if (submission.drawQueue != DrawQueue::Opaque || !submission.options.castShadows
+                    || submission.gpuInstances.empty()
+                    || (!submission.options.camera.IsNull() && submission.options.camera != camera.ens)
+                    || (submission.options.drawLayer & camera.drawLayerMask) == 0
+                    || (submission.worldBounds.valid && !Orbeden::Math::Intersects(cascades[index].lightFrustum, submission.worldBounds)))
+                {
+                    continue;
+                }
+
+                Mesh* mesh = submission.mesh.Get();
+                if (!mesh || !submission.material.Get() || submission.world->GetContentRevision() != submission.contentRevision
+                    || submission.subMeshIndex >= mesh->subMeshes.size())
+                {
+                    continue;
+                }
+
+                const SubMesh& subMesh = mesh->subMeshes[submission.subMeshIndex];
+                if (subMesh.indexCount == 0 || subMesh.indexStart > mesh->indices.size()
+                    || subMesh.indexCount > mesh->indices.size() - subMesh.indexStart)
+                {
+                    continue;
+                }
+
+                //按级联容量绘制已打包的实例
+                DrawBatch batch;
+                batch.key.indexStart = subMesh.indexStart;
+                batch.key.indexCount = subMesh.indexCount;
+                const std::span<const GpuMeshInstance> instances(submission.gpuInstances);
+                for (usize start = 0; start < instances.size();)
+                {
+                    const usize count = std::min<usize>(depthPass.instanceCapacity, instances.size() - start);
+                    if (!drawInstances(batch, mesh, instances.subspan(start, count)))
+                    {
+                        break;
+                    }
+                    start += count;
+                }
+            }
+        }
+
         backend->EndPass();
     }
     backend->BindVertexInput({});
@@ -420,15 +390,4 @@ void CascadedShadowMap::BindTexture(int32 slot)
     if (slot < 0) return;
     backend->GetParameters().SetInt("u_ShadowMap", slot);
     backend->BindDepthTexture(static_cast<uint32>(slot), ready ? atlas : GpuDepthTextureID{});
-}
-
-void CascadedShadowMap::CaptureDepth(const RenderCamera& camera)
-{
-    if (!ready || !settings.adaptive || !camera.cameraDepthTexture.IsValid()) return;
-    auto found = std::find_if(histories.begin(), histories.end(),
-        [&](const CameraHistory& history) { return history.camera.ens == camera.ens; });
-    if (found == histories.end()) return;
-    if (backend->SubmitDepthDistribution(found->query, camera.cameraDepthTexture,
-        Orbeden::Math::Inverse(camera.gpuProjectionMatrix), camera.nearPlane, std::min(camera.farPlane, settings.distance), camera.reversedDepth))
-        found->submittedCamera = camera;
 }

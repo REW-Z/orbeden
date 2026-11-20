@@ -3921,62 +3921,49 @@ public:
         return Reflection::SetFromValue(instance->shadowStrength, value);
     }
 
-    //读取 DirectionalLight.shadowDistance 字段
-    static std::string Get_DirectionalLight_shadowDistance(Object* object)
+    //读取 DirectionalLight.shadowCascadeEnds 字段
+    static std::string Get_DirectionalLight_shadowCascadeEnds(Object* object)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::ToXmlValue(instance->shadowDistance);
+        return Reflection::ArrayToXmlValue(instance->shadowCascadeEnds);
     }
 
-    //直接读取 DirectionalLight.shadowDistance 字段
-    static Reflection::Value GetValue_DirectionalLight_shadowDistance(Object* object)
+    //直接读取 DirectionalLight.shadowCascadeEnds 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowCascadeEnds(Object* object)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return instance ? Reflection::ToValue(instance->shadowDistance) : Reflection::Value();
+        return instance ? Reflection::Value(Reflection::ArrayToXmlValue(instance->shadowCascadeEnds)) : Reflection::Value();
     }
 
-    //写入 DirectionalLight.shadowDistance 字段
-    static bool Set_DirectionalLight_shadowDistance(Object* object, const std::string& value)
+    //写入 DirectionalLight.shadowCascadeEnds 字段
+    static bool Set_DirectionalLight_shadowCascadeEnds(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::SetFromXmlValue(instance->shadowDistance, value);
+        return Reflection::SetArrayFromXmlValue(instance->shadowCascadeEnds, value);
     }
 
-    //直接写入 DirectionalLight.shadowDistance 字段
-    static bool SetValue_DirectionalLight_shadowDistance(Object* object, const Reflection::Value& value)
+    //直接写入 DirectionalLight.shadowCascadeEnds 字段
+    static bool SetValue_DirectionalLight_shadowCascadeEnds(Object* object, const Reflection::Value& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->shadowDistance, value);
+        return Set_DirectionalLight_shadowCascadeEnds(object, value.ToString());
     }
 
-    //读取 DirectionalLight.shadowCascadeCount 字段
-    static std::string Get_DirectionalLight_shadowCascadeCount(Object* object)
+    //读取 DirectionalLight.shadowCascadeEnds 槽位数
+    static int32 Size_DirectionalLight_shadowCascadeEnds(Object* object)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::ToXmlValue(instance->shadowCascadeCount);
+        return instance ? static_cast<int32>(std::size(instance->shadowCascadeEnds)) : 0;
     }
 
-    //直接读取 DirectionalLight.shadowCascadeCount 字段
-    static Reflection::Value GetValue_DirectionalLight_shadowCascadeCount(Object* object)
+    //改写 DirectionalLight.shadowCascadeEnds 槽位数
+    static bool Resize_DirectionalLight_shadowCascadeEnds(Object* object, int32 count)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return instance ? Reflection::ToValue(instance->shadowCascadeCount) : Reflection::Value();
-    }
-
-    //写入 DirectionalLight.shadowCascadeCount 字段
-    static bool Set_DirectionalLight_shadowCascadeCount(Object* object, const std::string& value)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::SetFromXmlValue(instance->shadowCascadeCount, value);
-    }
-
-    //直接写入 DirectionalLight.shadowCascadeCount 字段
-    static bool SetValue_DirectionalLight_shadowCascadeCount(Object* object, const Reflection::Value& value)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->shadowCascadeCount, value);
+        if (!instance || count < 0) return false;
+        if (!Reflection::ResizeArray(instance->shadowCascadeEnds, count)) return false;
+        return true;
     }
 
     //读取 DirectionalLight.shadowMapResolution 字段
@@ -4006,64 +3993,6 @@ public:
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->shadowMapResolution, value);
-    }
-
-    //读取 DirectionalLight.shadowSplitLambda 字段
-    static std::string Get_DirectionalLight_shadowSplitLambda(Object* object)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::ToXmlValue(instance->shadowSplitLambda);
-    }
-
-    //直接读取 DirectionalLight.shadowSplitLambda 字段
-    static Reflection::Value GetValue_DirectionalLight_shadowSplitLambda(Object* object)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return instance ? Reflection::ToValue(instance->shadowSplitLambda) : Reflection::Value();
-    }
-
-    //写入 DirectionalLight.shadowSplitLambda 字段
-    static bool Set_DirectionalLight_shadowSplitLambda(Object* object, const std::string& value)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::SetFromXmlValue(instance->shadowSplitLambda, value);
-    }
-
-    //直接写入 DirectionalLight.shadowSplitLambda 字段
-    static bool SetValue_DirectionalLight_shadowSplitLambda(Object* object, const Reflection::Value& value)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->shadowSplitLambda, value);
-    }
-
-    //读取 DirectionalLight.shadowAdaptive 字段
-    static std::string Get_DirectionalLight_shadowAdaptive(Object* object)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::ToXmlValue(instance->shadowAdaptive);
-    }
-
-    //直接读取 DirectionalLight.shadowAdaptive 字段
-    static Reflection::Value GetValue_DirectionalLight_shadowAdaptive(Object* object)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return instance ? Reflection::ToValue(instance->shadowAdaptive) : Reflection::Value();
-    }
-
-    //写入 DirectionalLight.shadowAdaptive 字段
-    static bool Set_DirectionalLight_shadowAdaptive(Object* object, const std::string& value)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::SetFromXmlValue(instance->shadowAdaptive, value);
-    }
-
-    //直接写入 DirectionalLight.shadowAdaptive 字段
-    static bool SetValue_DirectionalLight_shadowAdaptive(Object* object, const Reflection::Value& value)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->shadowAdaptive, value);
     }
 
     //读取 DirectionalLight.shadowNormalBias 字段
@@ -4364,80 +4293,27 @@ public:
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
-    //按具体类型读取 DirectionalLight.shadowDistance
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowDistance(Object* object, void* output)
+    //按具体类型读取 DirectionalLight.shadowCascadeEnds
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowCascadeEnds(Object* object, void* output)
     {
         try
         {
             auto* instance = static_cast<DirectionalLight*>(object);
-            ScriptInterop::WriteDirectValue(instance->shadowDistance, output);
+            ScriptInterop::WriteDirectValue(instance->shadowCascadeEnds, output);
             return ScriptInterop::InteropStatus::Ok;
         }
         catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
-    //按具体类型写入 DirectionalLight.shadowDistance，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowDistance(Object* object, const void* input)
+    //按具体类型写入 DirectionalLight.shadowCascadeEnds，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowCascadeEnds(Object* object, const void* input)
     {
         try
         {
             auto* instance = static_cast<DirectionalLight*>(object);
-            float32 value{};
+            List<float32> value{};
             if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->shadowDistance = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 DirectionalLight.shadowDistance，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetValueDirect_DirectionalLight_shadowDistance(Object* object, float32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            instance->shadowDistance = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型读取 DirectionalLight.shadowCascadeCount
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowCascadeCount(Object* object, void* output)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            ScriptInterop::WriteDirectValue(instance->shadowCascadeCount, output);
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 DirectionalLight.shadowCascadeCount，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowCascadeCount(Object* object, const void* input)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            int32 value{};
-            if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->shadowCascadeCount = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 DirectionalLight.shadowCascadeCount，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetValueDirect_DirectionalLight_shadowCascadeCount(Object* object, int32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            instance->shadowCascadeCount = value;
+            instance->shadowCascadeEnds = value;
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -4478,86 +4354,6 @@ public:
         {
             auto* instance = static_cast<DirectionalLight*>(object);
             instance->shadowMapResolution = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型读取 DirectionalLight.shadowSplitLambda
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowSplitLambda(Object* object, void* output)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            ScriptInterop::WriteDirectValue(instance->shadowSplitLambda, output);
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 DirectionalLight.shadowSplitLambda，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowSplitLambda(Object* object, const void* input)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            float32 value{};
-            if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->shadowSplitLambda = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 DirectionalLight.shadowSplitLambda，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetValueDirect_DirectionalLight_shadowSplitLambda(Object* object, float32 value)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            instance->shadowSplitLambda = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型读取 DirectionalLight.shadowAdaptive
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowAdaptive(Object* object, void* output)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            ScriptInterop::WriteDirectValue(instance->shadowAdaptive, output);
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 DirectionalLight.shadowAdaptive，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowAdaptive(Object* object, const void* input)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            bool value{};
-            if (!ScriptInterop::ReadDirectValue(input, value)) return ScriptInterop::InteropStatus::InvalidArgument;
-            instance->shadowAdaptive = value;
-            if (World* world = instance->GetWorld()) world->SetDirty();
-            return ScriptInterop::InteropStatus::Ok;
-        }
-        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
-    }
-
-    //按具体类型写入 DirectionalLight.shadowAdaptive，保留业务通知
-    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetValueDirect_DirectionalLight_shadowAdaptive(Object* object, uint8 value)
-    {
-        try
-        {
-            auto* instance = static_cast<DirectionalLight*>(object);
-            instance->shadowAdaptive = value != 0;
             if (World* world = instance->GetWorld()) world->SetDirty();
             return ScriptInterop::InteropStatus::Ok;
         }
@@ -16762,11 +16558,8 @@ namespace Reflection
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_castShadows, ReflectionGeneratedAccess::SetValue_DirectionalLight_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_castShadows)),
                 FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBias, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowBias), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowBias), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowBias)),
                 FieldInfo("shadowStrength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::Set_DirectionalLight_shadowStrength, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowStrength, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowStrength), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowStrength), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowStrength)),
-                FieldInfo("shadowDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::Set_DirectionalLight_shadowDistance, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowDistance)),
-                FieldInfo("shadowCascadeCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowCascadeCount, ReflectionGeneratedAccess::Set_DirectionalLight_shadowCascadeCount, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowCascadeCount, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowCascadeCount, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowCascadeCount), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowCascadeCount), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowCascadeCount)),
+                FieldInfo("shadowCascadeEnds", "List<float32>", Reflection::FieldKind::Array, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowCascadeEnds, ReflectionGeneratedAccess::Set_DirectionalLight_shadowCascadeEnds, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowCascadeEnds, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowCascadeEnds, ReflectionGeneratedAccess::Size_DirectionalLight_shadowCascadeEnds, ReflectionGeneratedAccess::Resize_DirectionalLight_shadowCascadeEnds, Reflection::FieldKind::Float32, false, static_cast<Reflection::ValueKind>(static_cast<uint32>(Reflection::ValueKind::Array) | (static_cast<uint32>(Reflection::ValueKind::Float32) << 16)), reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowCascadeEnds), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowCascadeEnds), nullptr),
                 FieldInfo("shadowMapResolution", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowMapResolution, ReflectionGeneratedAccess::Set_DirectionalLight_shadowMapResolution, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowMapResolution, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowMapResolution, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowMapResolution), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowMapResolution), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowMapResolution)),
-                FieldInfo("shadowSplitLambda", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowSplitLambda, ReflectionGeneratedAccess::Set_DirectionalLight_shadowSplitLambda, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowSplitLambda, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowSplitLambda, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowSplitLambda), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowSplitLambda), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowSplitLambda)),
-                FieldInfo("shadowAdaptive", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowAdaptive, ReflectionGeneratedAccess::Set_DirectionalLight_shadowAdaptive, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowAdaptive, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowAdaptive, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowAdaptive), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowAdaptive), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowAdaptive)),
                 FieldInfo("shadowNormalBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowNormalBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowNormalBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowNormalBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowNormalBias, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowNormalBias), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowNormalBias), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowNormalBias)),
                 FieldInfo("shadowBlendRatio", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBlendRatio, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBlendRatio, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBlendRatio, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBlendRatio, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowBlendRatio), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowBlendRatio), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetValueDirect_DirectionalLight_shadowBlendRatio)),
             });
@@ -16867,6 +16660,8 @@ namespace Reflection
                 FieldInfo("options", "InstanceDrawOptions", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("instances", "List<MeshInstanceData>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
                 FieldInfo("drawParameters", "List<float32>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
+                FieldInfo("drawSubQueue", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(InstanceDrawList::StaticType(),

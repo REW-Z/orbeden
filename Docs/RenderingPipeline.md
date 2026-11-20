@@ -118,16 +118,15 @@ UI 命中检测另有单像素深度读取路径：`UIRenderer` 校验视图、�
 
 ### 4. 每相机级联阴影
 
-ForwardPipeline 选择第一个开启阴影的方向光，由 CascadedShadowMap 在当前相机主 pass 前绘制 1..6 级稳定 CSM。两列 D32F atlas 按顺序相机复用；各相机的 SDSM 历史按 EnsId 独立保存。
+ForwardPipeline 选择第一个开启阴影的方向光，由 CascadedShadowMap 在当前相机主 Pass 前按手动分界绘制最多六级稳定 CSM。两列 D32F 图集按方向光配置的级联容量分配，由相机顺序复用。
 
 - 包围球稳定投影、世界纹素网格对齐、级联过渡、4×4 tent PCF 和接收面深度修正。
 - 投射物从完整场景收集，遵守 layer mask、castShadows 与 Opaque 队列，包含相机外上游遮挡物。
 - shadowBias 使用世界单位，shadowNormalBias 使用本级纹素倍数。实际接收范围不超过相机 farPlane。
-- shadowAdaptive=false 使用固定 CSM 分区；true 使用冻结相机深度的 64 桶对数直方图调整内部边界。
-- 后端 compute 在主绘制后提交，完成状态零超时轮询；没有有效统计时仍保持完整 CSM 覆盖，不等待 GPU。
+- 在方向光 Inspector 或脚本中设置 `shadowCascadeEnds`，按相机视深度填写递增的结束距离。每台相机按自己的近、远裁剪面计算实际有效区间。
 - 任意材质 alpha discard、顶点位移没有自动的 ShadowCaster Pass，当前只保证不透明几何轮廓一致性。
 
-配置、算法、Shader ABI、验证清单见 [SDSM / CSM 详细方案](CascadedShadows.md)。
+配置、分区和着色器接口见[手动分区级联阴影](CascadedShadows.md)。
 
 ### 5. Forward Main Pass
 
@@ -319,13 +318,15 @@ bool submitted = World.DrawMeshInstanced(mesh, material, instances);
 
 第四个参数可传连续的 `float` 缓冲，每个实例 32 个值，按实例输入顺序排列。Shader 的 `OrbedenDrawParameters` 块按每实例 8 个 `vec4` 读取。省略缓冲即可使用普通实例材质。后续两个可选参数指定子网格和绘制选项，默认绘制子网格 0、图层 1，参与所有相机及阴影。提交结果表示该组是否进入渲染队列，视锥剔除与透明排序在之后执行。
 
-复用 `InstanceDrawList` 时可先调用 `SetInstances`，再调用 `SetDrawParameters` 和 `Submit`。列表保留相同数量实例对应的参数，数量变化时清除参数。直接提交和列表提交共用每次 Render 累计 1,048,576 个实例的现有 CPU 队列预算。
+使用 `InstanceDrawList` 时，`Configure` 从材质初始化 `drawQueue` 和 `drawSubQueue`。脚本可以在配置后修改这两个字段，例如设为 `DrawQueue.Opaque` 和 `1`。设置实例和可选的逐实例参数后，`Submit` 将当前队列、实例及参数一同保存到下一次 Render。列表保留相同数量实例对应的参数，数量变化时清除参数。两种提交入口共用每次 Render 累计 1,048,576 个实例的 CPU 预算。
+
+每个列表在指定子队列的通用批次绘制完毕后直接调用后端实例绘制。同一子队列内的列表按 `Submit` 顺序绘制，列表内部保留调用方提供的实例顺序。透明列表的混合顺序由调用方负责。引擎每帧打包一次实例数据，按整批包围盒筛选相机和阴影级联，然后按后端容量绘制连续的实例与参数。
 
 ## 几何合批与拓扑缓存
 
 - 主画面的绘制路径按渲染器的 `drawStrategy` 与批次可合并性选择：`Auto` 依次尝试持久静态批、实例批、动态展开批，都不成立才逐对象绘制；`Individual` 始终逐项提交；`GpuInstancing` 在单 Pass 和后端支持实例变体时直接实例绘制，单个实例也走该路径，显式实例组按绘制接口及程序缓冲容量提交。`DynamicBatching` 采用动态展开，条件不足时退回单绘制。实例批要求同 Mesh、子网格区间与材质；动态展开批只要求同材质与同渲染状态，用 `DrawIndexedInstanced` 与 `DrawIndexed` 分别提交（持久静态批直接绑定缓存组的顶点输入）。Indirect Draw 尚未实现。
-- 阴影中的 `Auto` 普通网格先复用有效持久静态批；其余项只尝试 GPU 实例批，条件不足时直接绘制原 GPU 网格，不逐级联进行 CPU 动态几何展开。显式 `DynamicBatching`、粒子与显式实例提交保持原路径；不修改 Renderer 保存的策略。`Render/Shadows` 记录阴影入口，`Cascade`、`BuildItems`、`BuildBatches`、`DrawBatches` 记录各级联；其中 `DrawBatches` 包含 Pass 建立、状态设置、绘制提交与结束，不是 GPU 时间查询。
-- 每次相机渲染只收集一次普通网格和显式实例的阴影候选，再按级联视锥筛选；同一 Renderer 的子网格共享一次包围盒判断。持久静态批和粒子保留逐级裁剪路径，投射物分区包围盒继续使用原筛选规则并复用存储容量。`Render/Shadows/CollectItems` 记录共享收集阶段，`BuildItems` 记录级联筛选和静态批／粒子追加；不跨相机或跨帧复用候选内容。
+- 阴影中的 `Auto` 普通网格先复用有效持久静态批；其余项只尝试 GPU 实例批，条件不足时直接绘制原 GPU 网格，不逐级联进行 CPU 动态几何展开。显式 `DynamicBatching`、粒子与 `World.DrawMeshInstanced` 使用各自的通用阴影批次。`InstanceDrawList` 的不透明投射物在每级联的通用批次之后直接绘制。`Render/Shadows` 记录阴影入口，`Cascade`、`BuildItems`、`BuildBatches`、`DrawBatches` 记录各级联；其中 `DrawBatches` 包含 Pass 建立、状态设置、绘制提交与结束，不是 GPU 时间查询。
+- 每次相机渲染只收集一次普通网格和 `World.DrawMeshInstanced` 的阴影候选，再按级联视锥筛选；同一 Renderer 的子网格共享一次包围盒判断。持久静态批和粒子保留逐级裁剪路径，投射物分区包围盒继续使用原筛选规则并复用存储容量。`Render/Shadows/CollectItems` 记录共享收集阶段，`BuildItems` 记录级联筛选和静态批／粒子追加；不跨相机或跨帧复用候选内容。
 - `StaticMeshRenderer` 只是组件类名，**不代表它所属的 Ens 已 static**：是否进入持久静态批由 Ens 的 `static` 约束和渲染器的 `drawStrategy` 共同决定。
 
 展开几何的引用计数与局部索引按 Mesh 内容版本缓存，首次构建同时完成索引校验和首次引用顺序映射；网格修改后重建，销毁后清理，资源失效时清空。每批仍重新计算世界空间顶点；位置、法线、切线公式和 32 位索引格式不变。索引输出直接复制缓存映射并加顶点基址，已消费的展开块回收容量供后续批次复用。`GetTopology`／`BuildTopology`／`ReserveBuffers` 记录拓扑与容量准备；`ValidateIndices` 包含拓扑缓存读取或重建，首次录制需区分冷缓存和后续帧。
@@ -362,7 +363,7 @@ Vulkan 在主线程录制命令，使用三组循环帧资源。每组持有命�
 
 流式缓冲保留最新 CPU 内容，跨帧首次使用时按需复制到当前帧上传区间；同帧后续上传分配新范围，不覆盖旧 Draw 已引用的数据。缓冲对象原地更新，Draw 每次从对象读取最新句柄、偏移和已用范围。仍可能被 GPU 使用的原生资源进入帧退休队列，完成后归还复用池或实际销毁。缓冲、图像使用专用退休数组，程序等其他对象保留回调队列。
 
-图像依赖使用 Synchronization2 跟踪布局、阶段与访问标记；转为附件、采样、传输或计算用途时建立相应依赖，需要时暂停并恢复渲染范围。复制相机快照、UI 中间目标和深度统计都走后端接口，不依赖 OpenGL 的隐式状态转换。
+图像依赖使用 Synchronization2 跟踪布局、阶段与访问标记；转为附件、采样或传输用途时建立相应依赖，需要时暂停并恢复渲染范围。相机快照和 UI 中间目标的复制通过后端接口执行。
 
 ### 缓存与失效
 
@@ -457,7 +458,7 @@ GPU 区间从首个 GPU 时间戳起算，与 CPU 时间线使用不同的时钟
 
 - 提供 OpenGL 4.3 与 Vulkan 1.3；当前窗口平台为 GLFW。
 - 实际只使用一个主方向光；各相机顺序重绘并复用级联 atlas。
-- CSM 每级默认 2048²、4 级，可选择固定分区或异步 SDSM；VSM、云阴影和屏幕空间接触阴影尚未实现。
+- CSM 默认四级，每级 2048²，分界由方向光的 `shadowCascadeEnds` 配置。
 - 相机裁剪仍为线性扫描，没有 BVH 或 GPU Culling。
 - RenderScene 在同一线程增量更新并立即消费。Vulkan 当前没有并行命令录制、独立异步计算队列或 Indirect Draw。
 - 所有 Refraction 物体共享同一份冻结快照，因此不会互相折射。
@@ -471,7 +472,7 @@ GPU 区间从首个 GPU 时间戳起算，与 CPU 时间线使用不同的时钟
 | 相机扩展契约与覆盖层接口 | [RenderSystem.h](../OrbedenCore/Src/Rendering/RenderSystem.h) |
 | 持久场景与组件快照 | [RenderScene.cpp](../OrbedenCore/Src/Rendering/RenderScene.cpp) |
 | 每相机阴影、主 Pass 与折射 | [ForwardPipeline.cpp](../OrbedenCore/Src/Rendering/ForwardPipeline.cpp) |
-| 级联阴影与深度统计 | [CascadedShadowMap.cpp](../OrbedenCore/Src/Rendering/CascadedShadowMap.cpp) |
+| 级联阴影 | [CascadedShadowMap.cpp](../OrbedenCore/Src/Rendering/CascadedShadowMap.cpp) |
 | 绘制项与合批策略 | [DrawSubmissionBuilder.cpp](../OrbedenCore/Src/Rendering/DrawSubmissionBuilder.cpp) |
 | 拓扑缓存与 CPU 几何展开 | [GeometryExpander.cpp](../OrbedenCore/Src/Rendering/GeometryExpander.cpp) |
 | GPU 资源缓存与绑定布局 | [GpuResourceManager.cpp](../OrbedenCore/Src/Rendering/GpuResourceManager.cpp) |

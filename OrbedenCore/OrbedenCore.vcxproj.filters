@@ -599,7 +599,6 @@
     <ClCompile Include="Src\Rendering\ShaderCompiler.cpp"><Filter>源文件</Filter></ClCompile>
     <ClInclude Include="Src\Rendering\VertexLayout.h"><Filter>头文件</Filter></ClInclude>
     <ClCompile Include="Src\Rendering\VertexLayout.cpp"><Filter>源文件</Filter></ClCompile>
-    <ClInclude Include="Src\Rendering\DepthDistributionShader.h"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="Src\Rendering\ImGuiRenderer.h"><Filter>头文件</Filter></ClInclude>
     <ClCompile Include="Src\Rendering\ImGuiRenderer.cpp"><Filter>源文件</Filter></ClCompile>
     <ClInclude Include="Src\Rendering\Backend\VulkanRenderBackend.h"><Filter>头文件</Filter></ClInclude>

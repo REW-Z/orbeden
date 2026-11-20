@@ -9,6 +9,7 @@
 #include "Rendering/StaticBatchCache.h"
 #include "Rendering/RenderScene.h"
 
+#include <map>
 #include <unordered_set>
 
 //Forward 渲染管线，负责组织阴影、天空盒和场景几何的绘制顺序。
@@ -49,12 +50,16 @@ private:
     //当前相机的统一绘制项与批次。
     List<DrawItem> cameraItems;
     List<DrawBatch> cameraBatches;
+    //按队列与子队列记录直接绘制的提交顺序
+    std::map<DrawQueue, std::map<int32, List<const InstanceSubmission*>>> directDraws;
 
     //本帧批次统计，由 RenderSystem 在每帧开始时清零。
     RenderBatchStats batchStats;
 
     //本帧生效的显式实例提交，只在一次 Render 内有效，由 RenderSystem 注入。
     const List<InstanceSubmission>* drawSubmissions = nullptr;
+    List<const InstanceSubmission*> batchedSubmissions;
+    List<const InstanceSubmission*> directSubmissions;
     //本帧用于刷新粒子快照的世界，由 RenderSystem 注入。
     World* frameWorld = nullptr;
 
@@ -118,7 +123,7 @@ public:
     RenderBatchStats& MutableBatchStats() { return batchStats; }
 
     //注入本帧生效的显式实例提交；传空表示没有提交。
-    void SetDrawSubmissions(const List<InstanceSubmission>* submissions) { drawSubmissions = submissions; }
+    void SetDrawSubmissions(const List<InstanceSubmission>* submissions);
 
     //注入本帧的世界，用于刷新粒子渲染快照。
     void SetFrameWorld(World* world) { frameWorld = world; }
@@ -142,6 +147,9 @@ private:
     //把当前相机的可见项合并为统一的绘制项与批次。
     void BuildFrameBatches(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& gpuResourceManager);
 
+    //按当前相机筛选直接绘制的实例列表
+    void PrepareDirectDraws(const RenderCamera& camera);
+
     //按指定队列执行已经排好序的批次。
     void ExecuteQueueBatches(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& gpuResourceManager,
         DrawQueue drawQueue, const RenderDirectionalLight* mainLight, bool cameraTexturesReady);
@@ -160,6 +168,17 @@ private:
     bool ExecuteInstancedBatch(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
         GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
         const GpuMaterial& material, std::unordered_set<uint32>& configuredPrograms);
+
+    //绘制提交的实例列表，按设备容量拆分连续数据
+    void ExecuteDirectDraw(const InstanceSubmission& submission, const RenderScene& scene, const RenderCamera& camera,
+        GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
+        std::unordered_set<uint32>& configuredPrograms);
+
+    //绑定并绘制已经打包的实例数据
+    bool DrawMeshInstances(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+        const RenderDirectionalLight* mainLight, bool cameraTexturesReady, const GpuMaterial& material,
+        GpuVertexInputID input, std::span<const GpuMeshInstance> instances, std::span<const DrawParameterData> parameters,
+        std::unordered_set<uint32>& configuredPrograms);
 
     //以展开几何执行批次，按 chunk 依次上传并绘制。
     bool ExecuteExpandedBatch(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,

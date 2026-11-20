@@ -218,8 +218,6 @@ void main(){vec4 sampleColor=texture(u_Texture,v_Uv);if(sampleColor.r*u_Color.a<
         auto copyDepth = backend.CreateDepthTexture({ 128,128 }); targetDesc.depthTexture = copyDepth;
         auto copyTarget = backend.CreateRenderTarget(targetDesc);
         Require(input.IsValid() && target.IsValid() && copyTarget.IsValid(), "Basic resource allocation failed.");
-        GpuDepthDistributionID distribution = backend.CreateDepthDistribution();
-        Require(distribution.IsValid(), "Depth compute resources failed.");
 
         for (uint32 frame = 0; frame < 5; ++frame)
         {
@@ -264,9 +262,6 @@ void main(){vec4 sampleColor=texture(u_Texture,v_Uv);if(sampleColor.r*u_Color.a<
             GpuRenderTargetCopyDesc copy; copy.sourceRenderTarget = target; copy.destinationRenderTarget = copyTarget; copy.width = copy.height = 128;
             Require(backend.CopyRenderTarget(copy), "Color/depth snapshot copy failed.");
             CheckDepth(backend, copyTarget, 35, 60, 0.25f);
-            GpuDepthDistribution previous;
-            backend.TryReadDepthDistribution(distribution, previous);
-            backend.SubmitDepthDistribution(distribution, copyDepth, matrix4x4(), 0.1f, 10.0f);
             OutputPass output; output.Initialize(&backend);
             OutputPass::Parameters parameters;
             parameters.sourceTexture = backend.GetRenderTargetColorTexture(target);
@@ -277,11 +272,7 @@ void main(){vec4 sampleColor=texture(u_Texture,v_Uv);if(sampleColor.r*u_Color.a<
             window.PollEvents();
         }
         backend.WaitForIdle();
-        GpuDepthDistribution statistics;
-        Require(backend.TryReadDepthDistribution(distribution, statistics), "Asynchronous compute did not complete.");
-        uint64 samples = 0; for (uint32 count : statistics.bins) samples += count;
-        Require(samples > 0, "Depth compute returned an empty histogram.");
-        std::cout << "Draw parameters, culling, textures, HDR/depth copies, compute and presentation passed\n";
+        std::cout << "Draw parameters, culling, textures, HDR/depth copies and presentation passed\n";
 
         //检查采样槽、图像写入与等待后的绑定恢复
         backend.BeginFrame();
@@ -410,7 +401,6 @@ void main(){vec4 sampleColor=texture(u_Texture,v_Uv);if(sampleColor.r*u_Color.a<
         }
         gui.Shutdown(); ImGui::DestroyContext(context); backend.DeleteSurface(surface); additional.Destroy();
         std::cout << "Additional surface and ImGui font texture updates passed\n";
-        backend.DeleteDepthDistribution(distribution);
         backend.DeleteRenderTarget(copyTarget); backend.DeleteDepthTexture(copyDepth);
         backend.DeleteRenderTarget(target); backend.DeleteDepthTexture(depth);
         backend.DeleteTexture(whiteTexture); backend.DeleteTexture(blackTexture);

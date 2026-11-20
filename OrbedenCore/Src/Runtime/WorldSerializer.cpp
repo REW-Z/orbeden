@@ -16,6 +16,7 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/OrbEvent.h"
 #include "ResourceManager/ResourceManager.h"
+#include "Runtime/Object/DirectionalLight.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/Script.h"
 
@@ -525,6 +526,25 @@ namespace
         return script->SetManagedField(name, typeName, kind, value, inspectorVisible);
     }
 
+    //把旧分区参数转换为手动结束距离
+    void MigrateShadowSplits(DirectionalLight& light, int32 count, float32 distance, float32 splitLambda)
+    {
+        constexpr float32 nearPlane = 0.1f;
+        count = std::clamp(count, 1, MaximumShadowCascades);
+        distance = std::isfinite(distance) ? std::clamp(distance, 0.01f, 10000000.0f) : 20000.0f;
+        splitLambda = std::isfinite(splitLambda) ? std::clamp(splitLambda, 0.0f, 1.0f) : 1.0f;
+        const float32 start = std::min(nearPlane, distance * 0.5f);
+        light.shadowCascadeEnds.resize(count);
+        for (int32 index = 0; index + 1 < count; ++index)
+        {
+            const float32 fraction = static_cast<float32>(index + 1) / count;
+            const float32 linear = start + (distance - start) * fraction;
+            const float32 logarithmic = start * std::pow(distance / start, fraction);
+            light.shadowCascadeEnds[index] = std::lerp(linear, logarithmic, splitLambda);
+        }
+        light.shadowCascadeEnds.back() = distance;
+    }
+
     //读取组件节点并应用字段
     bool ReadComponent(XmlReader& reader, World& world, Ens& ens, const XmlToken& startToken)
     {
@@ -575,17 +595,49 @@ namespace
 
         if (startToken.emptyElement) return true;
 
-        //读取组件字段
+        //读取组件字段及旧阴影分区
+        DirectionalLight* directionLight = component->Cast<DirectionalLight>();
+        bool hasManualSplits = false;
+        bool hasLegacySplits = false;
+        int32 legacyCount = 4;
+        float32 legacyDistance = 20000.0f;
+        float32 legacySplitLambda = 1.0f;
         XmlToken token;
         while (reader.Next(token))
         {
             if (token.kind == XmlTokenKind::EndElement && token.name == startToken.name)
             {
+                if (directionLight && hasLegacySplits && !hasManualSplits)
+                {
+                    MigrateShadowSplits(*directionLight, legacyCount, legacyDistance, legacySplitLambda);
+                }
                 return true;
             }
 
             if (token.kind == XmlTokenKind::StartElement && token.name == "Field")
             {
+                if (directionLight)
+                {
+                    const std::string& name = GetAttribute(token, "name");
+                    const std::string& value = GetAttribute(token, "value");
+                    if (name == "shadowCascadeEnds")
+                    {
+                        hasManualSplits = true;
+                    }
+                    else if (name == "shadowCascadeCount")
+                    {
+                        hasLegacySplits |= Reflection::SetFromXmlValue(legacyCount, value);
+                    }
+                    else if (name == "shadowDistance")
+                    {
+                        hasLegacySplits |= Reflection::SetFromXmlValue(legacyDistance, value);
+                    }
+                    else if (name == "shadowSplitLambda")
+                    {
+                        hasLegacySplits |= Reflection::SetFromXmlValue(legacySplitLambda, value);
+                    }
+                }
+
                 if (!ApplyField(component, token))
                 {
                     LogSerializerError("World XML failed to apply field on component: " + typeName);

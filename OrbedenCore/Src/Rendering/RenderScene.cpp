@@ -173,11 +173,10 @@ void RenderScene::Update(World& currentWorld)
         renderLight.castShadows = light->castShadows;
         renderLight.shadowBias = light->shadowBias;
         renderLight.shadowStrength = light->shadowStrength;
-        renderLight.shadowDistance = light->shadowDistance;
-        renderLight.shadowCascadeCount = light->shadowCascadeCount;
+        renderLight.shadowCascadeCapacity = static_cast<int32>(
+            std::min(light->shadowCascadeEnds.size(), renderLight.shadowCascadeEnds.size()));
+        std::copy_n(light->shadowCascadeEnds.begin(), renderLight.shadowCascadeCapacity, renderLight.shadowCascadeEnds.begin());
         renderLight.shadowMapResolution = light->shadowMapResolution;
-        renderLight.shadowSplitLambda = light->shadowSplitLambda;
-        renderLight.shadowAdaptive = light->shadowAdaptive;
         renderLight.shadowNormalBias = light->shadowNormalBias;
         renderLight.shadowBlendRatio = light->shadowBlendRatio;
         directionalLights.push_back(renderLight);

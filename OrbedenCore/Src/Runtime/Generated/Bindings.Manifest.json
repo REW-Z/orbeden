@@ -6703,7 +6703,7 @@
         },
         {
           "Name": "cascades",
-          "Type": "std::array\u003CShadowCascade,ShadowCascadeSettings::MaxCascades\u003E",
+          "Type": "std::array\u003CShadowCascade,MaximumShadowCascades\u003E",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -6718,25 +6718,6 @@
           "Buffer": "",
           "Count": "",
           "FixedArray": true,
-          "Parameters": []
-        },
-        {
-          "Name": "histories",
-          "Type": "List\u003CCameraHistory\u003E",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
           "Parameters": []
         },
         {
@@ -6933,13 +6914,7 @@
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "scene",
-              "Type": "const RenderScene\u0026",
-              "DefaultValue": ""
-            }
-          ]
+          "Parameters": []
         },
         {
           "Name": "Render",
@@ -6965,8 +6940,13 @@
               "DefaultValue": ""
             },
             {
-              "Name": "submissions",
-              "Type": "const List\u003CInstanceSubmission\u003E\u0026",
+              "Name": "batchedSubmissions",
+              "Type": "std::span\u003Cconst InstanceSubmission*const\u003E",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "directSubmissions",
+              "Type": "std::span\u003Cconst InstanceSubmission*const\u003E",
               "DefaultValue": ""
             },
             {
@@ -7072,31 +7052,6 @@
           ]
         },
         {
-          "Name": "CaptureDepth",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "camera",
-              "Type": "const RenderCamera\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
           "Name": "reportedShadowSkips",
           "Type": "uint32",
           "Access": "private",
@@ -7151,41 +7106,6 @@
           ]
         },
         {
-          "Name": "CanReuseView",
-          "Type": "bool",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": true,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "previous",
-              "Type": "const RenderCamera\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "current",
-              "Type": "const RenderCamera\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "maxDistance",
-              "Type": "float32",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
           "Name": "CreateAtlas",
           "Type": "bool",
           "Access": "private",
@@ -7202,194 +7122,13 @@
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
-          "Parameters": []
-        }
-      ],
-      "EnumValues": []
-    },
-    {
-      "Name": "CameraHistory",
-      "QualifiedName": "CascadedShadowMap::CameraHistory",
-      "BaseName": "",
-      "Kind": "struct",
-      "EnumBase": "int32",
-      "IsExported": false,
-      "Include": "Rendering/CascadedShadowMap.h",
-      "IsObject": false,
-      "IsAbstract": false,
-      "IsUnique": false,
-      "IsFinal": false,
-      "Members": [
-        {
-          "Name": "camera",
-          "Type": "RenderCamera",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "submittedCamera",
-          "Type": "RenderCamera",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "sampledCamera",
-          "Type": "RenderCamera",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "settings",
-          "Type": "ShadowCascadeSettings",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "query",
-          "Type": "GpuDepthDistributionID",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "distribution",
-          "Type": "GpuDepthDistribution",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "splits",
-          "Type": "std::array\u003Cfloat32,ShadowCascadeSettings::MaxCascades\u003E",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": true,
-          "Parameters": []
-        },
-        {
-          "Name": "initialized",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "hasDistribution",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
+          "Parameters": [
+            {
+              "Name": "capacity",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
         }
       ],
       "EnumValues": []
@@ -11351,27 +11090,8 @@
           "Parameters": []
         },
         {
-          "Name": "shadowDistance",
-          "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "shadowCascadeCount",
-          "Type": "int32",
+          "Name": "shadowCascadeEnds",
+          "Type": "List\u003Cfloat32\u003E",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -11391,44 +11111,6 @@
         {
           "Name": "shadowMapResolution",
           "Type": "int32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "shadowSplitLambda",
-          "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "shadowAdaptive",
-          "Type": "bool",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -13174,7 +12856,7 @@
             },
             {
               "Name": "submissions",
-              "Type": "const List\u003CInstanceSubmission\u003E\u0026",
+              "Type": "std::span\u003Cconst InstanceSubmission*const\u003E",
               "DefaultValue": ""
             },
             {
@@ -13279,7 +12961,7 @@
             },
             {
               "Name": "submissions",
-              "Type": "const List\u003CInstanceSubmission\u003E\u0026",
+              "Type": "std::span\u003Cconst InstanceSubmission*const\u003E",
               "DefaultValue": ""
             },
             {
@@ -17244,6 +16926,25 @@
           "Parameters": []
         },
         {
+          "Name": "directDraws",
+          "Type": "std::map\u003CDrawQueue,std::map\u003Cint32,List\u003Cconst InstanceSubmission*\u003E\u003E\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "batchStats",
           "Type": "RenderBatchStats",
           "Access": "private",
@@ -17265,6 +16966,44 @@
         {
           "Name": "drawSubmissions",
           "Type": "const List\u003CInstanceSubmission\u003E*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "batchedSubmissions",
+          "Type": "List\u003Cconst InstanceSubmission*\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "directSubmissions",
+          "Type": "List\u003Cconst InstanceSubmission*\u003E",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -17979,6 +17718,31 @@
           ]
         },
         {
+          "Name": "PrepareDirectDraws",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "camera",
+              "Type": "const RenderCamera\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "ExecuteQueueBatches",
           "Type": "void",
           "Access": "private",
@@ -18194,6 +17958,131 @@
             {
               "Name": "material",
               "Type": "const GpuMaterial\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "configuredPrograms",
+              "Type": "std::unordered_set\u003Cuint32\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "ExecuteDirectDraw",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "submission",
+              "Type": "const InstanceSubmission\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "scene",
+              "Type": "const RenderScene\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "camera",
+              "Type": "const RenderCamera\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "gpuResourceManager",
+              "Type": "GpuResourceManager\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "mainLight",
+              "Type": "const RenderDirectionalLight*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "cameraTexturesReady",
+              "Type": "bool",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "configuredPrograms",
+              "Type": "std::unordered_set\u003Cuint32\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DrawMeshInstances",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "batch",
+              "Type": "const DrawBatch\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "scene",
+              "Type": "const RenderScene\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "camera",
+              "Type": "const RenderCamera\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "mainLight",
+              "Type": "const RenderDirectionalLight*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "cameraTexturesReady",
+              "Type": "bool",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "material",
+              "Type": "const GpuMaterial\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "input",
+              "Type": "GpuVertexInputID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "instances",
+              "Type": "std::span\u003Cconst GpuMeshInstance\u003E",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "parameters",
+              "Type": "std::span\u003Cconst DrawParameterData\u003E",
               "DefaultValue": ""
             },
             {
@@ -19431,152 +19320,6 @@
     {
       "Name": "GpuCubeTextureID",
       "QualifiedName": "GpuCubeTextureID",
-      "BaseName": "",
-      "Kind": "struct",
-      "EnumBase": "int32",
-      "IsExported": false,
-      "Include": "Rendering/Backend/GpuResourceIDs.h",
-      "IsObject": false,
-      "IsAbstract": false,
-      "IsUnique": false,
-      "IsFinal": false,
-      "Members": [
-        {
-          "Name": "id",
-          "Type": "uint32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "IsValid",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": true,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        }
-      ],
-      "EnumValues": []
-    },
-    {
-      "Name": "GpuDepthDistribution",
-      "QualifiedName": "GpuDepthDistribution",
-      "BaseName": "",
-      "Kind": "struct",
-      "EnumBase": "int32",
-      "IsExported": false,
-      "Include": "Rendering/Backend/RenderBackend.h",
-      "IsObject": false,
-      "IsAbstract": false,
-      "IsUnique": false,
-      "IsFinal": false,
-      "Members": [
-        {
-          "Name": "BinCount",
-          "Type": "int32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": true,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "bins",
-          "Type": "std::array\u003Cuint32,BinCount\u003E",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": true,
-          "Parameters": []
-        },
-        {
-          "Name": "nearPlane",
-          "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "farPlane",
-          "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        }
-      ],
-      "EnumValues": []
-    },
-    {
-      "Name": "GpuDepthDistributionID",
-      "QualifiedName": "GpuDepthDistributionID",
       "BaseName": "",
       "Kind": "struct",
       "EnumBase": "int32",
@@ -20999,7 +20742,7 @@
       "Kind": "struct",
       "EnumBase": "int32",
       "IsExported": false,
-      "Include": "Rendering/DrawSubmissionBuilder.h",
+      "Include": "Rendering/InstanceDrawData.h",
       "IsObject": false,
       "IsAbstract": false,
       "IsUnique": false,
@@ -28524,6 +28267,44 @@
           "Parameters": []
         },
         {
+          "Name": "drawQueue",
+          "Type": "DrawQueue",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "drawSubQueue",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Configure",
           "Type": "bool",
           "Access": "public",
@@ -28962,6 +28743,82 @@
         {
           "Name": "drawParameters",
           "Type": "List\u003CDrawParameterData\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "drawQueue",
+          "Type": "std::optional\u003CDrawQueue\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "drawSubQueue",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "gpuInstances",
+          "Type": "List\u003CGpuMeshInstance\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "worldBounds",
+          "Type": "bounds3",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -32988,44 +32845,6 @@
           "Parameters": []
         },
         {
-          "Name": "depthDistributionShader",
-          "Type": "GpuShaderProgramID",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "depthDistributions",
-          "Type": "std::unordered_map\u003Cuint32,DepthDistributionState\u003E",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
           "Name": "currentShaderProgram",
           "Type": "GpuShaderProgramID",
           "Access": "private",
@@ -34263,130 +34082,6 @@
             {
               "Name": "id",
               "Type": "GpuDepthTextureID",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "CreateDepthDistribution",
-          "Type": "GpuDepthDistributionID",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "DeleteDepthDistribution",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SubmitDepthDistribution",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "depth",
-              "Type": "GpuDepthTextureID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "inverseProjection",
-              "Type": "const matrix4x4\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "nearPlane",
-              "Type": "float32",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "farPlane",
-              "Type": "float32",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "reversedDepth",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "TryReadDepthDistribution",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "distribution",
-              "Type": "GpuDepthDistribution\u0026",
               "DefaultValue": ""
             }
           ]
@@ -35926,79 +35621,6 @@
               "DefaultValue": ""
             }
           ]
-        }
-      ],
-      "EnumValues": []
-    },
-    {
-      "Name": "DepthDistributionState",
-      "QualifiedName": "OpenGLRenderBackend::DepthDistributionState",
-      "BaseName": "",
-      "Kind": "struct",
-      "EnumBase": "int32",
-      "IsExported": false,
-      "Include": "Rendering/Backend/OpenGLRenderBackend.h",
-      "IsObject": false,
-      "IsAbstract": false,
-      "IsUnique": false,
-      "IsFinal": false,
-      "Members": [
-        {
-          "Name": "fence",
-          "Type": "void*",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "nearPlane",
-          "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "farPlane",
-          "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
         }
       ],
       "EnumValues": []
@@ -54352,130 +53974,6 @@
           ]
         },
         {
-          "Name": "CreateDepthDistribution",
-          "Type": "GpuDepthDistributionID",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "DeleteDepthDistribution",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SubmitDepthDistribution",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "depth",
-              "Type": "GpuDepthTextureID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "inverseProjection",
-              "Type": "const matrix4x4\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "nearPlane",
-              "Type": "float32",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "farPlane",
-              "Type": "float32",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "reversedDepth",
-              "Type": "bool",
-              "DefaultValue": "false"
-            }
-          ]
-        },
-        {
-          "Name": "TryReadDepthDistribution",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "distribution",
-              "Type": "GpuDepthDistribution\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
           "Name": "CreateCubeTexture",
           "Type": "GpuCubeTextureID",
           "Access": "public",
@@ -56505,8 +56003,8 @@
           "Parameters": []
         },
         {
-          "Name": "shadowDistance",
-          "Type": "float32",
+          "Name": "shadowCascadeEnds",
+          "Type": "std::array\u003Cfloat32,MaximumShadowCascades\u003E",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -56524,7 +56022,7 @@
           "Parameters": []
         },
         {
-          "Name": "shadowCascadeCount",
+          "Name": "shadowCascadeCapacity",
           "Type": "int32",
           "Access": "public",
           "IsMethod": false,
@@ -56545,44 +56043,6 @@
         {
           "Name": "shadowMapResolution",
           "Type": "int32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "shadowSplitLambda",
-          "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "shadowAdaptive",
-          "Type": "bool",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -58815,6 +58275,25 @@
           "Parameters": []
         },
         {
+          "Name": "PrepareDirectInstances",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "FinishDrawSubmissions",
           "Type": "void",
           "Access": "private",
@@ -59906,6 +59385,16 @@
               "Name": "drawParameters",
               "Type": "std::span\u003Cconst float32\u003E",
               "DefaultValue": ""
+            },
+            {
+              "Name": "drawQueue",
+              "Type": "std::optional\u003CDrawQueue\u003E",
+              "DefaultValue": "std::nullopt"
+            },
+            {
+              "Name": "drawSubQueue",
+              "Type": "int32",
+              "DefaultValue": "0"
             }
           ]
         },
@@ -72155,7 +71644,7 @@
         },
         {
           "Name": "BuildSplits",
-          "Type": "void",
+          "Type": "int32",
           "Access": "public",
           "IsMethod": true,
           "IsStatic": true,
@@ -72172,8 +71661,8 @@
           "FixedArray": false,
           "Parameters": [
             {
-              "Name": "settings",
-              "Type": "const ShadowCascadeSettings\u0026",
+              "Name": "cascadeEnds",
+              "Type": "std::span\u003Cconst float32\u003E",
               "DefaultValue": ""
             },
             {
@@ -72187,23 +71676,8 @@
               "DefaultValue": ""
             },
             {
-              "Name": "distribution",
-              "Type": "const GpuDepthDistribution*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "previousSplits",
-              "Type": "const float32*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "deltaTime",
-              "Type": "float32",
-              "DefaultValue": ""
-            },
-            {
               "Name": "splits",
-              "Type": "float32*",
+              "Type": "std::span\u003Cfloat32\u003E",
               "DefaultValue": ""
             }
           ]
@@ -72280,25 +71754,6 @@
       "IsFinal": false,
       "Members": [
         {
-          "Name": "MaxCascades",
-          "Type": "int32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": true,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
           "Name": "count",
           "Type": "int32",
           "Access": "public",
@@ -72320,44 +71775,6 @@
         {
           "Name": "resolution",
           "Type": "int32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "distance",
-          "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "splitLambda",
-          "Type": "float32",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -72415,25 +71832,6 @@
         {
           "Name": "normalBias",
           "Type": "float32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "adaptive",
-          "Type": "bool",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -83209,130 +82607,6 @@
             {
               "Name": "id",
               "Type": "GpuDepthTextureID",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "CreateDepthDistribution",
-          "Type": "GpuDepthDistributionID",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "DeleteDepthDistribution",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SubmitDepthDistribution",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "depth",
-              "Type": "GpuDepthTextureID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "inverseProjection",
-              "Type": "const matrix4x4\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "nearPlane",
-              "Type": "float32",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "farPlane",
-              "Type": "float32",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "reversedDepth",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "TryReadDepthDistribution",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "id",
-              "Type": "GpuDepthDistributionID",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "distribution",
-              "Type": "GpuDepthDistribution\u0026",
               "DefaultValue": ""
             }
           ]

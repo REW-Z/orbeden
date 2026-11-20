@@ -158,6 +158,9 @@ private:
     //从消费 active 到本帧结束为 true，期间拒绝新的 Submit
     bool readingDrawSubmissions = false;
 
+    //准备本帧直接绘制的实例与包围盒
+    void PrepareDirectInstances();
+
     //清空本帧使用的显式提交并解除读取状态
     void FinishDrawSubmissions();
 
@@ -282,7 +285,8 @@ public:
 
     //复制实例及可选的着色参数到下一帧提交队列
     bool SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
-        Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId, std::span<const float32> drawParameters);
+        Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId,
+        std::span<const float32> drawParameters, std::optional<DrawQueue> drawQueue = std::nullopt, int32 drawSubQueue = 0);
 
     /// <summary>读取本次 Render 使用的显式实例提交快照。</summary>
     const List<InstanceSubmission>& GetActiveInstanceSubmissions() const { return activeInstanceSubmissions; }

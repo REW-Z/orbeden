@@ -17,7 +17,7 @@ Temp/RenderSmoke/Debug/OrbedenRenderSmoke.exe --graphics-api opengl
 Temp/RenderSmoke/Debug/OrbedenRenderSmoke.exe --graphics-api vulkan
 ```
 
-覆盖参数快照、流式缓冲同帧更新与跨帧保留、CCW 剔除、纹理采样、HDR / 深度复制、异步深度统计、显示输出、实例输入、屏幕与离屏片元坐标，以及附加窗口和 ImGui 动态字体。随后用真实资源导入器编译模板中的全部 `.orbshader` 及其几何变体。构建还会检查 Player 入口源码。
+覆盖参数快照、流式缓冲同帧更新与跨帧保留、CCW 剔除、纹理采样、HDR / 深度复制、显示输出、实例输入、屏幕与离屏片元坐标，以及附加窗口和 ImGui 动态字体。随后用真实资源导入器编译模板中的全部 `.orbshader` 及其几何变体。构建还会检查 Player 入口源码。
 
 资源缓存检查包含同帧采样槽切换、已采样纹理的更新与恢复，以及连续空等待后继续绘制；深度回读也会覆盖命令缓冲切换后的绑定恢复。
 

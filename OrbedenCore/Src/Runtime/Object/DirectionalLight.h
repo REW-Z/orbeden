@@ -26,11 +26,9 @@ public:
     //世界单位的深度偏移
     float32 shadowBias = 0.0005f;
     float32 shadowStrength = 0.45f;
-    float32 shadowDistance = 20000.0f;
-    int32 shadowCascadeCount = 4;
+    /// <summary>各级联的结束距离，按相机视线方向使用世界单位，最多六级。</summary>
+    List<float32> shadowCascadeEnds = { 2.11f, 44.72f, 945.74f, 20000.0f };
     int32 shadowMapResolution = 2048;
-    float32 shadowSplitLambda = 1.0f;
-    bool shadowAdaptive = true;
     float32 shadowNormalBias = 0.25f;
     float32 shadowBlendRatio = 0.1f;
 

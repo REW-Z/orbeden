@@ -44,11 +44,6 @@ public:
         int32 channels, const uint8* pixels, int32 rowStride) override;
     GpuDepthTextureID CreateDepthTexture(const GpuDepthTextureDesc& desc) override;
     void DeleteDepthTexture(GpuDepthTextureID id) override;
-    GpuDepthDistributionID CreateDepthDistribution() override;
-    void DeleteDepthDistribution(GpuDepthDistributionID id) override;
-    bool SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
-        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane, bool reversedDepth) override;
-    bool TryReadDepthDistribution(GpuDepthDistributionID id, GpuDepthDistribution& distribution) override;
     GpuCubeTextureID CreateCubeTexture(const GpuCubeTextureDesc& desc) override;
     void DeleteCubeTexture(GpuCubeTextureID id) override;
     GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) override;

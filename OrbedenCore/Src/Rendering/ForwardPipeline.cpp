@@ -224,7 +224,7 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
     }
 
     submissionBuilder.Initialize(&gpuResourceManager, backend->SupportsInstancing(), &particleRenderer, &staticBatches);
-    shadows.BeginFrame(scene);
+    shadows.BeginFrame();
 
     //静态几何缓存每帧刷新一次：收集候选、按内容版本重建受影响的组
     if (frameWorld) staticBatches.Refresh(*frameWorld, gpuResourceManager);
@@ -262,8 +262,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         PrepareDrawStream();
         Shader* depthShader = GetOrLoadBuiltinShader(shadowDepthShader,
             ResolveBuiltinShaderKey(ShadowDepthShaderFileName, GetBuiltinShaderKeys().shadowDepth));
-        static const List<InstanceSubmission> NoSubmissions;
-        shadows.Render(scene, drawSubmissions ? *drawSubmissions : NoSubmissions, particleSnapshot, camera,
+        shadows.Render(scene, batchedSubmissions, directSubmissions, particleSnapshot, camera,
             *shadowLight, depthShader, gpuResourceManager, particleRenderer, &staticBatches, submissionBuilder,
             drawStream, batchStats);
     }
@@ -319,6 +318,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     //合并本相机的可见项为统一绘制项与批次
     backend->ProfileGpuStage("Render/GpuStage/Sky");
     BuildFrameBatches(scene, visibleSet, gpuResourceManager);
+    PrepareDirectDraws(camera);
 
     //绘制 [不透明队列]
     ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Opaque, mainLight, false);
@@ -356,7 +356,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         PROFILE("Render/RefractionPass");
         bool hasRefraction = std::any_of(cameraBatches.begin(), cameraBatches.end(),
             [](const DrawBatch& batch) { return batch.key.queue == DrawQueue::Refraction; });
-        if (hasRefraction)
+        if (hasRefraction || directDraws.contains(DrawQueue::Refraction))
         {
             passDesc.clearMode = ClearMode::None;
             backend->BeginPass(passDesc);
@@ -375,19 +375,16 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         backend->GetPipelineState().cull = CullMode::None;
         backend->BindVertexInput(GpuVertexInputID());
         backend->BindShaderProgram(GpuShaderProgramID());
-        if (cameraTexturesReady) shadows.CaptureDepth(camera);
     }
-    backend->ProfileGpuStage("Render/GpuStage/DepthDistribution");
 }
 
 //把当前相机的可见项合并为统一的绘制项与批次
 void ForwardPipeline::BuildFrameBatches(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& gpuResourceManager)
 {
     PROFILE("Render/BuildBatches");
-    static const List<InstanceSubmission> EmptySubmissions;
     {
         PROFILE("Render/Batching/CollectItems");
-        submissionBuilder.BuildCameraItems(scene, visibleSet, drawSubmissions ? *drawSubmissions : EmptySubmissions,
+        submissionBuilder.BuildCameraItems(scene, visibleSet, batchedSubmissions,
             particleSnapshot, cameraItems);
     }
     {
@@ -404,7 +401,44 @@ void ForwardPipeline::BuildFrameBatches(const RenderScene& scene, const VisibleS
     }
 }
 
-//按指定队列执行已经排好序的批次
+//按提交入口分流本帧实例
+void ForwardPipeline::SetDrawSubmissions(const List<InstanceSubmission>* submissions)
+{
+    drawSubmissions = submissions;
+    batchedSubmissions.clear();
+    directSubmissions.clear();
+    directDraws.clear();
+    if (submissions)
+    {
+        for (const InstanceSubmission& submission : *submissions)
+        {
+            auto& target = submission.drawQueue ? directSubmissions : batchedSubmissions;
+            target.push_back(&submission);
+        }
+    }
+}
+
+//筛选当前相机的实例列表并记录子队列
+void ForwardPipeline::PrepareDirectDraws(const RenderCamera& camera)
+{
+    PROFILE("Render/PrepareDirectDraws");
+    directDraws.clear();
+    for (const InstanceSubmission* direct : directSubmissions)
+    {
+        const InstanceSubmission& submission = *direct;
+        if (submission.gpuInstances.empty()
+            || (!submission.options.camera.IsNull() && submission.options.camera != camera.ens)
+            || (submission.options.drawLayer & camera.drawLayerMask) == 0
+            || (submission.worldBounds.valid && !Orbeden::Math::Intersects(camera.viewFrustum, submission.worldBounds)))
+        {
+            continue;
+        }
+
+        directDraws[*submission.drawQueue][submission.drawSubQueue].push_back(&submission);
+    }
+}
+
+//按指定队列执行批次并追加直接绘制
 void ForwardPipeline::ExecuteQueueBatches(const RenderScene& scene, const RenderCamera& camera,
     GpuResourceManager& gpuResourceManager, DrawQueue drawQueue, const RenderDirectionalLight* mainLight,
     bool cameraTexturesReady)
@@ -415,10 +449,37 @@ void ForwardPipeline::ExecuteQueueBatches(const RenderScene& scene, const Render
     std::unordered_set<uint32> configuredPrograms;
     boundMaterial = nullptr;
     boundMaterialProgram = 0;
+
+    //按子队列插入直接绘制列表
+    static const std::map<int32, List<const InstanceSubmission*>> emptySubQueues;
+    const auto direct = directDraws.find(drawQueue);
+    const auto& subQueues = direct == directDraws.end() ? emptySubQueues : direct->second;
+    auto subQueue = subQueues.begin();
+    auto drawSubQueue = [&]()
+    {
+        for (const InstanceSubmission* submission : subQueue->second)
+        {
+            ExecuteDirectDraw(*submission, scene, camera, gpuResourceManager, mainLight, cameraTexturesReady, configuredPrograms);
+        }
+        ++subQueue;
+    };
+
+    //先执行当前子队列的通用批次
     for (const DrawBatch& batch : cameraBatches)
     {
-        if (batch.key.queue != drawQueue) continue;
+        if (batch.key.queue != drawQueue)
+        {
+            continue;
+        }
+        while (subQueue != subQueues.end() && subQueue->first < batch.key.subQueue)
+        {
+            drawSubQueue();
+        }
         ExecuteBatch(batch, scene, camera, gpuResourceManager, mainLight, cameraTexturesReady, configuredPrograms);
+    }
+    while (subQueue != subQueues.end())
+    {
+        drawSubQueue();
     }
 }
 
@@ -713,44 +774,124 @@ bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const Render
     //实例顺序必须与透明排序序列一致，构建与阴影 Pass 共用同一份实现
     batchStats.invalidTransforms += particleRenderer.BuildMeshInstances(batch, cameraItems, instanceScratch,
         first.hasDrawParameters ? &drawParameterScratch : nullptr);
-    if (instanceScratch.empty()) return false;
+    const auto parameters = first.hasDrawParameters
+        ? std::span<const DrawParameterData>(drawParameterScratch) : std::span<const DrawParameterData>();
+    return DrawMeshInstances(batch, scene, camera, mainLight, cameraTexturesReady, material, instancedInput,
+        instanceScratch, parameters, configuredPrograms);
+}
+
+//执行一份已分批的实例列表
+void ForwardPipeline::ExecuteDirectDraw(const InstanceSubmission& submission, const RenderScene& scene, const RenderCamera& camera,
+    GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
+    std::unordered_set<uint32>& configuredPrograms)
+{
+    Mesh* mesh = submission.mesh.Get();
+    Material* sourceMaterial = submission.material.Get();
+    if (!mesh || !sourceMaterial || submission.world->GetContentRevision() != submission.contentRevision
+        || submission.subMeshIndex >= mesh->subMeshes.size())
     {
-        if (!drawStream.UploadMeshInstances(instanceScratch))
-        {
-            ++batchStats.failedUploads;
-            Log::Error("ForwardPipeline instanced draw skipped: the instance upload was rejected.");
-            return false;
-        }
+        return;
     }
 
-    batchStats.uploadedBytes += static_cast<uint64>(instanceScratch.size()) * sizeof(GpuMeshInstance);
-    batchStats.submittedInstances += instanceScratch.size();
+    //读取本次绘制使用的子网格和材质
+    const SubMesh& subMesh = mesh->subMeshes[submission.subMeshIndex];
+    if (subMesh.indexCount == 0 || subMesh.indexStart > mesh->indices.size()
+        || subMesh.indexCount > mesh->indices.size() - subMesh.indexStart)
+    {
+        return;
+    }
 
+    const GpuMaterial* material = gpuResourceManager.GetMaterial(sourceMaterial);
+    if (!material || !material->shader || material->shader->passes.size() != 1)
+    {
+        ++batchStats.invalidResources;
+        return;
+    }
+
+    const GpuShaderPass& pass = material->shader->passes.front();
+    if (!pass.instancedProgram.IsValid() || pass.instanceCapacity == 0)
+    {
+        ++batchStats.failedUploads;
+        ReportMissingGeometryVariant(sourceMaterial, *material->shader, "instanced");
+        return;
+    }
+
+    const GpuMesh* gpuMesh = gpuResourceManager.GetMesh(mesh);
+    if (!gpuMesh || !gpuMesh->instancedVertexInput.IsValid())
+    {
+        ++batchStats.invalidResources;
+        return;
+    }
+
+    //解析本次绘制的固定状态
+    DrawBatch batch;
+    batch.key.queue = *submission.drawQueue;
+    batch.key.indexStart = subMesh.indexStart;
+    batch.key.indexCount = subMesh.indexCount;
+    batch.key.receiveShadows = submission.options.receiveShadows;
+    const bool alphaBlended = batch.key.queue != DrawQueue::Opaque;
+    batch.key.depthTest = pass.state.depthTest != ShaderPassToggle::Off;
+    batch.key.depthWrite = pass.state.depthWrite == ShaderPassToggle::Auto
+        ? !alphaBlended : pass.state.depthWrite == ShaderPassToggle::On;
+    batch.key.blend = pass.state.blend == ShaderPassToggle::Auto ? alphaBlended : pass.state.blend == ShaderPassToggle::On;
+    batch.key.cull = static_cast<uint32>(pass.state.cull == CullMode::Auto ? CullMode::None : pass.state.cull);
+
+    //按设备容量绘制连续的实例和参数
+    const std::span<const GpuMeshInstance> instances(submission.gpuInstances);
+    const std::span<const DrawParameterData> parameters(submission.drawParameters);
+    for (usize start = 0; start < instances.size();)
+    {
+        const usize count = std::min<usize>(pass.instanceCapacity, instances.size() - start);
+        if (!DrawMeshInstances(batch, scene, camera, mainLight, cameraTexturesReady, *material, gpuMesh->instancedVertexInput,
+            instances.subspan(start, count), parameters.empty() ? parameters : parameters.subspan(start, count), configuredPrograms))
+        {
+            return;
+        }
+        start += count;
+    }
+}
+
+//绑定实例缓冲与参数并调用后端
+bool ForwardPipeline::DrawMeshInstances(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+    const RenderDirectionalLight* mainLight, bool cameraTexturesReady, const GpuMaterial& material,
+    GpuVertexInputID input, std::span<const GpuMeshInstance> instances, std::span<const DrawParameterData> parameters,
+    std::unordered_set<uint32>& configuredPrograms)
+{
+    if (instances.empty() || !PrepareDrawStream())
+    {
+        return false;
+    }
+    if (!drawStream.UploadMeshInstances(instances))
+    {
+        ++batchStats.failedUploads;
+        Log::Error("ForwardPipeline instanced draw skipped: the instance upload was rejected.");
+        return false;
+    }
+
+    batchStats.uploadedBytes += static_cast<uint64>(instances.size()) * sizeof(GpuMeshInstance);
+    batchStats.submittedInstances += instances.size();
     if (!BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
-        shaderPass.instancedProgram.id, configuredPrograms))
+        material.shader->passes.front().instancedProgram.id, configuredPrograms))
     {
         ++batchStats.invalidResources;
         return false;
     }
-    backend->BindVertexInput(instancedInput);
+    backend->BindVertexInput(input);
     if (!backend->BindInstanceBuffer(drawStream.GetInstanceBuffer(), 0))
     {
         ++batchStats.failedUploads;
         return false;
     }
 
+    //上传同一绘制顺序的参数并绘制
+    usize uploadedBytes = 0;
+    if (!backend->BindDrawParameters(parameters, uploadedBytes))
     {
-        std::span<const DrawParameterData> parameters = first.hasDrawParameters
-            ? std::span<const DrawParameterData>(drawParameterScratch) : std::span<const DrawParameterData>();
-        usize uploadedBytes = 0;
-        if (!backend->BindDrawParameters(parameters, uploadedBytes))
-        {
-            ++batchStats.invalidResources;
-            return false;
-        }
-        batchStats.uploadedBytes += uploadedBytes;
+        ++batchStats.invalidResources;
+        return false;
     }
-    backend->DrawIndexedInstanced(batch.key.indexStart, batch.key.indexCount, static_cast<uint32>(instanceScratch.size()));
+    batchStats.uploadedBytes += uploadedBytes;
+    backend->DrawIndexedInstanced(batch.key.indexStart, batch.key.indexCount, static_cast<uint32>(instances.size()));
     ++batchStats.instancedDraws;
     return true;
 }

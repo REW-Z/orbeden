@@ -2,7 +2,6 @@
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
-#include "Rendering/DepthDistributionShader.h"
 #include "Rendering/VertexLayout.h"
 #include "Platform/GlfwWindow.h"
 #define GLFW_INCLUDE_NONE
@@ -254,9 +253,6 @@ void OpenGLRenderBackend::Shutdown()
     }
     vertexArrays.clear(); vertexInputDescriptions.clear();
     SetSurface({});
-    while (!depthDistributions.empty()) DeleteDepthDistribution({ depthDistributions.begin()->first });
-    DeleteShaderProgram(depthDistributionShader);
-    depthDistributionShader = {};
     for (auto& pair : renderTargetColorAttachments)
     {
         GLuint framebuffer = pair.first;
@@ -1445,124 +1441,6 @@ int32 OpenGLRenderBackend::UpdateUniformValue(const char* name, UniformValueType
     std::memcpy(state->value, data, size);
     state->type = type;
     return state->location;
-}
-
-/// <summary>绘制不受光照影响的调试线，使用相机矩阵进行三维裁剪。</summary>
-GpuDepthDistributionID OpenGLRenderBackend::CreateDepthDistribution()
-{
-    //编译组内归约直方图程序
-    if (!depthDistributionShader.IsValid())
-    {
-        std::string text = DepthDistributionSource;
-        text.insert(text.find('\n') + 1, "#define ORBEDEN_DISTRIBUTION_BINDING 0\n");
-        const char* source = text.c_str();
-        uint32 shader = CompileShader(GL_COMPUTE_SHADER, source);
-        if (!shader) return {};
-        uint32 program = glCreateProgram();
-        glAttachShader(program, shader);
-        glLinkProgram(program);
-        glDeleteShader(shader);
-        GLint success = 0;
-        glGetProgramiv(program, GL_LINK_STATUS, &success);
-        if (!success)
-        {
-            Log::Error(("Depth distribution link failed: " + GetProgramLog(program)).c_str());
-            glDeleteProgram(program);
-            return {};
-        }
-        depthDistributionShader = { program };
-    }
-    GLuint buffer = 0;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuDepthDistribution::bins), nullptr, GL_DYNAMIC_READ);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    if (!buffer) return {};
-    depthDistributions.emplace(buffer, DepthDistributionState{});
-    return { buffer };
-}
-
-//释放统计缓冲与完成信号
-void OpenGLRenderBackend::DeleteDepthDistribution(GpuDepthDistributionID id)
-{
-    auto found = depthDistributions.find(id.id);
-    if (found == depthDistributions.end()) return;
-    if (found->second.fence) glDeleteSync(static_cast<GLsync>(found->second.fence));
-    GLuint buffer = id.id;
-    glDeleteBuffers(1, &buffer);
-    depthDistributions.erase(found);
-}
-
-//提交冻结相机深度分布
-bool OpenGLRenderBackend::SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
-    const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane, bool reversedDepth)
-{
-    auto found = depthDistributions.find(id.id);
-    if (found == depthDistributions.end() || found->second.fence || !depth.IsValid() ||
-        !(nearPlane > 0.0f && farPlane > nearPlane)) return false;
-
-    //保存绘制状态并清空统计
-    GpuShaderProgramID previousProgram = currentShaderProgram;
-    uint32 previousSlot = currentTextureSlot;
-    uint32 previousTexture = boundTexture2Ds[0];
-    BindDepthTexture(0, depth);
-    GLint width = 0, height = 0;
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-    if (width <= 0 || height <= 0)
-    {
-        BindTexture2D(0, previousTexture);
-        ActivateTextureSlot(previousSlot);
-        return false;
-    }
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, id.id);
-    uint32 zero = 0;
-    glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, id.id);
-    BindShaderProgram(depthDistributionShader);
-    GetParameters().SetInt("u_Depth", 0);
-    GetParameters().SetMatrix4("u_InverseProjection", inverseProjection);
-    GetParameters().SetFloat("u_Near", nearPlane);
-    GetParameters().SetFloat("u_Far", farPlane);
-    GetParameters().SetInt("u_ReversedDepth", reversedDepth ? 1 : 0);
-    ApplyParameters();
-    glDispatchCompute((width + 15) / 16, (height + 15) / 16, 1);
-    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-    found->second.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    found->second.nearPlane = nearPlane;
-    found->second.farPlane = farPlane;
-    glFlush();
-
-    //恢复前向绘制状态
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    BindShaderProgram(previousProgram);
-    BindTexture2D(0, previousTexture);
-    ActivateTextureSlot(previousSlot);
-    return found->second.fence != nullptr;
-}
-
-//零超时读取已完成的统计
-bool OpenGLRenderBackend::TryReadDepthDistribution(GpuDepthDistributionID id, GpuDepthDistribution& distribution)
-{
-    auto found = depthDistributions.find(id.id);
-    if (found == depthDistributions.end() || !found->second.fence) return false;
-    GLsync fence = static_cast<GLsync>(found->second.fence);
-    GLenum status = glClientWaitSync(fence, 0, 0);
-    if (status == GL_TIMEOUT_EXPIRED) return false;
-    glDeleteSync(fence);
-    found->second.fence = nullptr;
-    if (status == GL_WAIT_FAILED)
-    {
-        Log::Error("Depth distribution fence polling failed.");
-        return false;
-    }
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, id.id);
-    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(distribution.bins), distribution.bins);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    distribution.nearPlane = found->second.nearPlane;
-    distribution.farPlane = found->second.farPlane;
-    return true;
 }
 
 //提交当前着色器参数

@@ -8,6 +8,9 @@ class Material;
 class Mesh;
 class StaticMeshRenderer;
 
+//与阴影着色器的级联数组长度一致
+inline constexpr int32 MaximumShadowCascades = 6;
+
 //每实例 8 个 vec4；旧式固定 UBO 的容量也用于自动策略的默认预算
 constexpr uint32 DrawParameterFloatCount = 32;
 constexpr uint32 MaximumDrawParameterInstances = 32;

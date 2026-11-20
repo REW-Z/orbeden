@@ -270,7 +270,7 @@ void DrawSubmissionBuilder::ReportMissingGeometryAbi(const GpuShader* shader, co
 
 //把当前相机的可见静态项展开为统一绘制项
 void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const VisibleSet& visibleSet,
-    const List<InstanceSubmission>& submissions, const ParticleFrameSnapshot& particles, List<DrawItem>& items)
+    std::span<const InstanceSubmission* const> submissions, const ParticleFrameSnapshot& particles, List<DrawItem>& items)
 {
     items.clear();
     if (!gpuResources) return;
@@ -333,8 +333,10 @@ void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const Vis
     //显式实例提交：逐实例展开，引用与内容 revision 在消费时重新验证
     {
         PROFILE("Render/Batching/Collect/ExplicitInstances");
-        for (const InstanceSubmission& submission : submissions)
+        for (const InstanceSubmission* source : submissions)
         {
+            const InstanceSubmission& submission = *source;
+
             //Ref 是软引用，不阻止销毁，使用前必须重新解析
             Mesh* mesh = submission.mesh.Get();
             Material* material = submission.material.Get();
@@ -614,7 +616,7 @@ void DrawSubmissionBuilder::BuildBatches(const List<DrawItem>& items, List<DrawB
 }
 
 //收集当前相机的普通网格与显式实例阴影候选
-void DrawSubmissionBuilder::CollectShadowCandidates(const RenderScene& scene, const List<InstanceSubmission>& submissions,
+void DrawSubmissionBuilder::CollectShadowCandidates(const RenderScene& scene, std::span<const InstanceSubmission* const> submissions,
     const RenderCamera& camera, List<DrawItem>& candidates)
 {
     candidates.clear();
@@ -663,8 +665,9 @@ void DrawSubmissionBuilder::CollectShadowCandidates(const RenderScene& scene, co
     }
 
     //显式实例的阴影候选：castShadows 关闭时不参与
-    for (const InstanceSubmission& submission : submissions)
+    for (const InstanceSubmission* source : submissions)
     {
+        const InstanceSubmission& submission = *source;
         if (!submission.options.castShadows) continue;
         Mesh* mesh = submission.mesh.Get();
         Material* material = submission.material.Get();

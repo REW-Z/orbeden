@@ -15,66 +15,46 @@ namespace
 ShadowCascadeSettings ShadowCascadeBuilder::ValidateSettings(const ShadowCascadeSettings& source)
 {
     ShadowCascadeSettings settings = source;
-    settings.count = std::clamp(settings.count, 1, ShadowCascadeSettings::MaxCascades);
+    settings.count = std::clamp(settings.count, 0, MaximumShadowCascades);
     int32 requested = std::clamp(settings.resolution, 256, 4096);
     settings.resolution = 256;
     while (settings.resolution * 2 <= requested) settings.resolution *= 2;
-    settings.distance = ClampFinite(settings.distance, 0.01f, 10000000.0f, 20000.0f);
-    settings.splitLambda = ClampFinite(settings.splitLambda, 0.0f, 1.0f, 1.0f);
     settings.blendRatio = ClampFinite(settings.blendRatio, 0.0f, 0.3f, 0.1f);
     settings.depthBias = ClampFinite(settings.depthBias, 0.0f, 10.0f, 0.0005f);
     settings.normalBias = ClampFinite(settings.normalBias, 0.0f, 4.0f, 0.25f);
     return settings;
 }
 
-void ShadowCascadeBuilder::BuildSplits(const ShadowCascadeSettings& source, float32 nearPlane, float32 farPlane,
-    const GpuDepthDistribution* distribution, const float32* previousSplits, float32 deltaTime, float32* splits)
+//裁剪手动结束距离并跳过空区间
+int32 ShadowCascadeBuilder::BuildSplits(std::span<const float32> cascadeEnds, float32 nearPlane, float32 farPlane,
+    std::span<float32> splits)
 {
-    const ShadowCascadeSettings settings = ValidateSettings(source);
-    const float32 n = ClampFinite(nearPlane, 0.001f, 10000000.0f, 0.1f);
-    const float32 f = std::max(n + 0.001f, std::min(settings.distance,
-        ClampFinite(farPlane, n + 0.001f, 10000000.0f, 1000.0f)));
-    const float32 gap = (f - n) * 0.000001f;
-    uint64 total = 0;
-    if (settings.adaptive && distribution)
-        for (uint32 count : distribution->bins) total += count;
-    const float32 weight = 1.0f - std::exp(-6.0f * ClampFinite(deltaTime, 0.0f, 0.1f, 0.0f));
-
-    //混合固定分区与实际样本分位数
-    for (int32 index = 0; index < settings.count; ++index)
+    if (!std::isfinite(nearPlane) || !std::isfinite(farPlane) || nearPlane <= 0.0f || farPlane <= nearPlane)
     {
-        float32 ratio = static_cast<float32>(index + 1) / settings.count;
-        float32 baseline = (1.0f - settings.splitLambda) * (n + (f - n) * ratio)
-            + settings.splitLambda * n * std::pow(f / n, ratio);
-        float32 split = baseline;
-        if (total && index + 1 < settings.count && std::isfinite(distribution->nearPlane) &&
-            std::isfinite(distribution->farPlane) && distribution->nearPlane > 0.0f &&
-            distribution->farPlane > distribution->nearPlane)
+        return 0;
+    }
+
+    int32 count = 0;
+    float32 start = nearPlane;
+    for (float32 end : cascadeEnds.first(std::min<usize>(cascadeEnds.size(), MaximumShadowCascades)))
+    {
+        if (!std::isfinite(end) || end <= start)
         {
-            float64 target = static_cast<float64>(total) * ratio;
-            uint64 cumulative = 0;
-            for (int32 bin = 0; bin < GpuDepthDistribution::BinCount; ++bin)
-            {
-                uint32 count = distribution->bins[bin];
-                if (count && static_cast<float64>(cumulative + count) >= target)
-                {
-                    float32 fraction = static_cast<float32>((target - cumulative) / count);
-                    float32 quantile = distribution->nearPlane * std::pow(distribution->farPlane / distribution->nearPlane,
-                        (bin + fraction) / GpuDepthDistribution::BinCount);
-                    quantile = std::clamp(quantile, baseline * 0.5f, baseline * 2.0f);
-                    split = std::exp(std::log(baseline) * 0.65f + std::log(quantile) * 0.35f);
-                    break;
-                }
-                cumulative += count;
-            }
+            continue;
+        }
+        if (static_cast<usize>(count) == splits.size())
+        {
+            break;
         }
 
-        //平滑内部边界并固定最远覆盖
-        if (previousSplits && std::isfinite(previousSplits[index]) && previousSplits[index] > n && index + 1 < settings.count)
-            split = std::exp(std::log(previousSplits[index]) * (1.0f - weight) + std::log(split) * weight);
-        float32 minimum = index == 0 ? n + gap : splits[index - 1] + gap;
-        splits[index] = index + 1 == settings.count ? f : std::clamp(split, minimum, f - gap * (settings.count - index - 1));
+        start = std::min(end, farPlane);
+        splits[count++] = start;
+        if (start == farPlane)
+        {
+            break;
+        }
     }
+    return count;
 }
 
 ShadowCascade ShadowCascadeBuilder::BuildCascade(const matrix4x4& cameraWorld, const matrix4x4& projection,

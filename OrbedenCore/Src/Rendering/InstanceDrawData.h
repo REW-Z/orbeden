@@ -5,6 +5,8 @@
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
 
+#include <optional>
+
 class World;
 
 //每个渲染帧接收的显式实例总数
@@ -43,6 +45,21 @@ public:
     EnsId camera;
 };
 
+//每实例网格数据：世界矩阵、法线矩阵、tint 与图集 uv 变换。
+//布局是后端 ABI，只允许内部使用，不暴露成生成 Span 的元素类型。
+struct GpuMeshInstance
+{
+public:
+    //列主序世界矩阵，attribute locations 5..8，每列一个 vec4。
+    float32 model[16] = {};
+    //法线矩阵的三列，每列补齐成 vec4，locations 9..11。
+    float32 normalColumns[12] = {};
+    //线性 tint，Alpha 是覆盖率，location 12。
+    float32 tint[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    //offsetU/offsetV/scaleU/scaleV，location 13。
+    float32 uvRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+};
+
 //一次 Submit 复制出的提交快照，只在一次 Render 内有效
 struct InstanceSubmission
 {
@@ -57,4 +74,9 @@ public:
     uint32 subMeshIndex = 0;
     List<MeshInstanceData> instances;
     List<DrawParameterData> drawParameters;
+    //有指定队列的列表直接绑定实例缓冲
+    std::optional<DrawQueue> drawQueue;
+    int32 drawSubQueue = 0;
+    List<GpuMeshInstance> gpuInstances;
+    bounds3 worldBounds;
 };

@@ -1,24 +1,10 @@
 #pragma once
 
 #include "Rendering/Backend/RenderBackend.h"
+#include "Rendering/InstanceDrawData.h"
 
 #include <span>
 #include <unordered_set>
-
-//每实例网格数据：世界矩阵、法线矩阵、tint 与图集 uv 变换。
-//布局是后端 ABI，只允许内部使用，不暴露成生成 Span 的元素类型。
-struct GpuMeshInstance
-{
-public:
-    //列主序世界矩阵，attribute locations 5..8，每列一个 vec4。
-    float32 model[16] = {};
-    //法线矩阵的三列，每列补齐成 vec4，locations 9..11。
-    float32 normalColumns[12] = {};
-    //线性 tint，Alpha 是覆盖率，location 12。
-    float32 tint[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    //offsetU/offsetV/scaleU/scaleV，location 13。
-    float32 uvRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
-};
 
 //展开后的世界空间顶点：位置、法线、已完成图集变换的 uv、切线、tint。
 //顶点已经是世界空间，着色器不再乘模型矩阵。
@@ -118,7 +104,6 @@ public:
     bool IsValid() const { return initialized; }
 };
 
-#include "Rendering/InstanceDrawData.h"
 #include "Rendering/RenderTypes.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
@@ -273,7 +258,7 @@ public:
 
     //把当前相机的可见静态项、显式实例与粒子展开为统一绘制项，并完成绘制状态解析
     void BuildCameraItems(const RenderScene& scene, const VisibleSet& visibleSet,
-        const List<InstanceSubmission>& submissions, const ParticleFrameSnapshot& particles, List<DrawItem>& items);
+        std::span<const InstanceSubmission* const> submissions, const ParticleFrameSnapshot& particles, List<DrawItem>& items);
 
     //在子队列内分组排列不透明项并按距离排列透明项
     void SortItems(const RenderCamera& camera, List<DrawItem>& items);
@@ -282,7 +267,7 @@ public:
     void BuildBatches(const List<DrawItem>& items, List<DrawBatch>& batches, RenderBatchStats& stats);
 
     //收集当前相机的普通网格与显式实例阴影候选，不按级联视锥裁剪
-    void CollectShadowCandidates(const RenderScene& scene, const List<InstanceSubmission>& submissions,
+    void CollectShadowCandidates(const RenderScene& scene, std::span<const InstanceSubmission* const> submissions,
         const RenderCamera& camera, List<DrawItem>& candidates);
 
     //筛选当前级联的共享候选，再追加逐级裁剪的持久静态批和 Opaque Mesh 粒子

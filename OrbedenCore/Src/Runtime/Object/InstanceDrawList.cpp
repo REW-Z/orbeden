@@ -52,6 +52,8 @@ bool InstanceDrawList::Configure(Mesh* targetMesh, uint32 targetSubMeshIndex, Ma
     material.Set(targetMaterial);
     subMeshIndex = targetSubMeshIndex;
     options = drawOptions;
+    drawQueue = targetMaterial->GetDrawQueue();
+    drawSubQueue = targetMaterial->drawSubQueue;
     return true;
 }
 
@@ -132,7 +134,8 @@ bool InstanceDrawList::Submit()
     World* owner = GetWorld() ? GetWorld() : World::CurrentWorld();
     if (!owner || owner->IsPreparing()) return false;
 
-    return renderSystem->SubmitInstances(*owner, options, mesh.Get(), subMeshIndex, material.Get(), instances, GetObjectId(), drawParameters);
+    return renderSystem->SubmitInstances(*owner, options, mesh.Get(), subMeshIndex, material.Get(), instances,
+        GetObjectId(), drawParameters, drawQueue, drawSubQueue);
 }
 
 //清空对象内实例

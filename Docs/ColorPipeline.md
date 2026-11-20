@@ -122,5 +122,5 @@ direct = albedo · nDotL · lightColor · intensity
 ## 相关
 
 - [渲染管线](RenderingPipeline.md)：Pass 顺序与渲染目标
-- [级联阴影](CascadedShadows.md)：阴影贴图与 SDSM
+- [级联阴影](CascadedShadows.md)：阴影贴图与手动级联分区
 - 已有项目的内置 Shader 同步见 [构建与打包](BuildAndPackaging.md) 的「引擎更新与项目同步」一节

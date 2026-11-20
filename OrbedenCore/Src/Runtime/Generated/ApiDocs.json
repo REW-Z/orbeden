@@ -541,7 +541,7 @@
         },
         {
           "Name": "Configure",
-          "Doc": "\u914D\u7F6E\u7ED8\u5236\u76EE\u6807\uFF1B\u6821\u9A8C\u5931\u8D25\u65F6\u4FDD\u7559\u65E7\u914D\u7F6E\uFF0C\u4E14\u4E0D\u6E05\u7A7A\u5DF2\u8BBE\u7F6E\u7684\u5B9E\u4F8B\u3002",
+          "Doc": "\u914D\u7F6E\u7ED8\u5236\u76EE\u6807\u5E76\u4ECE\u6750\u8D28\u521D\u59CB\u5316\u7ED8\u5236\u961F\u5217\uFF1B\u6821\u9A8C\u5931\u8D25\u65F6\u4FDD\u7559\u65E7\u914D\u7F6E\u3002",
           "IsMethod": true,
           "IsStatic": false,
           "Property": "",
@@ -640,7 +640,7 @@
         },
         {
           "Name": "Submit",
-          "Doc": "\u628A\u914D\u7F6E\u4E0E\u5B9E\u4F8B\u590D\u5236\u5230\u4E0B\u4E00\u6B21 Render \u7684\u63D0\u4EA4\u5217\u8868\u3002",
+          "Doc": "\u63D0\u4EA4\u7ED8\u5236\u5FEB\u7167\uFF0C\u5728\u4E0B\u4E00\u6B21 Render \u7684\u6307\u5B9A\u5B50\u961F\u5217\u672B\u5C3E\u76F4\u63A5\u7ED8\u5236\u3002",
           "IsMethod": true,
           "IsStatic": false,
           "Property": "",
@@ -651,6 +651,30 @@
           "Arities": [
             0
           ]
+        },
+        {
+          "Name": "drawQueue",
+          "Doc": "\u6307\u5B9A\u5B9E\u4F8B\u5217\u8868\u7684\u7ED8\u5236\u961F\u5217\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "DrawQueue",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "drawSubQueue",
+          "Doc": "\u6307\u5B9A\u5B50\u961F\u5217\uFF0C\u5B9E\u4F8B\u5217\u8868\u5728\u8BE5\u5B50\u961F\u5217\u672B\u5C3E\u6309\u63D0\u4EA4\u987A\u5E8F\u7ED8\u5236\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
         }
       ]
     },
@@ -2932,18 +2956,6 @@
           "Arities": []
         },
         {
-          "Name": "shadowAdaptive",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "bool",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
           "Name": "shadowBias",
           "Doc": "\u4E16\u754C\u5355\u4F4D\u7684\u6DF1\u5EA6\u504F\u79FB",
           "IsMethod": false,
@@ -2968,24 +2980,12 @@
           "Arities": []
         },
         {
-          "Name": "shadowCascadeCount",
-          "Doc": "",
+          "Name": "shadowCascadeEnds",
+          "Doc": "\u5404\u7EA7\u8054\u7684\u7ED3\u675F\u8DDD\u79BB\uFF0C\u6309\u76F8\u673A\u89C6\u7EBF\u65B9\u5411\u4F7F\u7528\u4E16\u754C\u5355\u4F4D\uFF0C\u6700\u591A\u516D\u7EA7\u3002",
           "IsMethod": false,
           "IsStatic": false,
           "Property": "getset",
-          "Type": "int32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "shadowDistance",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
+          "Type": "List\u003Cfloat32\u003E",
           "Serialize": false,
           "Changed": "",
           "Parameters": [],
@@ -3005,18 +3005,6 @@
         },
         {
           "Name": "shadowNormalBias",
-          "Doc": "",
-          "IsMethod": false,
-          "IsStatic": false,
-          "Property": "getset",
-          "Type": "float32",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [],
-          "Arities": []
-        },
-        {
-          "Name": "shadowSplitLambda",
           "Doc": "",
           "IsMethod": false,
           "IsStatic": false,
