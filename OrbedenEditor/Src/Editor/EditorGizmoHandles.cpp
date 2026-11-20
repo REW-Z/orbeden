@@ -1,7 +1,7 @@
 ﻿#include "Editor/EditorGizmoHandles.h"
 
 #include "Editor/EditorScene.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/World.h"
@@ -138,9 +138,9 @@ namespace
         const vector3& axis, float32& parameter)
     {
         vector3 w0 = SubtractVector(origin, pivot);
-        float32 b = RenderMath::Dot(direction, axis);
-        float32 d = RenderMath::Dot(direction, w0);
-        float32 e = RenderMath::Dot(axis, w0);
+        float32 b = Orbeden::Math::Dot(direction, axis);
+        float32 d = Orbeden::Math::Dot(direction, w0);
+        float32 e = Orbeden::Math::Dot(axis, w0);
         float32 denominator = 1.0f - b * b;
         if (std::abs(denominator) <= DegenerateEpsilon) return false;
 
@@ -152,10 +152,10 @@ namespace
     bool IntersectPlane(const vector3& origin, const vector3& direction, const vector3& point,
         const vector3& normal, vector3& hit)
     {
-        float32 denominator = RenderMath::Dot(normal, direction);
+        float32 denominator = Orbeden::Math::Dot(normal, direction);
         if (std::abs(denominator) <= 0.000001f) return false;
 
-        float32 distance = RenderMath::Dot(normal, SubtractVector(point, origin)) / denominator;
+        float32 distance = Orbeden::Math::Dot(normal, SubtractVector(point, origin)) / denominator;
         if (distance <= 0.0f) return false;
 
         hit = AddVector(origin, ScaleVector(direction, distance));
@@ -179,7 +179,7 @@ namespace
         if (lengthSquared <= DegenerateEpsilon) return 0.0f;
 
         //轴向背对相机时取反，保证拖拽方向与视觉一致
-        float32 invert = RenderMath::Dot(axis, view.cameraForward) < 0.0f ? -1.0f : 1.0f;
+        float32 invert = Orbeden::Math::Dot(axis, view.cameraForward) < 0.0f ? -1.0f : 1.0f;
         float32 fromX = from.x - originScreen.x;
         float32 fromY = from.y - originScreen.y;
         float32 toX = to.x - originScreen.x;
@@ -315,9 +315,9 @@ bool EditorGizmoHandles::BuildScreenRay(const matrix4x4& viewProjection, const v
 
     float32 ndcX = ((screenPosition.x - renderPosition.x) / renderSize.x) * 2.0f - 1.0f;
     float32 ndcY = 1.0f - ((screenPosition.y - renderPosition.y) / renderSize.y) * 2.0f;
-    matrix4x4 inverseViewProjection = RenderMath::Inverse(viewProjection);
-    origin = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, -1.0f });
-    vector3 end = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, 1.0f });
+    matrix4x4 inverseViewProjection = Orbeden::Math::Inverse(viewProjection);
+    origin = Orbeden::Math::TransformPoint(inverseViewProjection, { ndcX, ndcY, -1.0f });
+    vector3 end = Orbeden::Math::TransformPoint(inverseViewProjection, { ndcX, ndcY, 1.0f });
     vector3 delta = SubtractVector(end, origin);
     float32 length = LengthVector(delta);
     if (length <= DegenerateEpsilon) return false;
@@ -348,7 +348,7 @@ bool EditorGizmoHandles::CaptureTarget(World& world, EnsId ens, Target& target)
     Transform* parentTransform = parent.IsNull() ? nullptr : world.GetTransform(parent);
     if (parentTransform)
     {
-        target.parentWorldInverseMatrix = RenderMath::Inverse(parentTransform->GetWorldMatrix());
+        target.parentWorldInverseMatrix = Orbeden::Math::Inverse(parentTransform->GetWorldMatrix());
         target.parentWorldRotation = parentTransform->GetWorldRotation();
     }
     else
@@ -363,7 +363,7 @@ bool EditorGizmoHandles::CaptureTarget(World& world, EnsId ens, Target& target)
 vector3 EditorGizmoHandles::GetDraggedLocalPosition(const Target& target, const vector3& worldPosition)
 {
     vector3 worldDelta = SubtractVector(worldPosition, target.worldPosition);
-    vector3 localDelta = RenderMath::TransformDirection(target.parentWorldInverseMatrix, worldDelta);
+    vector3 localDelta = Orbeden::Math::TransformDirection(target.parentWorldInverseMatrix, worldDelta);
     return { target.localPosition.x + localDelta.x, target.localPosition.y + localDelta.y,
         target.localPosition.z + localDelta.z };
 }
@@ -397,7 +397,7 @@ bool EditorGizmoHandles::BuildContext(World& world, const EditorGizmoView& view,
         const bounds3& localBounds = mesh->GetLocalBounds();
         if (!localBounds.valid) continue;
 
-        bounds3 worldBounds = RenderMath::TransformBounds(transform->GetWorldMatrix(), localBounds);
+        bounds3 worldBounds = Orbeden::Math::TransformBounds(transform->GetWorldMatrix(), localBounds);
         if (!worldBounds.valid) continue;
 
         if (!hasBounds)
@@ -429,9 +429,9 @@ bool EditorGizmoHandles::BuildContext(World& world, const EditorGizmoView& view,
         ? activeTransform->GetWorldRotation()
         : quaternion();
 
-    matrix4x4 rotationMatrix = RenderMath::Rotation(context.pivotRotation);
+    matrix4x4 rotationMatrix = Orbeden::Math::Rotation(context.pivotRotation);
     for (int32 index = 0; index < 3; ++index)
-        context.axes[index] = RenderMath::Normalize(RenderMath::TransformDirection(rotationMatrix, BaseAxes[index]));
+        context.axes[index] = Orbeden::Math::Normalize(Orbeden::Math::TransformDirection(rotationMatrix, BaseAxes[index]));
 
     //枢轴沿相机右方向偏移一个世界单位对应的像素长度，用来把像素尺寸换算成世界尺寸
     vector2 pivotScreen;
@@ -479,9 +479,9 @@ EditorGizmoHandle EditorGizmoHandles::Pick(const EditorGizmoView& view, const Co
         {
             //圆环落在与该轴垂直的平面上，环的法线才是它代表的旋转轴
             quaternion pivotRotation = context.pivotRotation;
-            matrix4x4 rotationMatrix = RenderMath::Rotation(pivotRotation);
-            vector3 u = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 1) % 3]);
-            vector3 v = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 2) % 3]);
+            matrix4x4 rotationMatrix = Orbeden::Math::Rotation(pivotRotation);
+            vector3 u = Orbeden::Math::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 1) % 3]);
+            vector3 v = Orbeden::Math::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 2) % 3]);
 
             vector2 previous;
             bool hasPrevious = false;
@@ -519,7 +519,7 @@ EditorGizmoHandle EditorGizmoHandles::Pick(const EditorGizmoView& view, const Co
     for (int32 axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
         vector3 axis = mode == EditorGizmoMode::Scale
-            ? RenderMath::TransformDirection(RenderMath::Rotation(context.pivotRotation), BaseAxes[axisIndex])
+            ? Orbeden::Math::TransformDirection(Orbeden::Math::Rotation(context.pivotRotation), BaseAxes[axisIndex])
             : context.axes[axisIndex];
 
         vector2 axisStart;
@@ -544,7 +544,7 @@ EditorGizmoHandle EditorGizmoHandles::Pick(const EditorGizmoView& view, const Co
     {
         int32 normalIndex = planeNormals[planeIndex];
         vector3 normal = context.axes[normalIndex];
-        if (std::abs(RenderMath::Dot(normal, view.cameraForward)) > 0.999f) continue;
+        if (std::abs(Orbeden::Math::Dot(normal, view.cameraForward)) > 0.999f) continue;
 
         const vector3& axisA = context.axes[(normalIndex + 1) % 3];
         const vector3& axisB = context.axes[(normalIndex + 2) % 3];
@@ -606,7 +606,7 @@ void EditorGizmoHandles::BeginDrag(World& world, const EditorGizmoView& view, co
     {
         //缩放固定用局部轴，其余模式跟随当前坐标系
         startAxes[index] = mode == EditorGizmoMode::Scale
-            ? RenderMath::TransformDirection(RenderMath::Rotation(context.pivotRotation), BaseAxes[index])
+            ? Orbeden::Math::TransformDirection(Orbeden::Math::Rotation(context.pivotRotation), BaseAxes[index])
             : context.axes[index];
     }
     startMouse = { ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y };
@@ -726,7 +726,7 @@ void EditorGizmoHandles::ApplyDrag(World& world, const EditorGizmoView& view)
         //圆心固定，用起始角度累加得到总旋转量，避免跨 ±π 跳变；
         //屏幕角度按 y 向下计算，轴指向相机时鼠标的顺逆时针与旋转正方向相反
         float32 accumulated = WrapPi(angle - startMouseAngle);
-        if (RenderMath::Dot(startAxes[axisIndex], view.cameraForward) < 0.0f) accumulated = -accumulated;
+        if (Orbeden::Math::Dot(startAxes[axisIndex], view.cameraForward) < 0.0f) accumulated = -accumulated;
         quaternion rotation = AxisAngleQuaternion(startAxes[axisIndex], accumulated);
 
         for (const Target& target : targets)
@@ -736,7 +736,7 @@ void EditorGizmoHandles::ApplyDrag(World& world, const EditorGizmoView& view)
 
             quaternion worldRotation = MultiplyQuaternion(rotation, target.worldRotation);
             vector3 offset = SubtractVector(target.worldPosition, pivotWorld);
-            vector3 rotatedOffset = RenderMath::TransformDirection(RenderMath::Rotation(rotation), offset);
+            vector3 rotatedOffset = Orbeden::Math::TransformDirection(Orbeden::Math::Rotation(rotation), offset);
             vector3 worldPosition = AddVector(pivotWorld, rotatedOffset);
 
             transform->SetLocalPosition(GetDraggedLocalPosition(target, worldPosition));
@@ -789,7 +789,7 @@ void EditorGizmoHandles::ApplyDrag(World& world, const EditorGizmoView& view)
 
         //只有沿该轴的分量跟着缩放，与单轴缩放的视觉一致
         vector3 offset = SubtractVector(target.worldPosition, pivotWorld);
-        float32 along = RenderMath::Dot(offset, startAxes[axisIndex]);
+        float32 along = Orbeden::Math::Dot(offset, startAxes[axisIndex]);
         vector3 worldPosition = AddVector(pivotWorld,
             AddVector(offset, ScaleVector(startAxes[axisIndex], along * (factor - 1.0f))));
         transform->SetLocalPosition(GetDraggedLocalPosition(target, worldPosition));
@@ -939,12 +939,12 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
     auto drawAxis = [&](int32 axisIndex)
     {
         vector3 axis = mode == EditorGizmoMode::Scale
-            ? RenderMath::TransformDirection(RenderMath::Rotation(context.pivotRotation), BaseAxes[axisIndex])
+            ? Orbeden::Math::TransformDirection(Orbeden::Math::Rotation(context.pivotRotation), BaseAxes[axisIndex])
             : context.axes[axisIndex];
 
         EditorGizmoHandle handle = static_cast<EditorGizmoHandle>(static_cast<int32>(EditorGizmoHandle::AxisX) + axisIndex);
         EditorGizmoColor color = effective == handle ? HotColor : AxisColors[axisIndex];
-        float32 alphaScale = RenderMath::Dot(axis, view.cameraForward) > 0.15f ? 0.45f : 1.0f;
+        float32 alphaScale = Orbeden::Math::Dot(axis, view.cameraForward) > 0.15f ? 0.45f : 1.0f;
         float32 thickness = effective == handle ? HotThickness : AxisThickness;
 
         //缩放拖拽中轴端方块跟着比例外移，拖到哪方块就在哪
@@ -999,7 +999,7 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
             int32 normalIndex = planeNormals[planeIndex];
             EditorGizmoHandle handle = static_cast<EditorGizmoHandle>(static_cast<int32>(EditorGizmoHandle::PlaneXY) + planeIndex);
             vector3 normal = context.axes[normalIndex];
-            if (std::abs(RenderMath::Dot(normal, view.cameraForward)) > 0.999f) continue;
+            if (std::abs(Orbeden::Math::Dot(normal, view.cameraForward)) > 0.999f) continue;
 
             const vector3& axisA = context.axes[(normalIndex + 1) % 3];
             const vector3& axisB = context.axes[(normalIndex + 2) % 3];
@@ -1029,7 +1029,7 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
     if (mode == EditorGizmoMode::Rotate)
     {
         quaternion pivotRotation = context.pivotRotation;
-        matrix4x4 rotationMatrix = RenderMath::Rotation(pivotRotation);
+        matrix4x4 rotationMatrix = Orbeden::Math::Rotation(pivotRotation);
         ImVec2 outerPoints[37];
         for (int32 segment = 0; segment <= 36; ++segment)
         {
@@ -1046,8 +1046,8 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
             EditorGizmoHandle handle = static_cast<EditorGizmoHandle>(static_cast<int32>(EditorGizmoHandle::AxisX) + axisIndex);
             EditorGizmoColor color = effective == handle ? HotColor : AxisColors[axisIndex];
             //圆环落在与该轴垂直的平面上，环的法线才是它代表的旋转轴
-            vector3 u = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 1) % 3]);
-            vector3 v = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 2) % 3]);
+            vector3 u = Orbeden::Math::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 1) % 3]);
+            vector3 v = Orbeden::Math::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 2) % 3]);
 
             ImVec2 points[RingSegments + 1];
             int32 count = 0;
@@ -1075,9 +1075,9 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
             int32 order[3] = { 0, 1, 2 };
             //先画背对相机的轴，正面的压在更上层
             vector3 axis = mode == EditorGizmoMode::Scale
-                ? RenderMath::TransformDirection(RenderMath::Rotation(context.pivotRotation), BaseAxes[axisIndex])
+                ? Orbeden::Math::TransformDirection(Orbeden::Math::Rotation(context.pivotRotation), BaseAxes[axisIndex])
                 : context.axes[axisIndex];
-            order[axisIndex] = RenderMath::Dot(axis, view.cameraForward) > 0.0f ? 1 : 0;
+            order[axisIndex] = Orbeden::Math::Dot(axis, view.cameraForward) > 0.0f ? 1 : 0;
             (void)order;
         }
         for (int32 axisIndex = 0; axisIndex < 3; ++axisIndex) drawAxis(axisIndex);
@@ -1124,7 +1124,7 @@ void EditorGizmoHandles::DrawAxisCompass(const EditorGizmoView& view)
     int32 order[3] = { 0, 1, 2 };
     float32 depth[3];
     for (int32 index = 0; index < 3; ++index)
-        depth[index] = RenderMath::Dot(BaseAxes[index], view.cameraForward);
+        depth[index] = Orbeden::Math::Dot(BaseAxes[index], view.cameraForward);
     std::sort(order, order + 3, [&](int32 a, int32 b) { return depth[a] > depth[b]; });
 
     //轴端在屏幕上的位置：cameraRight/cameraUp 是正交基，两个分量直接构成投影，
@@ -1134,8 +1134,8 @@ void EditorGizmoHandles::DrawAxisCompass(const EditorGizmoView& view)
     bool drawArm[3];
     for (int32 index = 0; index < 3; ++index)
     {
-        float32 screenX = RenderMath::Dot(BaseAxes[index], view.cameraRight);
-        float32 screenY = -RenderMath::Dot(BaseAxes[index], view.cameraUp);
+        float32 screenX = Orbeden::Math::Dot(BaseAxes[index], view.cameraRight);
+        float32 screenY = -Orbeden::Math::Dot(BaseAxes[index], view.cameraUp);
         tips[index] = { center.x + screenX * CompassRadiusPixels, center.y + screenY * CompassRadiusPixels };
         drawArm[index] = std::sqrt(screenX * screenX + screenY * screenY) * CompassRadiusPixels > CompassMinArmPixels;
     }

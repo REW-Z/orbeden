@@ -126,6 +126,8 @@ public:
     //中间结果这类不需要深度测试的目标用它省一次深度分配。
     bool colorOnly = false;
     bool linearColorFilter = false;
+    bool colorMipmaps = false;
+    bool repeatColor = false;
     //默认 RGBA8：显示目标与掩码目标都在这个格式下工作，
     //只有场景缓冲需要显式声明 RGBA16F 承载线性 HDR。
     GpuRenderTargetFormat format = GpuRenderTargetFormat::RGBA8;
@@ -248,6 +250,7 @@ public:
     virtual void AttachRenderTargetDepthTexture(GpuRenderTargetID target, GpuDepthTextureID depthTexture) = 0;
     virtual void DeleteRenderTarget(GpuRenderTargetID id) = 0;
     virtual GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const = 0;
+    virtual void GenerateRenderTargetMipmaps(GpuRenderTargetID id) = 0;
     virtual bool CopyRenderTarget(const GpuRenderTargetCopyDesc& desc) = 0;
     virtual GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) = 0;
     virtual void DeleteShaderProgram(GpuShaderProgramID id) = 0;

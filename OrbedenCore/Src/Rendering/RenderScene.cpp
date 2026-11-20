@@ -1,7 +1,7 @@
 #include "Rendering/RenderScene.h"
 
 #include "Rendering/ColorSpace.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Transform.h"
@@ -124,7 +124,7 @@ void RenderScene::Update(World& currentWorld)
         renderCamera.camera = camera;
         Transform* transform = currentWorld.GetTransform(renderCamera.ens);
         renderCamera.worldMatrix = transform ? transform->GetWorldMatrix() : matrix4x4();
-        renderCamera.viewMatrix = RenderMath::Inverse(renderCamera.worldMatrix);
+        renderCamera.viewMatrix = Orbeden::Math::Inverse(renderCamera.worldMatrix);
         renderCamera.fieldOfView = camera->fieldOfView;
         renderCamera.nearPlane = camera->nearPlane;
         renderCamera.farPlane = camera->farPlane;
@@ -136,7 +136,7 @@ void RenderScene::Update(World& currentWorld)
         renderCamera.normalizedViewportY = std::clamp(camera->viewportY, 0.0f, 1.0f);
         renderCamera.normalizedViewportWidth = std::clamp(camera->viewportWidth, 0.0f, 1.0f - renderCamera.normalizedViewportX);
         renderCamera.normalizedViewportHeight = std::clamp(camera->viewportHeight, 0.0f, 1.0f - renderCamera.normalizedViewportY);
-        renderCamera.position = RenderMath::GetTranslation(renderCamera.worldMatrix);
+        renderCamera.position = Orbeden::Math::GetTranslation(renderCamera.worldMatrix);
         renderCamera.depth = camera->depth;
         cameras.push_back(renderCamera);
     }
@@ -162,9 +162,9 @@ void RenderScene::Update(World& currentWorld)
         //（LookAt 把 -forward 写进世界矩阵第三列，两者是同一套约定）。
         //归一化顺带抹掉缩放；退化到零向量时退回一个朝下的默认方向。
         Transform* transform = currentWorld.GetTransform(renderLight.ens);
-        renderLight.direction = RenderMath::Normalize(
-            RenderMath::TransformDirection(transform ? transform->GetWorldMatrix() : matrix4x4(), { 0.0f, 0.0f, -1.0f }));
-        if (RenderMath::Dot(renderLight.direction, renderLight.direction) <= 0.000001f)
+        renderLight.direction = Orbeden::Math::Normalize(
+            Orbeden::Math::TransformDirection(transform ? transform->GetWorldMatrix() : matrix4x4(), { 0.0f, 0.0f, -1.0f }));
+        if (Orbeden::Math::Dot(renderLight.direction, renderLight.direction) <= 0.000001f)
         {
             renderLight.direction = { -0.35f, -1.0f, -0.45f };
         }
@@ -442,7 +442,7 @@ void RenderScene::UpdateRenderer(StaticMeshRenderer* renderer, bool updateTransf
     if (meshChanged || updateTransform)
     {
         state.worldBounds = state.localBounds.valid
-            ? RenderMath::TransformBounds(state.localToWorld, state.localBounds)
+            ? Orbeden::Math::TransformBounds(state.localToWorld, state.localBounds)
             : bounds3();
         state.worldPosition = state.worldBounds.center;
     }

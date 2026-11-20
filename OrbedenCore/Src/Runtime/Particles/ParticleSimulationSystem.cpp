@@ -278,7 +278,7 @@ const ParticleSimulationContext& ParticleSimulationSystem::GetRenderContext(bool
 
 
 #include "Rendering/ColorSpace.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Particles/ParticleSettings.h"
 #include "Runtime/World.h"
 #include "Runtime/Object/Transform.h"
@@ -329,8 +329,8 @@ namespace
     //把方向按旋转四元数变换，不平移
     vector3 RotateDirection(const quaternion& rotation, const vector3& direction)
     {
-        matrix4x4 matrix = RenderMath::Rotation(rotation);
-        return RenderMath::TransformDirection(matrix, direction);
+        matrix4x4 matrix = Orbeden::Math::Rotation(rotation);
+        return Orbeden::Math::TransformDirection(matrix, direction);
     }
 }
 
@@ -617,7 +617,7 @@ void ParticleSimulationContext::Step(float32 step)
         matrix4x4 matrix = GetEmitterWorldMatrix(state);
         bool finite = std::all_of(std::begin(matrix.m), std::end(matrix.m), [](float32 value) { return std::isfinite(value); });
         vector3 a{matrix.m[0], matrix.m[1], matrix.m[2]}, b{matrix.m[4], matrix.m[5], matrix.m[6]}, c{matrix.m[8], matrix.m[9], matrix.m[10]};
-        if (state.validatedSettings.main.simulationSpace == ParticleSimulationSpace::Local && (!finite || std::fabs(RenderMath::Dot(a, RenderMath::Cross(b,c))) < 1e-8f))
+        if (state.validatedSettings.main.simulationSpace == ParticleSimulationSpace::Local && (!finite || std::fabs(Orbeden::Math::Dot(a, Orbeden::Math::Cross(b,c))) < 1e-8f))
         {
             ++state.stats.invalidTransforms;
             continue;
@@ -868,7 +868,7 @@ void ParticleSimulationContext::SpawnParticle(ParticleEmitterState& state, float
     matrix4x4 emitterWorld = GetEmitterWorldMatrix(state);
     vector3 a{emitterWorld.m[0],emitterWorld.m[1],emitterWorld.m[2]}, b{emitterWorld.m[4],emitterWorld.m[5],emitterWorld.m[6]}, c{emitterWorld.m[8],emitterWorld.m[9],emitterWorld.m[10]};
     if (!std::all_of(std::begin(emitterWorld.m), std::end(emitterWorld.m), [](float32 value) { return std::isfinite(value); }) ||
-        std::fabs(RenderMath::Dot(a,RenderMath::Cross(b,c))) < 1e-8f)
+        std::fabs(Orbeden::Math::Dot(a,Orbeden::Math::Cross(b,c))) < 1e-8f)
     {
         ++state.stats.invalidTransforms;
         return;
@@ -876,8 +876,8 @@ void ParticleSimulationContext::SpawnParticle(ParticleEmitterState& state, float
     bool local = settings.main.simulationSpace == ParticleSimulationSpace::Local;
     Transform* transform = sourceHolder ? world->GetTransform(sourceHolder->GetEnsId()) : nullptr;
     quaternion emitterRotation = transform ? transform->GetWorldRotation() : quaternion();
-    quaternion rotation = RenderMath::Mul(parent ? parent->worldRotation : emitterRotation, RenderMath::RotationZ(startRotation));
-    vector3 position = parent ? RotateDirection(parent->worldRotation, localPosition) : RenderMath::TransformPoint(emitterWorld, localPosition);
+    quaternion rotation = Orbeden::Math::Mul(parent ? parent->worldRotation : emitterRotation, Orbeden::Math::RotationZ(startRotation));
+    vector3 position = parent ? RotateDirection(parent->worldRotation, localPosition) : Orbeden::Math::TransformPoint(emitterWorld, localPosition);
     if (parent) position = {position.x + parent->worldPosition.x, position.y + parent->worldPosition.y, position.z + parent->worldPosition.z};
     vector3 velocity = ScaleVector(RotateDirection(parent ? parent->worldRotation : emitterRotation, direction), speed);
     if (parent && rule && rule->inheritVelocity)
@@ -886,14 +886,14 @@ void ParticleSimulationContext::SpawnParticle(ParticleEmitterState& state, float
     color inheritedColor = parent && rule && rule->inheritColor ? parent->linearColor : color{1,1,1,1};
     if (local)
     {
-        matrix4x4 inverse = RenderMath::Inverse(emitterWorld);
-        position = RenderMath::TransformPoint(inverse, position);
-        velocity = parent ? RenderMath::TransformDirection(inverse, velocity) : ScaleVector(direction, speed);
+        matrix4x4 inverse = Orbeden::Math::Inverse(emitterWorld);
+        position = Orbeden::Math::TransformPoint(inverse, position);
+        velocity = parent ? Orbeden::Math::TransformDirection(inverse, velocity) : ScaleVector(direction, speed);
         quaternion inverseRotation{-emitterRotation.x,-emitterRotation.y,-emitterRotation.z,emitterRotation.w};
-        rotation = RenderMath::Mul(inverseRotation, rotation);
-        if (parent) size /= RenderMath::GetMaximumBasisLength(emitterWorld);
+        rotation = Orbeden::Math::Mul(inverseRotation, rotation);
+        if (parent) size /= Orbeden::Math::GetMaximumBasisLength(emitterWorld);
     }
-    else if (!parent) size *= RenderMath::GetMaximumBasisLength(emitterWorld);
+    else if (!parent) size *= Orbeden::Math::GetMaximumBasisLength(emitterWorld);
 
     ParticleRecord record;
     record.birthId = state.nextBirthId++;
@@ -993,8 +993,8 @@ bool ParticleSimulationContext::IntegrateParticle(ParticleEmitterState& state, u
     };
     if (settings.main.simulationSpace == ParticleSimulationSpace::Local)
     {
-        matrix4x4 inverse = RenderMath::Inverse(GetEmitterWorldMatrix(state));
-        acceleration = RenderMath::TransformDirection(inverse, acceleration);
+        matrix4x4 inverse = Orbeden::Math::Inverse(GetEmitterWorldMatrix(state));
+        acceleration = Orbeden::Math::TransformDirection(inverse, acceleration);
     }
 
     particle.velocity.x += acceleration.x * aliveTime;
@@ -1026,7 +1026,7 @@ bool ParticleSimulationContext::IntegrateParticle(ParticleEmitterState& state, u
         matrix4x4 emitterWorld = GetEmitterWorldMatrix(state);
         if (settings.main.simulationSpace == ParticleSimulationSpace::Local)
         {
-            float32 maximumBasis = RenderMath::GetMaximumBasisLength(emitterWorld);
+            float32 maximumBasis = Orbeden::Math::GetMaximumBasisLength(emitterWorld);
             radius *= maximumBasis;
         }
 
@@ -1034,8 +1034,8 @@ bool ParticleSimulationContext::IntegrateParticle(ParticleEmitterState& state, u
         if (evaluatedSize > 0.0f)
         {
             bool localSpace = settings.main.simulationSpace == ParticleSimulationSpace::Local;
-            vector3 worldOrigin = localSpace ? RenderMath::TransformPoint(emitterWorld, particle.position) : particle.position;
-            vector3 worldProposed = localSpace ? RenderMath::TransformPoint(emitterWorld, proposed) : proposed;
+            vector3 worldOrigin = localSpace ? Orbeden::Math::TransformPoint(emitterWorld, particle.position) : particle.position;
+            vector3 worldProposed = localSpace ? Orbeden::Math::TransformPoint(emitterWorld, proposed) : proposed;
             if (!CollideParticle(state, particle, radius, worldOrigin, worldProposed, aliveTime))
             {
                 //碰撞致死的位置就是接触点
@@ -1163,33 +1163,33 @@ bool ParticleSimulationContext::CollideParticle(ParticleEmitterState& state, Par
     filter.ignoredEns = source->GetEnsId();
     filter.includeTriggers = false;
     bool local = settings.main.simulationSpace == ParticleSimulationSpace::Local;
-    matrix4x4 matrix = GetEmitterWorldMatrix(state), inverse = RenderMath::Inverse(matrix);
+    matrix4x4 matrix = GetEmitterWorldMatrix(state), inverse = Orbeden::Math::Inverse(matrix);
     vector3 position = worldOrigin;
-    vector3 velocity = local ? RenderMath::TransformDirection(matrix, particle.velocity) : particle.velocity;
+    vector3 velocity = local ? Orbeden::Math::TransformDirection(matrix, particle.velocity) : particle.velocity;
     vector3 delta{worldProposed.x-position.x,worldProposed.y-position.y,worldProposed.z-position.z};
     bool alive = true;
     for (uint32 attempt=0; attempt<2; ++attempt)
     {
-        float32 distance = std::sqrt(RenderMath::Dot(delta,delta));
+        float32 distance = std::sqrt(Orbeden::Math::Dot(delta,delta));
         if (distance <= 1e-6f) break;
         PhysicsQueryHit hit;
         ++state.stats.collisionQueries;
         bool hitSomething = physics->SweepSphereFiltered(position,radius,delta,distance,hit,filter);
-        if (!hitSomething || !std::isfinite(hit.distance) || !std::isfinite(RenderMath::Dot(hit.normal,hit.normal)) || RenderMath::Dot(hit.normal,hit.normal)<1e-12f)
+        if (!hitSomething || !std::isfinite(hit.distance) || !std::isfinite(Orbeden::Math::Dot(hit.normal,hit.normal)) || Orbeden::Math::Dot(hit.normal,hit.normal)<1e-12f)
         {
             position = {position.x+delta.x,position.y+delta.y,position.z+delta.z};
             break;
         }
         ++state.stats.collisionHits;
-        vector3 normal = RenderMath::Normalize(hit.normal);
+        vector3 normal = Orbeden::Math::Normalize(hit.normal);
         float32 traveled = std::clamp(hit.distance/distance,0.0f,1.0f);
         float32 skin = std::max(1e-4f,radius*0.001f);
         position = {position.x+delta.x*traveled+normal.x*skin,position.y+delta.y*traveled+normal.y*skin,position.z+delta.z*traveled+normal.z*skin};
-        particle.position = local ? RenderMath::TransformPoint(inverse,position) : position;
+        particle.position = local ? Orbeden::Math::TransformPoint(inverse,position) : position;
         QueueEvent(state,particle,ParticleSubEmitterEvent::Collision,stepIndex*FixedStep+FixedStep-remainingTime+remainingTime*traveled);
         particle.age += particle.lifetime * settings.collision.lifetimeLoss;
         alive = particle.age < particle.lifetime && settings.collision.response != ParticleCollisionResponse::Kill;
-        float32 vn = RenderMath::Dot(velocity,normal);
+        float32 vn = Orbeden::Math::Dot(velocity,normal);
         if (vn < 0)
         {
             float32 bounce = hit.distance <= 1e-6f ? 0.0f : settings.collision.restitution;
@@ -1201,8 +1201,8 @@ bool ParticleSimulationContext::CollideParticle(ParticleEmitterState& state, Par
         remainingTime *= 1-traveled;
         delta = ScaleVector(velocity,remainingTime);
     }
-    particle.position = local ? RenderMath::TransformPoint(inverse,position) : position;
-    particle.velocity = local ? RenderMath::TransformDirection(inverse,velocity) : velocity;
+    particle.position = local ? Orbeden::Math::TransformPoint(inverse,position) : position;
+    particle.velocity = local ? Orbeden::Math::TransformDirection(inverse,velocity) : velocity;
     return alive;
 }
 
@@ -1254,7 +1254,7 @@ void ParticleSimulationContext::UpdateTrails(ParticleEmitterState& state, float3
                 const ParticleTrailPoint& last = state.trailPoints[trail.pointStart + headSlot];
                 vector3 delta = { owner->position.x - last.position.x, owner->position.y - last.position.y,
                     owner->position.z - last.position.z };
-                bool distanceReached = RenderMath::Dot(delta, delta) >=
+                bool distanceReached = Orbeden::Math::Dot(delta, delta) >=
                     settings.trails.minimumVertexDistance * settings.trails.minimumVertexDistance;
                 bool intervalReached = state.simulationTime - last.time >= settings.trails.maximumVertexInterval;
                 if (distanceReached || intervalReached)
@@ -1274,7 +1274,7 @@ void ParticleSimulationContext::UpdateTrails(ParticleEmitterState& state, float3
                     point.width = settings.trails.width * evaluatedSize;
                     point.linearColor = pointColor;
                     point.accumulatedLength = last.accumulatedLength +
-                        std::sqrt(RenderMath::Dot(delta, delta));
+                        std::sqrt(Orbeden::Math::Dot(delta, delta));
 
                     uint32 slot = trail.head;
                     //环形满时丢最旧的点
@@ -1428,14 +1428,14 @@ void ParticleSimulationContext::RebuildBounds(ParticleEmitterState& state)
     matrix4x4 emitterWorld = GetEmitterWorldMatrix(state);
     bool local = state.validatedSettings.main.simulationSpace == ParticleSimulationSpace::Local;
     //局部尺寸要乘发射器世界尺度才能与渲染侧的包围盒口径一致
-    float32 emitterBasis = local ? RenderMath::GetMaximumBasisLength(emitterWorld) : 1.0f;
+    float32 emitterBasis = local ? Orbeden::Math::GetMaximumBasisLength(emitterWorld) : 1.0f;
 
     for (const ParticleRecord& particle : state.particles)
     {
         float32 size = particle.startSize * particle.inheritedSize *
             std::max(0.0f, EvaluateCurve(state.validatedSettings.motion.sizeOverLifetime,
                 particle.lifetime > 0.0f ? std::clamp(particle.age / particle.lifetime, 0.0f, 1.0f) : 1.0f)) * emitterBasis;
-        vector3 position = local ? RenderMath::TransformPoint(emitterWorld, particle.position) : particle.position;
+        vector3 position = local ? Orbeden::Math::TransformPoint(emitterWorld, particle.position) : particle.position;
         //Billboard 的保守半径是外接圆，Mesh 粒子按尺寸盒近似
         float32 radius = size * 0.70710678118f;
         bounds3 particleBounds;
@@ -1490,14 +1490,14 @@ void ParticleSimulationContext::QueueEvent(ParticleEmitterState& state, const Pa
     color tint = EvaluateGradient(settings.motion.colorOverLifetime,age);
     ParticleEvent event;
     event.stepIndex=stepIndex; event.eventTime=time; event.sourceObjectId=source->GetObjectId(); event.birthId=particle.birthId; event.type=type;
-    event.worldPosition = local ? RenderMath::TransformPoint(matrix,particle.position) : particle.position;
-    event.worldVelocity = local ? RenderMath::TransformDirection(matrix,particle.velocity) : particle.velocity;
-    event.worldRotation = RenderMath::Mul(particle.rotation,RenderMath::RotationZ(particle.angle-particle.startAngle));
-    if (local && transform) event.worldRotation = RenderMath::Mul(transform->GetWorldRotation(),event.worldRotation);
+    event.worldPosition = local ? Orbeden::Math::TransformPoint(matrix,particle.position) : particle.position;
+    event.worldVelocity = local ? Orbeden::Math::TransformDirection(matrix,particle.velocity) : particle.velocity;
+    event.worldRotation = Orbeden::Math::Mul(particle.rotation,Orbeden::Math::RotationZ(particle.angle-particle.startAngle));
+    if (local && transform) event.worldRotation = Orbeden::Math::Mul(transform->GetWorldRotation(),event.worldRotation);
     event.linearColor = {tint.r*particle.startLinearColor.r*particle.inheritedColor.r,tint.g*particle.startLinearColor.g*particle.inheritedColor.g,
         tint.b*particle.startLinearColor.b*particle.inheritedColor.b,tint.a*particle.startLinearColor.a*particle.inheritedColor.a};
     event.size = particle.startSize*particle.inheritedSize*std::max(0.0f,EvaluateCurve(settings.motion.sizeOverLifetime,age));
-    if (local) event.size *= RenderMath::GetMaximumBasisLength(matrix);
+    if (local) event.size *= Orbeden::Math::GetMaximumBasisLength(matrix);
     event.generation=particle.generation;
     for (uint32 i=0;i<settings.subEmitters.size();++i)
     {
@@ -1530,7 +1530,7 @@ void ParticleSimulationContext::FinishParticle(ParticleEmitterState& state, cons
         {
             const auto& previous=state.trailPoints[trail->pointStart+(trail->head+cap-1)%cap];
             vector3 delta{point.position.x-previous.position.x,point.position.y-previous.position.y,point.position.z-previous.position.z};
-            point.accumulatedLength=previous.accumulatedLength+std::sqrt(RenderMath::Dot(delta,delta));
+            point.accumulatedLength=previous.accumulatedLength+std::sqrt(Orbeden::Math::Dot(delta,delta));
         }
         state.trailPoints[trail->pointStart+trail->head]=point;
         trail->head=(trail->head+1)%cap; trail->count=std::min(cap,trail->count+1); trail->attached=false;

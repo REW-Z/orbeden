@@ -1,5 +1,5 @@
 #include "Rendering/ShadowCascadeBuilder.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include <algorithm>
 #include <cmath>
 
@@ -82,13 +82,13 @@ ShadowCascade ShadowCascadeBuilder::BuildCascade(const matrix4x4& cameraWorld, c
     const ShadowCascadeSettings& source, const List<bounds3>& casterBounds)
 {
     const ShadowCascadeSettings settings = ValidateSettings(source);
-    matrix4x4 inverseProjection = RenderMath::Inverse(projection);
+    matrix4x4 inverseProjection = Orbeden::Math::Inverse(projection);
     vector3 corners[8];
     vector3 center;
     //还原相机空间分区角点
     for (int32 index = 0; index < 4; ++index)
     {
-        vector3 ray = RenderMath::TransformPoint(inverseProjection,
+        vector3 ray = Orbeden::Math::TransformPoint(inverseProjection,
             { (index & 1) ? 1.0f : -1.0f, (index & 2) ? 1.0f : -1.0f, 0.0f });
         float32 depth = std::max(-ray.z, 0.000001f);
         for (int32 end = 0; end < 2; ++end)
@@ -105,19 +105,19 @@ ShadowCascade ShadowCascadeBuilder::BuildCascade(const matrix4x4& cameraWorld, c
     for (const vector3& point : corners)
     {
         vector3 offset{ point.x - center.x, point.y - center.y, point.z - center.z };
-        radius = std::max(radius, std::sqrt(RenderMath::Dot(offset, offset)));
+        radius = std::max(radius, std::sqrt(Orbeden::Math::Dot(offset, offset)));
     }
     radius = std::max(std::ceil(radius * 16.0f) / 16.0f, 0.0625f);
-    center = RenderMath::TransformPoint(cameraWorld, center);
+    center = Orbeden::Math::TransformPoint(cameraWorld, center);
 
     //建立固定太阳坐标基
-    vector3 direction = RenderMath::Normalize(lightDirection);
+    vector3 direction = Orbeden::Math::Normalize(lightDirection);
     if (!std::isfinite(direction.x) || !std::isfinite(direction.y) || !std::isfinite(direction.z) ||
-        RenderMath::Dot(direction, direction) < 0.5f)
-        direction = RenderMath::Normalize({ -0.35f, -1.0f, -0.45f });
+        Orbeden::Math::Dot(direction, direction) < 0.5f)
+        direction = Orbeden::Math::Normalize({ -0.35f, -1.0f, -0.45f });
     vector3 up = std::abs(direction.y) > 0.9f ? vector3{ 0.0f, 0.0f, 1.0f } : vector3{ 0.0f, 1.0f, 0.0f };
-    matrix4x4 lightView = RenderMath::LookAt({}, direction, up);
-    vector3 lightCenter = RenderMath::TransformPoint(lightView, center);
+    matrix4x4 lightView = Orbeden::Math::LookAt({}, direction, up);
+    vector3 lightCenter = Orbeden::Math::TransformPoint(lightView, center);
     float32 halfSize = radius / (1.0f - 8.0f / settings.resolution);
     float32 texel = 2.0f * halfSize / settings.resolution;
     float32 x = std::floor(lightCenter.x / texel + 0.5f) * texel;
@@ -129,7 +129,7 @@ ShadowCascade ShadowCascadeBuilder::BuildCascade(const matrix4x4& cameraWorld, c
     for (const bounds3& bounds : casterBounds)
     {
         if (!bounds.valid) continue;
-        bounds3 projected = RenderMath::TransformBounds(lightView, bounds);
+        bounds3 projected = Orbeden::Math::TransformBounds(lightView, bounds);
         if (projected.center.x + projected.extents.x < x - halfSize || projected.center.x - projected.extents.x > x + halfSize ||
             projected.center.y + projected.extents.y < y - halfSize || projected.center.y - projected.extents.y > y + halfSize ||
             projected.center.z + projected.extents.z < minZ) continue;
@@ -138,10 +138,10 @@ ShadowCascade ShadowCascadeBuilder::BuildCascade(const matrix4x4& cameraWorld, c
     float32 padding = std::max(0.01f, texel * (settings.normalBias + 1.0f) + settings.depthBias);
     minZ -= padding;
     maxZ += padding;
-    matrix4x4 ortho = RenderMath::Orthographic(x - halfSize, x + halfSize, y - halfSize, y + halfSize, -maxZ, -minZ);
+    matrix4x4 ortho = Orbeden::Math::Orthographic(x - halfSize, x + halfSize, y - halfSize, y + halfSize, -maxZ, -minZ);
     ShadowCascade cascade;
-    cascade.worldToShadow = RenderMath::Mul(ortho, lightView);
-    cascade.lightFrustum = RenderMath::BuildFrustum(cascade.worldToShadow);
+    cascade.worldToShadow = Orbeden::Math::Mul(ortho, lightView);
+    cascade.lightFrustum = Orbeden::Math::BuildFrustum(cascade.worldToShadow);
     cascade.texelWorldSize = texel;
     cascade.depthRange = maxZ - minZ;
     cascade.splitDepth = sliceFar;

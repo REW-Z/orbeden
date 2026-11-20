@@ -55,6 +55,7 @@ public:
     void AttachRenderTargetDepthTexture(GpuRenderTargetID target, GpuDepthTextureID depthTexture) override;
     void DeleteRenderTarget(GpuRenderTargetID id) override;
     GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const override;
+    void GenerateRenderTargetMipmaps(GpuRenderTargetID id) override;
     bool CopyRenderTarget(const GpuRenderTargetCopyDesc& desc) override;
     GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) override;
     void DeleteShaderProgram(GpuShaderProgramID id) override;

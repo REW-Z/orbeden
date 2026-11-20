@@ -47,6 +47,7 @@ internal static class EditorEnvironmentSettings
     private static AtmosphereQuality atmosphereQuality = AtmosphereQuality.Low;
     private static float aerosolDensity = 1.0f;
     private static float sunRadianceScale = 1.0f;
+    private static color groundBackgroundColor;
     private static float metersPerWorldUnit = 1.0f;
     private static double planetRadiusMeters = 6371000.0;
     private static double altitudeMeters;
@@ -88,6 +89,7 @@ internal static class EditorEnvironmentSettings
             atmosphereQuality = AtmosphereQuality.Low;
             aerosolDensity = 1.0f;
             sunRadianceScale = 1.0f;
+            groundBackgroundColor = draft.GroundBackgroundColor;
             metersPerWorldUnit = 1.0f;
             SetPlanetParameters(draft.PlanetRadiusMeters, draft.AltitudeMeters);
             upDirection = draft.UpDirection;
@@ -114,6 +116,7 @@ internal static class EditorEnvironmentSettings
         atmosphereQuality = (AtmosphereQuality)draft.Quality;
         aerosolDensity = draft.AerosolDensity;
         sunRadianceScale = draft.SunRadianceScale;
+        groundBackgroundColor = draft.GroundBackgroundColor;
         metersPerWorldUnit = draft.MetersPerWorldUnit;
         SetPlanetParameters(draft.PlanetRadiusMeters, draft.AltitudeMeters);
         upDirection = draft.UpDirection;
@@ -184,6 +187,7 @@ internal static class EditorEnvironmentSettings
             MetersPerWorldUnit = metersPerWorldUnit,
             AerosolDensity = aerosolDensity,
             SunRadianceScale = sunRadianceScale,
+            GroundBackgroundColor = groundBackgroundColor,
             DenseFogEnabled = denseFogEnabled,
             DenseFogMode = (uint)denseFogMode,
             FogVisibilityMeters = fogVisibilityMeters,
@@ -319,6 +323,11 @@ internal static class EditorEnvironmentSettings
                 {
                     EditorGUI.TextColored("Cubemap sky ignores the atmosphere; use Sky Mode Atmosphere.",
                         EditorTheme.Current.LogError);
+                }
+
+                if (skyMode == SkyMode.Atmosphere && GUI.ColorField("Ground Background Color", ref groundBackgroundColor))
+                {
+                    dirty = true;
                 }
 
                 //显示天空与空气透视共用参数

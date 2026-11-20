@@ -3303,25 +3303,6 @@
           "Parameters": []
         },
         {
-          "Name": "groundBackground",
-          "Type": "color",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
           "Name": "settings",
           "Type": "AtmosphereSettings",
           "Access": "public",
@@ -4024,6 +4005,25 @@
           "Parameters": []
         },
         {
+          "Name": "skyReflectionTarget",
+          "Type": "GpuRenderTargetID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "transmittanceTexture",
           "Type": "GpuTextureID",
           "Access": "private",
@@ -4101,6 +4101,25 @@
         },
         {
           "Name": "skyTexture",
+          "Type": "GpuTextureID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "skyReflectionTexture",
           "Type": "GpuTextureID",
           "Access": "private",
           "IsMethod": false,
@@ -4404,6 +4423,120 @@
           "Parameters": []
         },
         {
+          "Name": "skyReflectionKey",
+          "Type": "AtmosphereFrame",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "skyReflectionBasis",
+          "Type": "matrix4x4",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "skyReflectionHorizon",
+          "Type": "float32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "skyReflectionActive",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "cachedSkyReflectionProgram",
+          "Type": "GpuShaderProgramID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "cachedSkyReflectionLutProgram",
+          "Type": "GpuShaderProgramID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "cachedAerialProgram",
           "Type": "uint32",
           "Access": "private",
@@ -4640,6 +4773,11 @@
               "Name": "texture",
               "Type": "GpuTextureID\u0026",
               "DefaultValue": ""
+            },
+            {
+              "Name": "reflectionSampling",
+              "Type": "bool",
+              "DefaultValue": "false"
             }
           ]
         },
@@ -4733,6 +4871,85 @@
             {
               "Name": "quality",
               "Type": "const AtmosphereQualityDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "UpdateSkyReflection",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "MatchesSkyLighting",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "current",
+              "Type": "const AtmosphereFrame\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "other",
+              "Type": "const AtmosphereFrame\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "MatchesSky",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "current",
+              "Type": "const AtmosphereFrame\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "other",
+              "Type": "const AtmosphereFrame\u0026",
               "DefaultValue": ""
             }
           ]
@@ -5011,6 +5228,50 @@
         {
           "Name": "RenderSky",
           "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "reflectionCapture",
+              "Type": "bool",
+              "DefaultValue": "false"
+            }
+          ]
+        },
+        {
+          "Name": "GetSkyReflectionTexture",
+          "Type": "GpuTextureID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "BindSkyReflectionUniforms",
+          "Type": "void",
           "Access": "public",
           "IsMethod": true,
           "IsStatic": false,
@@ -5314,6 +5575,25 @@
         {
           "Name": "sunRadianceScale",
           "Type": "float32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "groundBackgroundColor",
+          "Type": "color",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -21081,6 +21361,44 @@
           "Parameters": []
         },
         {
+          "Name": "colorMipmaps",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "repeatColor",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "format",
           "Type": "GpuRenderTargetFormat",
           "Access": "public",
@@ -22199,6 +22517,25 @@
         },
         {
           "Name": "environmentSlot",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "atmosphereReflectionSlot",
           "Type": "int32",
           "Access": "public",
           "IsMethod": false,
@@ -34210,6 +34547,31 @@
           ]
         },
         {
+          "Name": "GenerateRenderTargetMipmaps",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "CopyRenderTarget",
           "Type": "bool",
           "Access": "public",
@@ -36465,6 +36827,712 @@
           "Value": "2"
         }
       ]
+    },
+    {
+      "Name": "Math",
+      "QualifiedName": "Orbeden::Math",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/Math.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "Members": [
+        {
+          "Name": "Dot",
+          "Type": "float32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "a",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "b",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Cross",
+          "Type": "vector3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "a",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "b",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Normalize",
+          "Type": "vector3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Mul",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "a",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "b",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Mul",
+          "Type": "quaternion",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "a",
+              "Type": "const quaternion\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "b",
+              "Type": "const quaternion\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "RotationZ",
+          "Type": "quaternion",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "degrees",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GetMaximumBasisLength",
+          "Type": "float32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "matrix",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Translation",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Rotation",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const quaternion\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Scale",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "TRS",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "position",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "rotation",
+              "Type": "const quaternion\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "scale",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Perspective",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "fieldOfView",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "aspect",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "nearPlane",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "farPlane",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "PerspectiveReversed",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "fieldOfView",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "aspect",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "nearPlane",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "farPlane",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Orthographic",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "left",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "right",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "bottom",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "top",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "nearPlane",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "farPlane",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "LookAt",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "eye",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "target",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "up",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Inverse",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "TransformPoint",
+          "Type": "vector3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "matrix",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "point",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "TransformDirection",
+          "Type": "vector3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "matrix",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "direction",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GetTranslation",
+          "Type": "vector3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "matrix",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CalculateBounds",
+          "Type": "bounds3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "points",
+              "Type": "const List\u003Cvector3\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "TransformBounds",
+          "Type": "bounds3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "matrix",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "bounds",
+              "Type": "const bounds3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BuildFrustum",
+          "Type": "frustum",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "viewProjection",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Intersects",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "viewFrustum",
+              "Type": "const frustum\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "bounds",
+              "Type": "const bounds3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        }
+      ],
+      "EnumValues": []
     },
     {
       "Name": "Object",
@@ -47957,6 +49025,55 @@
           "Parameters": []
         },
         {
+          "Name": "CreatePreparedTriangleMesh",
+          "Type": "std::shared_ptr\u003CPreparedTriangleMesh\u003E",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "InstallTriangleMesh",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "mesh",
+              "Type": "Mesh\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "prepared",
+              "Type": "PreparedTriangleMesh\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "Current",
           "Type": "PhysicsSystem*",
           "Access": "public",
@@ -48094,36 +49211,6 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
-        },
-        {
-          "Name": "InstallTriangleMesh",
-          "Type": "bool",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "mesh",
-              "Type": "Mesh\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "bytes",
-              "Type": "const List\u003Cuint8\u003E\u0026",
-              "DefaultValue": ""
-            }
-          ]
         },
         {
           "Name": "NotifyComponentChanged",
@@ -49053,6 +50140,56 @@
           "Value": ""
         }
       ]
+    },
+    {
+      "Name": "PreparedTriangleMesh",
+      "QualifiedName": "PreparedTriangleMesh",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Physics/PhysicsSystem.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "mesh",
+          "Type": "std::unique_ptr\u003Cphysx::PxTriangleMesh,Release\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "Release",
+      "QualifiedName": "PreparedTriangleMesh::Release",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Physics/PhysicsSystem.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": []
     },
     {
       "Name": "PrimitiveTopology",
@@ -53475,6 +54612,31 @@
           "IsMethod": true,
           "IsStatic": false,
           "IsConst": true,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GenerateRenderTargetMipmaps",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
           "IsVirtual": true,
           "IsTemplate": false,
           "Serialize": false,
@@ -75600,8 +76762,8 @@
           "Parameters": []
         },
         {
-          "Name": "cookedBytes",
-          "Type": "std::shared_ptr\u003CList\u003Cuint8\u003E\u003E",
+          "Name": "cookedMesh",
+          "Type": "std::shared_ptr\u003CPreparedTriangleMesh\u003E",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -82312,6 +83474,31 @@
           "IsMethod": true,
           "IsStatic": false,
           "IsConst": true,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GenerateRenderTargetMipmaps",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
           "IsVirtual": true,
           "IsTemplate": false,
           "Serialize": false,

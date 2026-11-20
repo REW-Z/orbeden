@@ -1,4 +1,4 @@
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 
 #include <algorithm>
 #include <cmath>
@@ -6,9 +6,9 @@
 
 #if defined(_M_X64) || defined(__SSE2__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
 #include <emmintrin.h>
-#define ORBEDEN_RENDER_MATH_SSE2 1
+#define ORBEDEN_MATH_SSE2 1
 #else
-#define ORBEDEN_RENDER_MATH_SSE2 0
+#define ORBEDEN_MATH_SSE2 0
 #endif
 
 namespace
@@ -32,7 +32,7 @@ namespace
 
     float32 Length(const vector3& value)
     {
-        return std::sqrt(RenderMath::Dot(value, value));
+        return std::sqrt(Orbeden::Math::Dot(value, value));
     }
 
     plane3 NormalizePlane(const plane3& plane)
@@ -45,14 +45,14 @@ namespace
     }
 }
 
-namespace RenderMath
+namespace Orbeden
 {
-    float32 Dot(const vector3& a, const vector3& b)
+    float32 Math::Dot(const vector3& a, const vector3& b)
     {
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
-    vector3 Cross(const vector3& a, const vector3& b)
+    vector3 Math::Cross(const vector3& a, const vector3& b)
     {
         return
         {
@@ -62,7 +62,7 @@ namespace RenderMath
         };
     }
 
-    vector3 Normalize(const vector3& value)
+    vector3 Math::Normalize(const vector3& value)
     {
         float32 length = Length(value);
         if (length <= 0.000001f) return vector3();
@@ -70,7 +70,7 @@ namespace RenderMath
         return ScaleVector(value, 1.0f / length);
     }
 
-    quaternion Mul(const quaternion& a, const quaternion& b)
+    quaternion Math::Mul(const quaternion& a, const quaternion& b)
     {
         quaternion result;
         result.x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y;
@@ -80,7 +80,7 @@ namespace RenderMath
         return result;
     }
 
-    quaternion RotationZ(float32 degrees)
+    quaternion Math::RotationZ(float32 degrees)
     {
         float32 half = degrees * 0.01745329251994329577f * 0.5f;
         quaternion result;
@@ -91,7 +91,7 @@ namespace RenderMath
         return result;
     }
 
-    float32 GetMaximumBasisLength(const matrix4x4& matrix)
+    float32 Math::GetMaximumBasisLength(const matrix4x4& matrix)
     {
         vector3 basis[3] =
         {
@@ -109,10 +109,10 @@ namespace RenderMath
         return maximum;
     }
 
-    matrix4x4 Mul(const matrix4x4& a, const matrix4x4& b)
+    matrix4x4 Math::Mul(const matrix4x4& a, const matrix4x4& b)
     {
         matrix4x4 result;
-#if ORBEDEN_RENDER_MATH_SSE2
+#if ORBEDEN_MATH_SSE2
         //并行计算每列的四个分量
         const __m128 a0 = _mm_loadu_ps(a.m);
         const __m128 a1 = _mm_loadu_ps(a.m + 4);
@@ -144,7 +144,7 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 Translation(const vector3& value)
+    matrix4x4 Math::Translation(const vector3& value)
     {
         matrix4x4 result;
         result.m[12] = value.x;
@@ -153,7 +153,7 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 Rotation(const quaternion& value)
+    matrix4x4 Math::Rotation(const quaternion& value)
     {
         quaternion q = value;
         float32 length = std::sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
@@ -191,7 +191,7 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 Scale(const vector3& value)
+    matrix4x4 Math::Scale(const vector3& value)
     {
         matrix4x4 result;
         result.m[0] = value.x;
@@ -200,11 +200,11 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 TRS(const vector3& position, const quaternion& rotation, const vector3& scale)
+    matrix4x4 Math::TRS(const vector3& position, const quaternion& rotation, const vector3& scale)
     {
         //缩放旋转矩阵的三个基向量
         matrix4x4 result = Rotation(rotation);
-#if ORBEDEN_RENDER_MATH_SSE2
+#if ORBEDEN_MATH_SSE2
         _mm_storeu_ps(result.m, _mm_mul_ps(_mm_loadu_ps(result.m), _mm_set1_ps(scale.x)));
         _mm_storeu_ps(result.m + 4, _mm_mul_ps(_mm_loadu_ps(result.m + 4), _mm_set1_ps(scale.y)));
         _mm_storeu_ps(result.m + 8, _mm_mul_ps(_mm_loadu_ps(result.m + 8), _mm_set1_ps(scale.z)));
@@ -224,7 +224,7 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 Perspective(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane)
+    matrix4x4 Math::Perspective(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane)
     {
         float32 safeAspect = aspect > 0.000001f ? aspect : 1.0f;
         float32 safeNear = std::max(nearPlane, 0.0001f);
@@ -241,7 +241,7 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 PerspectiveReversed(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane)
+    matrix4x4 Math::PerspectiveReversed(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane)
     {
         float32 safeAspect = aspect > 0.000001f ? aspect : 1.0f;
         float32 safeNear = std::max(nearPlane, 0.0001f);
@@ -257,7 +257,7 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 Orthographic(float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane)
+    matrix4x4 Math::Orthographic(float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane)
     {
         float32 width = std::max(right - left, 0.0001f);
         float32 height = std::max(top - bottom, 0.0001f);
@@ -273,7 +273,7 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 LookAt(const vector3& eye, const vector3& target, const vector3& up)
+    matrix4x4 Math::LookAt(const vector3& eye, const vector3& target, const vector3& up)
     {
         vector3 forward = Normalize({ target.x - eye.x, target.y - eye.y, target.z - eye.z });
         if (Dot(forward, forward) <= 0.000001f) forward = { 0.0f, 0.0f, -1.0f };
@@ -299,7 +299,7 @@ namespace RenderMath
         return result;
     }
 
-    matrix4x4 Inverse(const matrix4x4& value)
+    matrix4x4 Math::Inverse(const matrix4x4& value)
     {
         const float32* m = value.m;
         matrix4x4 result;
@@ -337,9 +337,9 @@ namespace RenderMath
         return result;
     }
 
-    vector3 TransformPoint(const matrix4x4& matrix, const vector3& point)
+    vector3 Math::TransformPoint(const matrix4x4& matrix, const vector3& point)
     {
-#if ORBEDEN_RENDER_MATH_SSE2
+#if ORBEDEN_MATH_SSE2
         //并行计算齐次坐标
         __m128 position = _mm_mul_ps(_mm_loadu_ps(matrix.m), _mm_set1_ps(point.x));
         position = _mm_add_ps(position, _mm_mul_ps(_mm_loadu_ps(matrix.m + 4), _mm_set1_ps(point.y)));
@@ -368,9 +368,9 @@ namespace RenderMath
         return { x, y, z };
     }
 
-    vector3 TransformDirection(const matrix4x4& matrix, const vector3& direction)
+    vector3 Math::TransformDirection(const matrix4x4& matrix, const vector3& direction)
     {
-#if ORBEDEN_RENDER_MATH_SSE2
+#if ORBEDEN_MATH_SSE2
         //并行计算方向分量
         __m128 result = _mm_mul_ps(_mm_loadu_ps(matrix.m), _mm_set1_ps(direction.x));
         result = _mm_add_ps(result, _mm_mul_ps(_mm_loadu_ps(matrix.m + 4), _mm_set1_ps(direction.y)));
@@ -388,12 +388,12 @@ namespace RenderMath
 #endif
     }
 
-    vector3 GetTranslation(const matrix4x4& matrix)
+    vector3 Math::GetTranslation(const matrix4x4& matrix)
     {
         return { matrix.m[12], matrix.m[13], matrix.m[14] };
     }
 
-    bounds3 CalculateBounds(const List<vector3>& points)
+    bounds3 Math::CalculateBounds(const List<vector3>& points)
     {
         if (points.empty()) return bounds3();
 
@@ -427,7 +427,7 @@ namespace RenderMath
         return result;
     }
 
-    bounds3 TransformBounds(const matrix4x4& matrix, const bounds3& bounds)
+    bounds3 Math::TransformBounds(const matrix4x4& matrix, const bounds3& bounds)
     {
         if (!bounds.valid) return bounds3();
 
@@ -440,7 +440,7 @@ namespace RenderMath
         return result;
     }
 
-    frustum BuildFrustum(const matrix4x4& viewProjection)
+    frustum Math::BuildFrustum(const matrix4x4& viewProjection)
     {
         const float32* m = viewProjection.m;
         frustum result;
@@ -453,7 +453,7 @@ namespace RenderMath
         return result;
     }
 
-    bool Intersects(const frustum& viewFrustum, const bounds3& bounds)
+    bool Math::Intersects(const frustum& viewFrustum, const bounds3& bounds)
     {
         if (!bounds.valid) return false;
 

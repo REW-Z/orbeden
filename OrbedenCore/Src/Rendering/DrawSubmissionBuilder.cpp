@@ -5,7 +5,7 @@
 #include "Rendering/ColorSpace.h"
 #include "Rendering/GeometryExpander.h"
 #include "Rendering/GpuResourceManager.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Rendering/ParticleRenderer.h"
 #include "Rendering/StaticBatchCache.h"
 #include "Rendering/RenderScene.h"
@@ -363,7 +363,7 @@ void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const Vis
                 for (usize index = 0; index < submission.instances.size(); ++index)
                 {
                     const MeshInstanceData& instance = submission.instances[index];
-                    matrix4x4 model = RenderMath::TRS(instance.position, instance.rotation, instance.scale);
+                    matrix4x4 model = Orbeden::Math::TRS(instance.position, instance.rotation, instance.scale);
                     if (!IsFiniteMatrix(model)) continue;
 
                     DrawItem item;
@@ -383,12 +383,12 @@ void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const Vis
                     item.mode = GeometryMode::Instanced;
                     item.blendMode = BlendMode::Alpha;
                     item.model = model;
-                    item.worldBounds = localBounds.valid ? RenderMath::TransformBounds(model, localBounds) : bounds3();
-                    if (item.worldBounds.valid && !RenderMath::Intersects(camera.viewFrustum, item.worldBounds)) continue;
+                    item.worldBounds = localBounds.valid ? Orbeden::Math::TransformBounds(model, localBounds) : bounds3();
+                    if (item.worldBounds.valid && !Orbeden::Math::Intersects(camera.viewFrustum, item.worldBounds)) continue;
                     //距离度量与剔除保持一致：相机到对象位置的距离平方
                     vector3 center = item.worldBounds.valid ? item.worldBounds.center : instance.position;
                     vector3 toItem = { center.x - camera.position.x, center.y - camera.position.y, center.z - camera.position.z };
-                    item.cameraDistance = RenderMath::Dot(toItem, toItem);
+                    item.cameraDistance = Orbeden::Math::Dot(toItem, toItem);
                     //输入的 tint 是 sRGB，Alpha 原样；管线内统一用线性值
                     item.linearTint = ColorSpace::SrgbToLinear(instance.tint);
                     item.linearTint.a = instance.tint.a;
@@ -481,7 +481,7 @@ void DrawSubmissionBuilder::SortItems(const RenderCamera& camera, List<DrawItem>
 
         const vector3 center = item.worldBounds.valid ? item.worldBounds.center
             : vector3{ item.model.m[12], item.model.m[13], item.model.m[14] };
-        float32 depth = GetSortableDistance(RenderMath::Dot(depthAxis, center) + depthOffset);
+        float32 depth = GetSortableDistance(Orbeden::Math::Dot(depthAxis, center) + depthOffset);
         sortItemLinks[index] = itemCount;
         if (!item.canGroupOpaque)
         {
@@ -684,10 +684,10 @@ void DrawSubmissionBuilder::CollectShadowCandidates(const RenderScene& scene, co
         for (usize index = 0; index < submission.instances.size(); ++index)
         {
             const MeshInstanceData& instance = submission.instances[index];
-            matrix4x4 model = RenderMath::TRS(instance.position, instance.rotation, instance.scale);
+            matrix4x4 model = Orbeden::Math::TRS(instance.position, instance.rotation, instance.scale);
             if (!IsFiniteMatrix(model)) continue;
 
-            bounds3 worldBounds = localBounds.valid ? RenderMath::TransformBounds(model, localBounds) : bounds3();
+            bounds3 worldBounds = localBounds.valid ? Orbeden::Math::TransformBounds(model, localBounds) : bounds3();
 
             DrawItem item;
             item.source = DrawSource::ExplicitInstance;
@@ -728,7 +728,7 @@ void DrawSubmissionBuilder::BuildShadowItems(const List<DrawItem>& candidates, c
                 && candidates[end].sourceObjectId == first.sourceObjectId)
                 ++end;
         }
-        if (!first.worldBounds.valid || RenderMath::Intersects(lightFrustum, first.worldBounds))
+        if (!first.worldBounds.valid || Orbeden::Math::Intersects(lightFrustum, first.worldBounds))
             items.insert(items.end(), candidates.begin() + static_cast<isize>(begin),
                 candidates.begin() + static_cast<isize>(end));
         begin = end;
@@ -976,15 +976,15 @@ bool BuildGpuMeshInstance(const matrix4x4& model, const color& linearTint, const
     vector3 column2 = { model.m[8], model.m[9], model.m[10] };
 
     //法线矩阵是 3x3 的逆转置：奇异模型会让法线失去意义，整条实例拒绝
-    float32 determinant = RenderMath::Dot(column0, RenderMath::Cross(column1, column2));
+    float32 determinant = Orbeden::Math::Dot(column0, Orbeden::Math::Cross(column1, column2));
     if (!std::isfinite(determinant) || std::fabs(determinant) < 1.0e-8f) return false;
 
     //逆转置后的三列就是两两叉积除以行列式，每列补齐成 vec4
     const vector3 columns[3] =
     {
-        RenderMath::Cross(column1, column2),
-        RenderMath::Cross(column2, column0),
-        RenderMath::Cross(column0, column1),
+        Orbeden::Math::Cross(column1, column2),
+        Orbeden::Math::Cross(column2, column0),
+        Orbeden::Math::Cross(column0, column1),
     };
     float32 inverseDeterminant = 1.0f / determinant;
     for (uint32 index = 0; index < 3; ++index)

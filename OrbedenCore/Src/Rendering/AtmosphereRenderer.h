@@ -46,8 +46,7 @@ public:
     matrix4x4 cameraWorldRotation;
     int32 viewportWidth = 0;
     int32 viewportHeight = 0;
-    //未加载远地形的颜色底板；命中地球的射线由天空着色器按像素解析合成，不烘焙进查找表
-    color groundBackground;
+    //当前世界的大气配置
     AtmosphereSettings settings;
 
     //浓雾：消光系数（每 km）、散射亮度、剖面（雾顶高度、预留、预留、参考球半径，单位 km）
@@ -83,17 +82,19 @@ private:
     GpuShaderProgramID skyLutPass;
     GpuShaderProgramID skyPass;
 
-    //五张查找表目标；颜色纹理随目标释放，句柄在创建时取一次
+    //大气查找表和天空反射目标；颜色纹理随目标释放
     GpuRenderTargetID transmittanceTarget;
     GpuRenderTargetID multipleScatteringTarget;
     GpuRenderTargetID aerialRadianceTarget;
     GpuRenderTargetID aerialOpticalDepthTarget;
     GpuRenderTargetID skyTarget;
+    GpuRenderTargetID skyReflectionTarget;
     GpuTextureID transmittanceTexture;
     GpuTextureID multipleScatteringTexture;
     GpuTextureID aerialRadianceTexture;
     GpuTextureID aerialOpticalDepthTexture;
     GpuTextureID skyTexture;
+    GpuTextureID skyReflectionTexture;
 
     //关闭空气透视时给材质槽占位的 1×1 零纹理
     GpuTextureID neutralTexture;
@@ -119,6 +120,12 @@ private:
     bool skyValid = false;
     AtmosphereFrame aerialKey;
     AtmosphereFrame skyKey;
+    AtmosphereFrame skyReflectionKey;
+    matrix4x4 skyReflectionBasis;
+    float32 skyReflectionHorizon = 0.5f;
+    bool skyReflectionActive = false;
+    GpuShaderProgramID cachedSkyReflectionProgram;
+    GpuShaderProgramID cachedSkyReflectionLutProgram;
     uint32 cachedAerialProgram = 0;
     uint32 cachedSkyProgram = 0;
 
@@ -140,7 +147,7 @@ private:
         bool needFog, bool needSky);
 
     //创建一张无深度颜色目标并取回颜色纹理
-    bool CreateLutTarget(int32 width, int32 height, GpuRenderTargetID& target, GpuTextureID& texture);
+    bool CreateLutTarget(int32 width, int32 height, GpuRenderTargetID& target, GpuTextureID& texture, bool reflectionSampling = false);
 
     //重建太阳透光率查找表
     bool UpdateTransmittance(const AtmosphereQualityDesc& quality);
@@ -153,6 +160,15 @@ private:
 
     //重建天空查找表
     bool UpdateSky(const AtmosphereQualityDesc& quality);
+
+    //按天空状态更新反射方向贴图
+    bool UpdateSkyReflection();
+
+    //比较天空散射参数
+    static bool MatchesSkyLighting(const AtmosphereFrame& current, const AtmosphereFrame& other);
+
+    //比较天空查找表依赖的观察高度与局部方向
+    static bool MatchesSky(const AtmosphereFrame& current, const AtmosphereFrame& other);
 
     //两份帧数据是否逐字段一致，禁止对含 padding 的结构直接比较内存
     static bool MatchesFrame(const AtmosphereFrame& current, const AtmosphereFrame& other);
@@ -188,7 +204,13 @@ public:
         const RenderDirectionalLight* mainLight, GpuResourceManager& gpuResourceManager);
 
     //在当前 Pass 中绘制程序化天空，返回是否成功替代原天空盒
-    bool RenderSky();
+    bool RenderSky(bool reflectionCapture = false);
+
+    //返回当前相机可用的程序化天空反射
+    GpuTextureID GetSkyReflectionTexture() const { return skyReflectionActive ? skyReflectionTexture : GpuTextureID(); }
+
+    //提交当前反射贴图的方向基与地平线位置
+    void BindSkyReflectionUniforms();
 
     //向当前程序提交材质的空气透视参数
     void BindMaterialUniforms();

@@ -154,7 +154,7 @@ public:
     //导入字体资产
     static AssetCollection Import_FONT(std::string path, const AssetImportSettings& settings = {});
 
-    /// <summary>把内存中的材质写回 .orbmat 源文件，供编辑器编辑后保存。</summary>
+    /// <summary>把内存中的材质写回 .orbmat 源文件，供编辑器编辑后保存。</summary>an
     static bool SaveMaterialAsset(const Material& material, const std::string& path, std::string& error);
 
     //导入OBJ为复合资源；settings 里的网格缩放与坐标轴作用于产出的全部网格

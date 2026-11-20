@@ -5115,6 +5115,11 @@
           "Name": "sunRadianceScale",
           "Type": "float32",
           "Doc": "\u6807\u5B9A\u540E\u7684\u592A\u9633\u4EAE\u5EA6\u500D\u7387\uFF0C1 \u4E3A\u4E2D\u6027\uFF0C\u4E0D\u6539\u53D8\u6D88\u5149\u3001\u8868\u9762\u4E3B\u5149\u6216\u73AF\u5883\u5149\u3002"
+        },
+        {
+          "Name": "groundBackgroundColor",
+          "Type": "color",
+          "Doc": "\u7A0B\u5E8F\u5316\u5929\u7A7A\u4E2D\u7684\u5730\u8868\u80CC\u666F\u8272\uFF08\u7EBF\u6027 RGB\uFF09"
         }
       ]
     },
@@ -6712,7 +6717,7 @@
         {
           "Name": "reflectionEnvironment",
           "Type": "Ref\u003CSkybox\u003E",
-          "Doc": "\u72EC\u7ACB\u53CD\u5C04\u73AF\u5883\uFF1B\u672A\u6307\u5B9A\u65F6\u4F7F\u7528 skybox\uFF0C\u4E0D\u53D7\u80CC\u666F\u663E\u793A\u5F00\u5173\u5F71\u54CD"
+          "Doc": "\u72EC\u7ACB\u53CD\u5C04\u73AF\u5883\uFF1B\u672A\u6307\u5B9A\u65F6\u4F18\u5148\u4F7F\u7528\u5F53\u524D\u7A0B\u5E8F\u5316\u5929\u7A7A\uFF0C\u518D\u4F7F\u7528 skybox"
         },
         {
           "Name": "reflectionIntensity",

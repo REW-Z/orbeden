@@ -1,6 +1,6 @@
 #include "Rendering/GeometryExpander.h"
 
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Profiler/Profiler.h"
 #include "Runtime/Object/Mesh.h"
 
@@ -147,7 +147,7 @@ namespace
         vector3 column0 = { model.m[0], model.m[1], model.m[2] };
         vector3 column1 = { model.m[4], model.m[5], model.m[6] };
         vector3 column2 = { model.m[8], model.m[9], model.m[10] };
-        float32 determinant = RenderMath::Dot(column0, RenderMath::Cross(column1, column2));
+        float32 determinant = Orbeden::Math::Dot(column0, Orbeden::Math::Cross(column1, column2));
         if (!std::isfinite(determinant) || std::fabs(determinant) < 1.0e-8f) return false;
 
         //准备原法线算法使用的余子式矩阵
@@ -247,13 +247,13 @@ namespace
         expanded.uv[1] = values[1];
         _mm_storeu_ps(expanded.tint, transform.tint);
 #else
-        vector3 world = RenderMath::TransformPoint(transform.model, position);
+        vector3 world = Orbeden::Math::TransformPoint(transform.model, position);
         expanded.position[0] = world.x;
         expanded.position[1] = world.y;
         expanded.position[2] = world.z;
 
-        vector3 normal = RenderMath::Normalize({ RenderMath::Dot(transform.normalRows[0], sourceNormal),
-            RenderMath::Dot(transform.normalRows[1], sourceNormal), RenderMath::Dot(transform.normalRows[2], sourceNormal) });
+        vector3 normal = Orbeden::Math::Normalize({ Orbeden::Math::Dot(transform.normalRows[0], sourceNormal),
+            Orbeden::Math::Dot(transform.normalRows[1], sourceNormal), Orbeden::Math::Dot(transform.normalRows[2], sourceNormal) });
         expanded.normal[0] = normal.x;
         expanded.normal[1] = normal.y;
         expanded.normal[2] = normal.z;
@@ -261,10 +261,10 @@ namespace
         expanded.uv[0] = sourceUv.x * transform.uvRect.b + transform.uvRect.r;
         expanded.uv[1] = sourceUv.y * transform.uvRect.a + transform.uvRect.g;
 
-        vector3 tangent = RenderMath::TransformDirection(transform.model, tangentSource);
-        float32 projection = RenderMath::Dot(tangent, normal);
+        vector3 tangent = Orbeden::Math::TransformDirection(transform.model, tangentSource);
+        float32 projection = Orbeden::Math::Dot(tangent, normal);
         tangent = { tangent.x - normal.x * projection, tangent.y - normal.y * projection, tangent.z - normal.z * projection };
-        float32 tangentLength = std::sqrt(RenderMath::Dot(tangent, tangent));
+        float32 tangentLength = std::sqrt(Orbeden::Math::Dot(tangent, tangent));
         if (tangentLength > 1.0e-6f)
             tangent = { tangent.x / tangentLength, tangent.y / tangentLength, tangent.z / tangentLength };
         else tangent = { 0.0f, 0.0f, 0.0f };

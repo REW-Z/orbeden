@@ -6,7 +6,7 @@
 #include "Runtime/Native/InteropText.h"
 #include "Rendering/ParticleRenderer.h"
 #include "Rendering/GeometryExpander.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Object/Camera.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/CookedAssetSerializer.h"
@@ -232,7 +232,7 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
     //粒子快照每帧只抓一次，本帧所有相机共用
     if (frameWorld) CaptureParticleFrame(*frameWorld);
     else particleSnapshot = ParticleFrameSnapshot();
-    //选择全局反射来源并准备本帧采样数据
+    //准备手动反射贴图或当前天空盒的后备采样数据
     const RenderSettings& settings = scene.renderSettings;
     Skybox* source = settings.reflectionEnvironment.GetInstanceId().IsValid()
         ? settings.reflectionEnvironment.Get() : settings.skybox.Get();
@@ -789,6 +789,10 @@ bool ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& s
     backend->GetPipelineState().blendMode = batch.key.blendMode;
     backend->GetPipelineState().cull = ConvertCullModeForBackend(static_cast<CullMode>(batch.key.cull));
 
+    const GpuTextureID skyReflection = bindings.atmosphereReflectionSlot >= 0
+        ? atmosphere.GetSkyReflectionTexture() : GpuTextureID();
+    const bool useSkyReflection = skyReflection.IsValid();
+
     //相机、光照与环境反射对本队列的每个 program 只提交一次
     if (configuredPrograms.insert(programId).second)
     {
@@ -802,7 +806,19 @@ bool ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& s
         if (bindings.useCameraTextures)
             parameters.SetInt("u_UseCameraTextures", batch.key.queue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
         if (bindings.useAmbientColor) parameters.SetColor("u_AmbientColor", scene.renderSettings.ambientColor);
-        if (bindings.useEnvironmentIntensity) parameters.SetFloat("u_EnvironmentIntensity", environmentReflection.intensity);
+        if (bindings.useEnvironmentIntensity)
+        {
+            parameters.SetFloat("u_EnvironmentIntensity", useSkyReflection
+                ? scene.renderSettings.reflectionIntensity : environmentReflection.intensity);
+        }
+        if (bindings.atmosphereReflectionSlot >= 0)
+        {
+            parameters.SetInt("u_UseAtmosphereReflection", useSkyReflection ? 1 : 0);
+            if (useSkyReflection)
+            {
+                atmosphere.BindSkyReflectionUniforms();
+            }
+        }
         if (bindings.useEnvironmentMaxLod) parameters.SetFloat("u_EnvironmentMaxLod", environmentReflection.maxLod);
         if (bindings.useLightDirection)
             parameters.SetVector3("u_LightDirection", mainLight ? mainLight->direction : vector3{ 0.0f, -1.0f, 0.0f });
@@ -856,6 +872,11 @@ bool ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& s
     {
         parameters.SetInt("u_EnvironmentTexture", bindings.environmentSlot);
         backend->BindCubeTexture(static_cast<uint32>(bindings.environmentSlot), environmentReflection.texture);
+    }
+    if (bindings.atmosphereReflectionSlot >= 0)
+    {
+        parameters.SetInt("u_AtmosphereReflectionTexture", bindings.atmosphereReflectionSlot);
+        backend->BindTexture(static_cast<uint32>(bindings.atmosphereReflectionSlot), skyReflection);
     }
     bool useCameraTextures = batch.key.queue == DrawQueue::Refraction && cameraTexturesReady;
     if (bindings.cameraColorSlot >= 0)
@@ -1016,7 +1037,7 @@ void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera&
     view.m[12] = 0.0f;
     view.m[13] = 0.0f;
     view.m[14] = 0.0f;
-    matrix4x4 viewProjection = RenderMath::Mul(camera.projectionMatrix, view);
+    matrix4x4 viewProjection = Orbeden::Math::Mul(camera.projectionMatrix, view);
 
     //绘制天空盒立方体
     backend->GetPipelineState().depthTest = false;

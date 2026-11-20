@@ -7,7 +7,7 @@
 #include "Runtime/Object/WheelCollider.h"
 #include "InputManager/InputManager.h"
 #include "Rendering/RenderSystem.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/World.h"
@@ -167,7 +167,7 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
             const float32* matrix = wheelTransform->GetWorldMatrix().m;
             float32 scale = std::sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]);
             float32 compression = wheel->GetCompression();
-            vector3 mount = RenderMath::TransformPoint(wheelTransform->GetWorldMatrix(), wheel->wheelOffset);
+            vector3 mount = Orbeden::Math::TransformPoint(wheelTransform->GetWorldMatrix(), wheel->wheelOffset);
             vector3 contact = Add(mount, Scale(normal, -((wheel->suspensionRestLength + wheel->wheelRadius) * scale - compression)));
             vector3 offset = Add(contact, Scale(center, -1.0f));
             vector3 velocity = Add(body->GetLinearVelocity(), Cross(body->GetAngularVelocity(), offset));

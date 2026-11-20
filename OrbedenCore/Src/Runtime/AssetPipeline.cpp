@@ -17,7 +17,7 @@
 #include "FileSystem/PathDefines.h"
 #include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/AssetPipeline.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Reflection.h"
@@ -230,11 +230,11 @@ namespace
             axisConversion.m[9] = 1.0f;
             axisConversion.m[10] = 0.0f;
         }
-        matrix4x4 inverseAxis = RenderMath::Inverse(axisConversion);
+        matrix4x4 inverseAxis = Orbeden::Math::Inverse(axisConversion);
         for (AssetModelNode& node : collection.modelNodes)
         {
             if (convertUpAxis)
-                node.localMatrix = RenderMath::Mul(RenderMath::Mul(axisConversion, node.localMatrix), inverseAxis);
+                node.localMatrix = Orbeden::Math::Mul(Orbeden::Math::Mul(axisConversion, node.localMatrix), inverseAxis);
             if (settings.hasMeshScale)
                 for (int32 index = 12; index < 15; ++index) node.localMatrix.m[index] *= settings.meshScale;
         }

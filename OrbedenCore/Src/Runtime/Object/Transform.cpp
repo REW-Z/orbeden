@@ -1,7 +1,7 @@
 #include "Runtime/Object/Transform.h"
 
 #include "Runtime/World.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 
 #include <algorithm>
 #include <cmath>
@@ -144,7 +144,7 @@ void Transform::SetParent(EnsId value)
 //读取本地变换矩阵
 matrix4x4 Transform::GetLocalMatrix() const
 {
-    return RenderMath::TRS(GetResolvedLocalPosition(), localRotation, localScale);
+    return Orbeden::Math::TRS(GetResolvedLocalPosition(), localRotation, localScale);
 }
 
 //读取世界变换失效版本
@@ -183,8 +183,8 @@ void Transform::UpdateWorldTransform() const
     Transform* parentTransform = world ? world->GetTransform(parent) : nullptr;
     if (parentTransform)
     {
-        worldMatrix = RenderMath::Mul(parentTransform->GetWorldMatrix(), GetLocalMatrix());
-        worldRotation = RenderMath::Mul(parentTransform->GetWorldRotation(), localRotation);
+        worldMatrix = Orbeden::Math::Mul(parentTransform->GetWorldMatrix(), GetLocalMatrix());
+        worldRotation = Orbeden::Math::Mul(parentTransform->GetWorldRotation(), localRotation);
     }
     else
     {
@@ -192,7 +192,7 @@ void Transform::UpdateWorldTransform() const
         worldRotation = localRotation;
     }
 
-    worldPosition = RenderMath::GetTranslation(worldMatrix);
+    worldPosition = Orbeden::Math::GetTranslation(worldMatrix);
     worldTransformValid = true;
 }
 

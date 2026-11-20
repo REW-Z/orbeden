@@ -3,7 +3,7 @@
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
 #include "Rendering/GpuResourceManager.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/World.h"
 
 
@@ -144,8 +144,8 @@ void EditorSceneWireframe::Render(RenderBackend& renderBackend, GpuResourceManag
         const bounds3 localBounds = mesh->GetLocalBounds();
         for (const MeshInstanceData& instance : submission.instances)
         {
-            matrix4x4 model = RenderMath::TRS(instance.position, instance.rotation, instance.scale);
-            if (RenderMath::Intersects(camera.viewFrustum, RenderMath::TransformBounds(model, localBounds)))
+            matrix4x4 model = Orbeden::Math::TRS(instance.position, instance.rotation, instance.scale);
+            if (Orbeden::Math::Intersects(camera.viewFrustum, Orbeden::Math::TransformBounds(model, localBounds)))
                 AppendMeshDraw(mesh, subMesh.indexStart, subMesh.indexCount, model);
         }
     }

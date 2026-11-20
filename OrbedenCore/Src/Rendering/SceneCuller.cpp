@@ -1,6 +1,6 @@
 #include "Rendering/SceneCuller.h"
 
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 
@@ -19,7 +19,7 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
         const StaticMeshRendererRenderState& state = renderer->renderState;
         if (!state.mesh || !state.worldBounds.valid) continue;
         if ((state.drawLayer & layerMask) == 0) continue;
-        if (!RenderMath::Intersects(camera.viewFrustum, state.worldBounds)) continue;
+        if (!Orbeden::Math::Intersects(camera.viewFrustum, state.worldBounds)) continue;
 
         //计算相机距离平方
         vector3 toItem =
@@ -32,7 +32,7 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
         //记录可见渲染器
         VisibleItem visibleItem;
         visibleItem.renderer = renderer;
-        visibleItem.cameraDistance = RenderMath::Dot(toItem, toItem);
+        visibleItem.cameraDistance = Orbeden::Math::Dot(toItem, toItem);
         visibleSet.visibleItems.push_back(visibleItem);
     }
 }

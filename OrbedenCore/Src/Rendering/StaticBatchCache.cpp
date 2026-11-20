@@ -4,7 +4,7 @@
 #include "Profiler/Profiler.h"
 #include "Rendering/GeometryExpander.h"
 #include "Rendering/GpuResourceManager.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
@@ -428,7 +428,7 @@ void StaticBatchCache::CollectVisibleRanges(const StaticBatchGroup& group, const
     for (const StaticBatchMember& member : group.members)
     {
         bool visible = (group.drawLayer & drawLayerMask) != 0 &&
-            (!member.worldBounds.valid || RenderMath::Intersects(viewFrustum, member.worldBounds));
+            (!member.worldBounds.valid || Orbeden::Math::Intersects(viewFrustum, member.worldBounds));
         if (!visible)
         {
             //可见性断开就在这里切段，保留每个源对象自己的裁剪结果

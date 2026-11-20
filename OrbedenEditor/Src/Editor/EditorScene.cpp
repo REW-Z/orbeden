@@ -20,7 +20,7 @@
 #include "Editor/ManagedEditorBridge.h"
 #include "Platform/GlfwWindow.h"
 #include "Profiler/Profiler.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Native/NativeCall.h"
@@ -120,13 +120,13 @@ namespace
     //把局部矩阵分解回Transform使用的TRS字段。
     void DecomposeTransform(const matrix4x4& matrix, vector3& position, quaternion& rotation, vector3& scale)
     {
-        position = RenderMath::GetTranslation(matrix);
+        position = Orbeden::Math::GetTranslation(matrix);
         scale = { GetAxisLength(matrix, 0), GetAxisLength(matrix, 4), GetAxisLength(matrix, 8) };
 
         vector3 xAxis = { matrix.m[0], matrix.m[1], matrix.m[2] };
         vector3 yAxis = { matrix.m[4], matrix.m[5], matrix.m[6] };
         vector3 zAxis = { matrix.m[8], matrix.m[9], matrix.m[10] };
-        if (RenderMath::Dot(RenderMath::Cross(xAxis, yAxis), zAxis) < 0.0f) scale.x = -scale.x;
+        if (Orbeden::Math::Dot(Orbeden::Math::Cross(xAxis, yAxis), zAxis) < 0.0f) scale.x = -scale.x;
         rotation = GetRotation(matrix, scale);
     }
 
@@ -192,20 +192,20 @@ namespace
         float32 yaw = yawDegrees * Pi / 180.0f;
         float32 pitch = pitchDegrees * Pi / 180.0f;
         float32 cosPitch = std::cos(pitch);
-        return RenderMath::Normalize({ -std::sin(yaw) * cosPitch, std::sin(pitch), -std::cos(yaw) * cosPitch });
+        return Orbeden::Math::Normalize({ -std::sin(yaw) * cosPitch, std::sin(pitch), -std::cos(yaw) * cosPitch });
     }
 
     //获取相机右方向。
     vector3 GetRight(float32 yawDegrees)
     {
         float32 yaw = yawDegrees * Pi / 180.0f;
-        return RenderMath::Normalize({ std::cos(yaw), 0.0f, -std::sin(yaw) });
+        return Orbeden::Math::Normalize({ std::cos(yaw), 0.0f, -std::sin(yaw) });
     }
 
     //获取相机上方向。
     vector3 GetUp(float32 yawDegrees, float32 pitchDegrees)
     {
-        return RenderMath::Normalize(RenderMath::Cross(GetRight(yawDegrees), GetForward(yawDegrees, pitchDegrees)));
+        return Orbeden::Math::Normalize(Orbeden::Math::Cross(GetRight(yawDegrees), GetForward(yawDegrees, pitchDegrees)));
     }
 
     //读取编辑器相机的半竖直视场角（弧度）；组件缺失时按 60 度算。平移按焦点平面换算像素尺寸要用它
@@ -335,7 +335,7 @@ namespace
             const bounds3* localBounds = mesh ? &mesh->GetLocalBounds() : nullptr;
             if (localBounds && localBounds->valid)
             {
-                bounds3 worldBounds = RenderMath::TransformBounds(transform->GetWorldMatrix(), *localBounds);
+                bounds3 worldBounds = Orbeden::Math::TransformBounds(transform->GetWorldMatrix(), *localBounds);
                 if (worldBounds.valid)
                 {
                     merged = hasBounds ? UnionBounds(merged, worldBounds) : worldBounds;
@@ -1019,7 +1019,7 @@ bool EditorScene::MoveEns(World& world, EnsId child, EnsId parent, EnsId before,
     if (!preserveWorld || oldParent == parent) return true;
     Transform* parentTransform = world.GetTransform(parent);
     matrix4x4 localMatrix = parentTransform
-        ? RenderMath::Mul(RenderMath::Inverse(parentTransform->GetWorldMatrix()), worldMatrix) : worldMatrix;
+        ? Orbeden::Math::Mul(Orbeden::Math::Inverse(parentTransform->GetWorldMatrix()), worldMatrix) : worldMatrix;
     vector3 position, scale;
     quaternion rotation;
     DecomposeTransform(localMatrix, position, rotation, scale);
@@ -1404,7 +1404,7 @@ bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPo
         Transform* transform = app.GetWorld().GetTransform(rendererEns);
         if (currentRenderer != renderer || !transform) continue;
 
-        bounds3 worldBounds = RenderMath::TransformBounds(transform->GetWorldMatrix(), mesh->GetLocalBounds());
+        bounds3 worldBounds = Orbeden::Math::TransformBounds(transform->GetWorldMatrix(), mesh->GetLocalBounds());
         if (!worldBounds.valid) continue;
 
         //先用世界包围盒排除不可能命中的绘制项。
@@ -1467,25 +1467,25 @@ bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPo
                 uint32 indexC = indices[index + 2];
                 if (indexA >= vertices.size() || indexB >= vertices.size() || indexC >= vertices.size()) continue;
 
-                vector3 a = RenderMath::TransformPoint(transform->GetWorldMatrix(), vertices[indexA]);
-                vector3 b = RenderMath::TransformPoint(transform->GetWorldMatrix(), vertices[indexB]);
-                vector3 c = RenderMath::TransformPoint(transform->GetWorldMatrix(), vertices[indexC]);
+                vector3 a = Orbeden::Math::TransformPoint(transform->GetWorldMatrix(), vertices[indexA]);
+                vector3 b = Orbeden::Math::TransformPoint(transform->GetWorldMatrix(), vertices[indexB]);
+                vector3 c = Orbeden::Math::TransformPoint(transform->GetWorldMatrix(), vertices[indexC]);
                 vector3 edgeAB = { b.x - a.x, b.y - a.y, b.z - a.z };
                 vector3 edgeAC = { c.x - a.x, c.y - a.y, c.z - a.z };
-                vector3 crossDirection = RenderMath::Cross(rayDirection, edgeAC);
-                float32 determinant = RenderMath::Dot(edgeAB, crossDirection);
+                vector3 crossDirection = Orbeden::Math::Cross(rayDirection, edgeAC);
+                float32 determinant = Orbeden::Math::Dot(edgeAB, crossDirection);
                 if (std::abs(determinant) <= 0.000001f) continue;
 
                 float32 inverseDeterminant = 1.0f / determinant;
                 vector3 toOrigin = { rayOrigin.x - a.x, rayOrigin.y - a.y, rayOrigin.z - a.z };
-                float32 u = RenderMath::Dot(toOrigin, crossDirection) * inverseDeterminant;
+                float32 u = Orbeden::Math::Dot(toOrigin, crossDirection) * inverseDeterminant;
                 if (u < 0.0f || u > 1.0f) continue;
 
-                vector3 crossOrigin = RenderMath::Cross(toOrigin, edgeAB);
-                float32 v = RenderMath::Dot(rayDirection, crossOrigin) * inverseDeterminant;
+                vector3 crossOrigin = Orbeden::Math::Cross(toOrigin, edgeAB);
+                float32 v = Orbeden::Math::Dot(rayDirection, crossOrigin) * inverseDeterminant;
                 if (v < 0.0f || u + v > 1.0f) continue;
 
-                float32 distance = RenderMath::Dot(edgeAC, crossOrigin) * inverseDeterminant;
+                float32 distance = Orbeden::Math::Dot(edgeAC, crossOrigin) * inverseDeterminant;
                 if (distance >= 0.0f && distance < closestDistance)
                 {
                     closestDistance = distance;
@@ -1653,12 +1653,12 @@ void EditorScene::PrepareGizmoView(const RenderScene& scene)
         || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return;
 
     gizmoViewProjection = camera->viewProjectionMatrix;
-    gizmoCameraRight = RenderMath::Normalize(
-        RenderMath::TransformDirection(camera->worldMatrix, { 1.0f, 0.0f, 0.0f }));
-    gizmoCameraUp = RenderMath::Normalize(
-        RenderMath::TransformDirection(camera->worldMatrix, { 0.0f, 1.0f, 0.0f }));
-    gizmoCameraForward = RenderMath::Normalize(
-        RenderMath::TransformDirection(camera->worldMatrix, { 0.0f, 0.0f, -1.0f }));
+    gizmoCameraRight = Orbeden::Math::Normalize(
+        Orbeden::Math::TransformDirection(camera->worldMatrix, { 1.0f, 0.0f, 0.0f }));
+    gizmoCameraUp = Orbeden::Math::Normalize(
+        Orbeden::Math::TransformDirection(camera->worldMatrix, { 0.0f, 1.0f, 0.0f }));
+    gizmoCameraForward = Orbeden::Math::Normalize(
+        Orbeden::Math::TransformDirection(camera->worldMatrix, { 0.0f, 0.0f, -1.0f }));
 
     gizmoView.viewProjection = gizmoViewProjection;
     gizmoView.cameraRight = gizmoCameraRight;

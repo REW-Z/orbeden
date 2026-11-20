@@ -203,7 +203,7 @@
     <ClInclude Include="Src\Rendering\OutputPass.h" />
     <ClInclude Include="Src\Rendering\ParticleRenderer.h" />
     <ClInclude Include="Src\Rendering\RenderItemSorter.h" />
-    <ClInclude Include="Src\Rendering\RenderMath.h" />
+    <ClInclude Include="Src\Rendering\Math.h" />
     <ClInclude Include="Src\Rendering\StaticBatchCache.h" />
     <ClInclude Include="Src\Rendering\RenderScene.h" />
     <ClInclude Include="Src\Rendering\RenderSystem.h" />
@@ -310,7 +310,7 @@
     <ClCompile Include="Src\Rendering\OutputPass.cpp" />
     <ClCompile Include="Src\Rendering\ParticleRenderer.cpp" />
     <ClCompile Include="Src\Rendering\RenderItemSorter.cpp" />
-    <ClCompile Include="Src\Rendering\RenderMath.cpp" />
+    <ClCompile Include="Src\Rendering\Math.cpp" />
     <ClCompile Include="Src\Rendering\StaticBatchCache.cpp" />
     <ClCompile Include="Src\Rendering\RenderScene.cpp" />
     <ClCompile Include="Src\Rendering\RenderSystem.cpp" />

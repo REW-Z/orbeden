@@ -3,7 +3,7 @@
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
 #include "Rendering/ColorSpace.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/DisplaySettings.h"
 #include "Runtime/Object/Camera.h"
@@ -814,14 +814,14 @@ void RenderSystem::PrepareCameraRenderData()
 
         //更新相机投影数据
         float32 aspect = static_cast<float32>(camera.viewportWidth) / static_cast<float32>(camera.viewportHeight);
-        camera.projectionMatrix = RenderMath::Perspective(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane);
-        camera.viewProjectionMatrix = RenderMath::Mul(camera.projectionMatrix, camera.viewMatrix);
-        camera.viewFrustum = RenderMath::BuildFrustum(camera.viewProjectionMatrix);
+        camera.projectionMatrix = Orbeden::Math::Perspective(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane);
+        camera.viewProjectionMatrix = Orbeden::Math::Mul(camera.projectionMatrix, camera.viewMatrix);
+        camera.viewFrustum = Orbeden::Math::BuildFrustum(camera.viewProjectionMatrix);
         camera.reversedDepth = backend->SupportsReversedDepth();
         camera.gpuProjectionMatrix = camera.reversedDepth
-            ? RenderMath::PerspectiveReversed(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane)
+            ? Orbeden::Math::PerspectiveReversed(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane)
             : camera.projectionMatrix;
-        camera.gpuViewProjectionMatrix = RenderMath::Mul(camera.gpuProjectionMatrix, camera.viewMatrix);
+        camera.gpuViewProjectionMatrix = Orbeden::Math::Mul(camera.gpuProjectionMatrix, camera.viewMatrix);
 
         //曝光：项目级默认值，相机可单独覆盖
         camera.exposure = (camera.camera && camera.camera->overrideExposure)

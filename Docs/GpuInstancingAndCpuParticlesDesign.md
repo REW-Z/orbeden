@@ -461,7 +461,7 @@ angle 增量取本积分段中点归一化寿命的 angularVelocityCurve*dAlive�
 
 尺寸=`startSize*inheritedSize*max(0,sizeCurve(age/lifetime))`；线性颜色=`startLinearColor*inheritedColor*gradient(age/lifetime)`。尺寸为0仍模拟，不提交渲染与非零半径碰撞。
 
-Local 发射器矩阵非有限或奇异时，整个发射器本步冻结时间、积分、出生和事件，保留状态，报一次错误直到恢复；不能用 RenderMath::Inverse 的单位阵失败值继续模拟。World 已出生粒子不依赖当前发射器逆矩阵，发射器非法仅暂停新出生。
+Local 发射器矩阵非有限或奇异时，整个发射器本步冻结时间、积分、出生和事件，保留状态，报一次错误直到恢复；不能用 Orbeden::Math::Inverse 的单位阵失败值继续模拟。World 已出生粒子不依赖当前发射器逆矩阵，发射器非法仅暂停新出生。
 
 ## 12. 世界碰撞、拖尾与子发射器
 

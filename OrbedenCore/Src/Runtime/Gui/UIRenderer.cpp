@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Log/Log.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Gui/UIShaderSources.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Object.h"
@@ -398,7 +398,7 @@ void UIRenderer::RenderCanvas(const RetainedGuiFrame::CanvasView& canvas, const 
     }
 
     currentViewProjection = canvasWorld
-        ? RenderMath::Mul(*canvasWorld, canvas.submission->viewProjection)
+        ? Orbeden::Math::Mul(*canvasWorld, canvas.submission->viewProjection)
         : canvas.submission->viewProjection;
     currentTarget = target;
     //只有离屏输出的第一次进入才清屏；裁剪层进出会用 None 重新进入同一目标。

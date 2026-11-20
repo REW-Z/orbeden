@@ -178,7 +178,7 @@
     <ClInclude Include="Src\Rendering\RenderTypes.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Rendering\RenderMath.h">
+    <ClInclude Include="Src\Rendering\Math.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\StaticBatchCache.h">
@@ -457,7 +457,7 @@
     <ClCompile Include="Src\Runtime\Object\StaticMeshRenderer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Rendering\RenderMath.cpp">
+    <ClCompile Include="Src\Rendering\Math.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\StaticBatchCache.cpp">

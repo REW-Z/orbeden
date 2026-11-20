@@ -3,7 +3,7 @@
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
 #include "Rendering/GpuResourceManager.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Rendering/RenderScene.h"
 #include "ResourceManager/ResourceManager.h"
 
@@ -28,6 +28,12 @@ namespace
 
     //大气要求的最低片元纹理槽数量：材质纹理之外还要放阴影、相机纹理、环境反射与两张图集
     constexpr uint32 MinimumFragmentTextureUnits = 16;
+
+    //经纬反射贴图尺寸与观察位置的更新阈值
+    constexpr int32 SkyReflectionWidth = 256;
+    constexpr int32 SkyReflectionHeight = 128;
+    constexpr float32 SkyReflectionHeightStepKm = 0.02f;
+    constexpr float32 SkyReflectionUpCos = 0.9999976f;
 
     //读取矩阵一列的前三个分量
     vector3 GetMatrixColumn(const matrix4x4& matrix, int32 column)
@@ -126,6 +132,7 @@ void AtmosphereRenderer::ReleaseTargets()
         backend->DeleteRenderTarget(aerialRadianceTarget);
         backend->DeleteRenderTarget(aerialOpticalDepthTarget);
         backend->DeleteRenderTarget(skyTarget);
+        backend->DeleteRenderTarget(skyReflectionTarget);
     }
 
     transmittanceTarget = GpuRenderTargetID();
@@ -133,11 +140,16 @@ void AtmosphereRenderer::ReleaseTargets()
     aerialRadianceTarget = GpuRenderTargetID();
     aerialOpticalDepthTarget = GpuRenderTargetID();
     skyTarget = GpuRenderTargetID();
+    skyReflectionTarget = GpuRenderTargetID();
     transmittanceTexture = GpuTextureID();
     multipleScatteringTexture = GpuTextureID();
     aerialRadianceTexture = GpuTextureID();
     aerialOpticalDepthTexture = GpuTextureID();
     skyTexture = GpuTextureID();
+    skyReflectionTexture = GpuTextureID();
+    skyReflectionActive = false;
+    cachedSkyReflectionProgram = GpuShaderProgramID();
+    cachedSkyReflectionLutProgram = GpuShaderProgramID();
     targetsCreated = false;
     transmittanceValid = false;
     multipleScatteringValid = false;
@@ -174,13 +186,15 @@ void AtmosphereRenderer::InvalidateResources()
 }
 
 //创建一张无深度颜色目标并取回颜色纹理
-bool AtmosphereRenderer::CreateLutTarget(int32 width, int32 height, GpuRenderTargetID& target, GpuTextureID& texture)
+bool AtmosphereRenderer::CreateLutTarget(int32 width, int32 height, GpuRenderTargetID& target, GpuTextureID& texture, bool reflectionSampling)
 {
     GpuRenderTargetDesc desc;
     desc.width = width;
     desc.height = height;
     desc.colorOnly = true;
     desc.linearColorFilter = true;
+    desc.colorMipmaps = reflectionSampling;
+    desc.repeatColor = reflectionSampling;
     desc.format = GpuRenderTargetFormat::RGBA16F;
     target = backend->CreateRenderTarget(desc);
     texture = backend->GetRenderTargetColorTexture(target);
@@ -464,7 +478,7 @@ bool AtmosphereRenderer::UpdateSky(const AtmosphereQualityDesc& quality)
     if (!skyLutPass.IsValid() || !skyTarget.IsValid()) return false;
 
     //天空查找表与图集各自记录缓存键，两者可以单独重建
-    if (skyValid && cachedSkyProgram == skyLutPass.id && MatchesFrame(skyKey, frame)) return true;
+    if (skyValid && cachedSkyProgram == skyLutPass.id && MatchesSky(skyKey, frame)) return true;
 
     if (!RenderLut(skyTarget, quality.skyWidth, quality.skyHeight, skyLutPass, quality.skySteps, 0)) return false;
 
@@ -474,28 +488,118 @@ bool AtmosphereRenderer::UpdateSky(const AtmosphereQualityDesc& quality)
     return true;
 }
 
+//按当前大气状态生成全方向 HDR 反射贴图
+bool AtmosphereRenderer::UpdateSkyReflection()
+{
+    PROFILE("Render/Atmosphere/UpdateSkyReflection");
+    if (!backend->HasShaderParameter(skyPass, "u_AtmosphereReflectionCapture")) return false;
+
+    const AtmosphereFrame& previous = skyReflectionKey;
+    if (cachedSkyReflectionProgram.id == skyPass.id && cachedSkyReflectionLutProgram.id == skyLutPass.id
+        && MatchesSkyLighting(previous, frame)
+        && std::abs(previous.cameraHeightKm - frame.cameraHeightKm) < SkyReflectionHeightStepKm
+        && Orbeden::Math::Dot(previous.cameraUp, frame.cameraUp) > SkyReflectionUpCos
+        && previous.settings.groundBackgroundColor.r == frame.settings.groundBackgroundColor.r
+        && previous.settings.groundBackgroundColor.g == frame.settings.groundBackgroundColor.g
+        && previous.settings.groundBackgroundColor.b == frame.settings.groundBackgroundColor.b
+        && previous.denseFogExtinction == frame.denseFogExtinction
+        && previous.denseFogDistanceMode == frame.denseFogDistanceMode
+        && previous.denseFogTopFadeKm == frame.denseFogTopFadeKm
+        && previous.denseFogScattering.r == frame.denseFogScattering.r
+        && previous.denseFogScattering.g == frame.denseFogScattering.g
+        && previous.denseFogScattering.b == frame.denseFogScattering.b
+        && previous.denseFogProfile.r == frame.denseFogProfile.r)
+    {
+        return true;
+    }
+
+    //高空背景直接积分，反射贴图更新时才准备高空查找表
+    if (frame.cameraHeightKm >= 16.0f && !UpdateSky(GetQualityDesc(frame.quality)))
+    {
+        return false;
+    }
+
+    //按需分配反射颜色目标
+    if (!skyReflectionTarget.IsValid()
+        && !CreateLutTarget(SkyReflectionWidth, SkyReflectionHeight, skyReflectionTarget, skyReflectionTexture, true))
+    {
+        ReportResourceError("Atmosphere sky reflection target creation failed.");
+        return false;
+    }
+
+    //按大气局部向上方向排列反射贴图的纬线
+    const vector3& up = frame.cameraUp;
+    const vector3 axis = std::abs(up.z) < 0.99f ? vector3{ 0.0f, 0.0f, 1.0f } : vector3{ 1.0f, 0.0f, 0.0f };
+    const vector3 east = Orbeden::Math::Normalize(Orbeden::Math::Cross(up, axis));
+    const vector3 north = Orbeden::Math::Cross(east, up);
+    skyReflectionBasis = { {
+        east.x, east.y, east.z, 0.0f,
+        up.x, up.y, up.z, 0.0f,
+        north.x, north.y, north.z, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
+    } };
+    const float64 height = std::max(frame.cameraHeightKm, 0.0f);
+    const float64 radius = frame.settings.planetRadiusMeters * 0.001;
+    const float64 horizon = -std::sqrt(height * (2.0 * radius + height)) / (radius + height);
+    constexpr float64 Pi = 3.14159265358979323846;
+    skyReflectionHorizon = static_cast<float32>(0.5 + std::asin(std::clamp(horizon, -1.0, 0.0)) / Pi);
+    cachedSkyReflectionProgram = {};
+
+    //使用程序化天空着色器绘制完整视线范围
+    RenderPassDesc passDesc;
+    passDesc.width = SkyReflectionWidth;
+    passDesc.height = SkyReflectionHeight;
+    passDesc.renderTarget = skyReflectionTarget;
+    passDesc.clearMode = ClearMode::ColorOnly;
+    backend->BeginPass(passDesc);
+    backend->GetPipelineState().cull = CullMode::None;
+    const bool rendered = RenderSky(true);
+    backend->EndPass();
+
+    if (rendered)
+    {
+        backend->GenerateRenderTargetMipmaps(skyReflectionTarget);
+        skyReflectionKey = frame;
+        cachedSkyReflectionProgram = skyPass;
+        cachedSkyReflectionLutProgram = skyLutPass;
+    }
+    return rendered;
+}
+
+//比较大气介质与太阳
+bool AtmosphereRenderer::MatchesSkyLighting(const AtmosphereFrame& current, const AtmosphereFrame& other)
+{
+    return current.quality == other.quality
+        && current.sunDirection.x == other.sunDirection.x && current.sunDirection.y == other.sunDirection.y && current.sunDirection.z == other.sunDirection.z
+        && current.sunRadiance.r == other.sunRadiance.r && current.sunRadiance.g == other.sunRadiance.g && current.sunRadiance.b == other.sunRadiance.b
+        && current.settings.planetRadiusMeters == other.settings.planetRadiusMeters
+        && current.settings.aerosolDensity == other.settings.aerosolDensity;
+}
+
+bool AtmosphereRenderer::MatchesSky(const AtmosphereFrame& current, const AtmosphereFrame& other)
+{
+    return MatchesSkyLighting(current, other)
+        && current.cameraHeightKm == other.cameraHeightKm
+        && current.cameraUp.x == other.cameraUp.x && current.cameraUp.y == other.cameraUp.y && current.cameraUp.z == other.cameraUp.z;
+}
+
 bool AtmosphereRenderer::MatchesFrame(const AtmosphereFrame& current, const AtmosphereFrame& other)
 {
-    return current.fogActive == other.fogActive
+    return MatchesSky(current, other)
+        && current.fogActive == other.fogActive
         && current.skyActive == other.skyActive
-        && current.quality == other.quality
-        && current.cameraHeightKm == other.cameraHeightKm
         && current.maxDistanceKm == other.maxDistanceKm
-        && current.cameraUp.x == other.cameraUp.x && current.cameraUp.y == other.cameraUp.y && current.cameraUp.z == other.cameraUp.z
-        && current.sunDirection.x == other.sunDirection.x && current.sunDirection.y == other.sunDirection.y && current.sunDirection.z == other.sunDirection.z
-        && current.sunRadiance.r == other.sunRadiance.r && current.sunRadiance.g == other.sunRadiance.g
-        && current.sunRadiance.b == other.sunRadiance.b && current.sunRadiance.a == other.sunRadiance.a
+        && current.sunRadiance.a == other.sunRadiance.a
         && std::equal(std::begin(current.inverseProjection.m), std::end(current.inverseProjection.m), std::begin(other.inverseProjection.m))
         && std::equal(std::begin(current.cameraWorldRotation.m), std::end(current.cameraWorldRotation.m), std::begin(other.cameraWorldRotation.m))
         && current.viewportWidth == other.viewportWidth
         && current.viewportHeight == other.viewportHeight
-        && current.groundBackground.r == other.groundBackground.r && current.groundBackground.g == other.groundBackground.g
-        && current.groundBackground.b == other.groundBackground.b && current.groundBackground.a == other.groundBackground.a
+        && current.settings.groundBackgroundColor.r == other.settings.groundBackgroundColor.r
+        && current.settings.groundBackgroundColor.g == other.settings.groundBackgroundColor.g
+        && current.settings.groundBackgroundColor.b == other.settings.groundBackgroundColor.b
         && current.settings.fogEnabled == other.settings.fogEnabled
         && current.settings.quality == other.settings.quality
-        && current.settings.planetRadiusMeters == other.settings.planetRadiusMeters
         && current.settings.metersPerWorldUnit == other.settings.metersPerWorldUnit
-        && current.settings.aerosolDensity == other.settings.aerosolDensity
         && current.settings.sunRadianceScale == other.settings.sunRadianceScale;
 }
 
@@ -537,7 +641,7 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
     //读取世界大气观察条件
     const float64 altitudeMeters = atmosphere.altitudeMeters;
     const vector3 up = atmosphere.upDirection;
-    const float32 upLength = std::sqrt(RenderMath::Dot(up, up));
+    const float32 upLength = std::sqrt(Orbeden::Math::Dot(up, up));
     if (!std::isfinite(altitudeMeters) || altitudeMeters <= -atmosphere.planetRadiusMeters
         || !std::isfinite(upLength) || upLength <= 1.0e-6f)
     {
@@ -553,7 +657,7 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
         ReportConfigError("Atmosphere requires a perspective camera; the camera falls back to the skybox path.");
         return false;
     }
-    outFrame.inverseProjection = RenderMath::Inverse(camera.projectionMatrix);
+    outFrame.inverseProjection = Orbeden::Math::Inverse(camera.projectionMatrix);
 
     //取相机世界矩阵的归一化旋转基，平移置零
     matrix4x4 rotation = camera.worldMatrix;
@@ -581,13 +685,12 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
 
     outFrame.viewportWidth = camera.viewportWidth;
     outFrame.viewportHeight = camera.viewportHeight;
-    outFrame.groundBackground = camera.clearColor;
     outFrame.maxDistanceKm = std::clamp(camera.farPlane * atmosphere.metersPerWorldUnit / 1000.0f, 1.0f, 128.0f);
 
     //太阳方向取主光传播方向的反向，无主光时散射亮度为零
     if (mainLight)
     {
-        const vector3 sunDirection = RenderMath::Normalize(
+        const vector3 sunDirection = Orbeden::Math::Normalize(
             { -mainLight->direction.x, -mainLight->direction.y, -mainLight->direction.z });
         const float32 length = std::sqrt(sunDirection.x * sunDirection.x + sunDirection.y * sunDirection.y +
             sunDirection.z * sunDirection.z);
@@ -641,6 +744,7 @@ bool AtmosphereRenderer::PrepareCamera(const RenderScene& scene, const RenderCam
     const RenderDirectionalLight* mainLight, GpuResourceManager& gpuResourceManager)
 {
     PROFILE("Render/Atmosphere/PrepareCamera");
+    skyReflectionActive = false;
     frame = AtmosphereFrame();
     if (!backend) return false;
 
@@ -675,12 +779,30 @@ bool AtmosphereRenderer::PrepareCamera(const RenderScene& scene, const RenderCam
         && UpdateMultipleScattering()
         && (!frame.fogActive || frame.cameraHeightKm >= 16.0f || UpdateAerial(quality))
         && (!frame.skyActive || frame.cameraHeightKm >= 16.0f || UpdateSky(quality));
-    if (ready) return true;
+    if (ready)
+    {
+        //反射来源自动跟随当前程序化天空
+        const RenderSettings& settings = scene.renderSettings;
+        if (frame.skyActive && !settings.reflectionEnvironment.GetInstanceId().IsValid()
+            && settings.reflectionIntensity > 0.0f)
+        {
+            skyReflectionActive = UpdateSkyReflection();
+        }
+        return true;
+    }
 
     //查找表失败只停用空气透视与程序化天空，背景退回原天空盒路径；浓雾不依赖查找表，不被连坐
     frame.fogActive = false;
     frame.skyActive = false;
     return frame.denseFogActive;
+}
+
+//提交反射贴图生成时使用的方向基和地平线纬度
+void AtmosphereRenderer::BindSkyReflectionUniforms()
+{
+    ShaderParameters& parameters = backend->GetParameters();
+    parameters.SetMatrix4("u_AtmosphereReflectionBasis", skyReflectionBasis);
+    parameters.SetFloat("u_AtmosphereReflectionHorizon", skyReflectionHorizon);
 }
 
 void AtmosphereRenderer::BindMaterialUniforms()
@@ -753,7 +875,7 @@ void AtmosphereRenderer::BindMaterialTextures(int32 radianceSlot, int32 opticalD
     }
 }
 
-bool AtmosphereRenderer::RenderSky()
+bool AtmosphereRenderer::RenderSky(bool reflectionCapture)
 {
     PROFILE("Render/Atmosphere/RenderSky");
     if (!backend || !frame.skyActive || !skyPass.IsValid()) return false;
@@ -766,6 +888,12 @@ bool AtmosphereRenderer::RenderSky()
     backend->GetPipelineState().depthWrite = false;
     backend->GetPipelineState().blend = false;
     backend->BindShaderProgram(skyPass);
+    backend->GetParameters().SetInt("u_AtmosphereReflectionCapture", reflectionCapture ? 1 : 0);
+    if (reflectionCapture)
+    {
+        BindSkyReflectionUniforms();
+        backend->GetParameters().SetFloat("u_AtmosphereReflectionTexelHeight", 1.0f / SkyReflectionHeight);
+    }
     backend->GetParameters().SetFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
     backend->GetParameters().SetInt("u_AtmosphereStepCount", quality.skySteps);
     backend->GetParameters().SetColor("u_AtmosphereAtlas",
@@ -779,7 +907,7 @@ bool AtmosphereRenderer::RenderSky()
     backend->GetParameters().SetVector3("u_AtmosphereSunDirection", frame.sunDirection);
     backend->GetParameters().SetColor("u_AtmosphereSunRadiance", frame.sunRadiance);
     //地球底板由天空着色器按像素合成，查找表里不再烘焙
-    backend->GetParameters().SetColor("u_AtmosphereGroundBackground", frame.groundBackground);
+    backend->GetParameters().SetColor("u_AtmosphereGroundBackground", frame.settings.groundBackgroundColor);
     backend->GetParameters().SetColor("u_AtmosphereSkySize",
         { static_cast<float32>(quality.skyWidth), static_cast<float32>(quality.skyHeight), 0.0f, 0.0f });
     backend->GetParameters().SetColor("u_AtmosphereTransSize",

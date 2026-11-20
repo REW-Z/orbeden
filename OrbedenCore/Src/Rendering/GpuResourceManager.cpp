@@ -232,6 +232,7 @@ namespace
         bindings.cameraColorSlot = textureSlot("u_CameraColorTexture");
         bindings.cameraDepthSlot = textureSlot("u_CameraDepthTexture");
         bindings.environmentSlot = textureSlot("u_EnvironmentTexture");
+        bindings.atmosphereReflectionSlot = textureSlot("u_AtmosphereReflectionTexture");
         bindings.atmosphereRadianceSlot = textureSlot("u_AtmosphereRadianceTexture");
         bindings.atmosphereOpticalDepthSlot = textureSlot("u_AtmosphereOpticalDepthTexture");
         bindings.atmosphereTransmittanceSlot = textureSlot("u_AtmosphereTransmittanceTexture");

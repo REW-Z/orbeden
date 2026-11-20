@@ -77,6 +77,7 @@ struct VulkanRenderBackend::State
         VkImage handle = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
         VkImageView view = VK_NULL_HANDLE;
+        VkImageView attachmentView = VK_NULL_HANDLE;
         VkSampler sampler = VK_NULL_HANDLE;
         VkFormat format = VK_FORMAT_UNDEFINED;
         VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -592,6 +593,7 @@ struct VulkanRenderBackend::State
     {
         PROFILE("Render/Backend/ResourceCache/FreeImage");
         if (image.sampler) vkDestroySampler(device, image.sampler, nullptr);
+        if (image.attachmentView) vkDestroyImageView(device, image.attachmentView, nullptr);
         if (image.view) vkDestroyImageView(device, image.view, nullptr);
         if (image.owned && image.handle) vkDestroyImage(device, image.handle, nullptr);
         if (image.memory) vkFreeMemory(device, image.memory, nullptr);
@@ -765,7 +767,8 @@ struct VulkanRenderBackend::State
         VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         if (color)
         {
-            colorInfo.imageView = color->view; colorInfo.imageLayout = color->layout;
+            colorInfo.imageView = color->attachmentView ? color->attachmentView : color->view;
+            colorInfo.imageLayout = color->layout;
             colorInfo.loadOp = color->initialized ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
             colorInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE; color->initialized = true;
         }
@@ -1633,7 +1636,25 @@ GpuRenderTargetID VulkanRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     if (!desc.depthOnly)
     {
         VkFormat format = desc.format == GpuRenderTargetFormat::RGBA16F ? VK_FORMAT_R16G16B16A16_SFLOAT : desc.format == GpuRenderTargetFormat::R8 ? VK_FORMAT_R8_UNORM : VK_FORMAT_R8G8B8A8_UNORM;
-        target.color = s.nextId++; s.images.emplace(target.color, s.AllocateImage(desc.width, desc.height, format, false, 1, 1, desc.linearColorFilter));
+        const uint32 levels = desc.colorMipmaps
+            ? static_cast<uint32>(std::log2(std::max(desc.width, desc.height))) + 1 : 1;
+        auto image = s.AllocateImage(desc.width, desc.height, format, false, 1, levels, desc.linearColorFilter, desc.repeatColor);
+        //渲染写入第 0 级，材质通过全级别视图采样
+        if (levels > 1 && !image.attachmentView)
+        {
+            VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+            view.image = image.handle;
+            view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            view.format = image.format;
+            view.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+            if (vkCreateImageView(s.device, &view, nullptr, &image.attachmentView) != VK_SUCCESS)
+            {
+                s.DestroyImage(image);
+                return {};
+            }
+        }
+        target.color = s.nextId++;
+        s.images.emplace(target.color, image);
     }
     uint32 id = s.nextId++; s.targets.emplace(id, target);
     return { id };
@@ -1655,6 +1676,14 @@ void VulkanRenderBackend::DeleteRenderTarget(GpuRenderTargetID id)
     if (found == s.targets.end()) return;
     if (s.passActive && s.pass.renderTarget.id == id.id) EndPass();
     uint32 color = found->second.color; s.targets.erase(found); if (color) DeleteTexture({ color });
+}
+
+//更新颜色附件的逐级缩小图
+void VulkanRenderBackend::GenerateRenderTargetMipmaps(GpuRenderTargetID id)
+{
+    const GpuTextureID texture = GetRenderTargetColorTexture(id);
+    auto image = state->images.find(texture.id);
+    if (image != state->images.end()) state->GenerateMipmaps(image->second);
 }
 
 //获取目标颜色纹理句柄

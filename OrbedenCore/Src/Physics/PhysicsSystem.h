@@ -2,6 +2,7 @@
 
 #include "Application.h"
 #include "Physics/PhysicsTypes.h"
+#include <memory>
 
 namespace physx
 {
@@ -11,12 +12,25 @@ namespace physx
     class PxPhysics;
     class PxRigidActor;
     class PxScene;
+    class PxTriangleMesh;
     struct PxCookingParams;
 }
 
 class Mesh;
 class Component;
 class RigidBody;
+class TriangleMeshCollider;
+
+//持有后台生成、尚未安装的 PhysX 网格
+struct PreparedTriangleMesh
+{
+    struct Release
+    {
+        void operator()(physx::PxTriangleMesh* mesh) const noexcept;
+    };
+
+    std::unique_ptr<physx::PxTriangleMesh, Release> mesh;
+};
 
 //PhysX 5 CPU-only 原生物理系统
 class PhysicsSystem final : public IEngineSystem
@@ -24,6 +38,14 @@ class PhysicsSystem final : public IEngineSystem
 private:
     class Impl;
     Impl* impl = nullptr;
+
+    friend class TriangleMeshCollider;
+
+    //登记后台烘焙的网格结果
+    std::shared_ptr<PreparedTriangleMesh> CreatePreparedTriangleMesh();
+
+    //接收后台烘焙的三角网格
+    bool InstallTriangleMesh(Mesh& mesh, PreparedTriangleMesh& prepared);
 
 public:
     PhysicsSystem();
@@ -51,9 +73,6 @@ public:
 
     /// <summary>读取物理场景当前重力加速度。</summary>
     vector3 GetGravity() const;
-
-    //接收后台烘焙的三角网格
-    bool InstallTriangleMesh(Mesh& mesh, const List<uint8>& bytes);
 
     //登记组件配置变化
     void NotifyComponentChanged(Component& component);

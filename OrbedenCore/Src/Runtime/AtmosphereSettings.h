@@ -79,4 +79,6 @@ public:
     float32 aerosolDensity = 1.0f;
     //标定后的太阳亮度倍率，1 为中性，不改变消光、表面主光或环境光。
     float32 sunRadianceScale = 1.0f;
+    //程序化天空中的地表背景色（线性 RGB）
+    color groundBackgroundColor = { 0.08f, 0.12f, 0.16f, 1.0f };
 };

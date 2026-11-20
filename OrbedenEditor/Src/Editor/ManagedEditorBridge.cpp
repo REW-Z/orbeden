@@ -1126,8 +1126,10 @@ namespace
         uint32 fogDebugViewReserved = 0;
         float32 denseFogReservedTail2 = 0.0f;
         vector3 upDirection = { 0.0f, 1.0f, 0.0f };
+        color groundBackgroundColor;
     };
-    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 176);
+    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 192);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, groundBackgroundColor) == 172);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, upDirection) == 160);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, skyMode) == 64);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, fogEnabled) == 68);
@@ -1177,6 +1179,7 @@ namespace
         settings->metersPerWorldUnit = source.atmosphere.metersPerWorldUnit;
         settings->aerosolDensity = source.atmosphere.aerosolDensity;
         settings->sunRadianceScale = source.atmosphere.sunRadianceScale;
+        settings->groundBackgroundColor = source.atmosphere.groundBackgroundColor;
         settings->denseFogEnabled = source.atmosphere.denseFog.enabled ? 1u : 0u;
         settings->denseFogMode = static_cast<uint32>(source.atmosphere.denseFog.mode);
         settings->fogVisibilityMeters = source.atmosphere.denseFog.visibilityMeters;
@@ -1220,6 +1223,7 @@ namespace
         target.atmosphere.metersPerWorldUnit = settings->metersPerWorldUnit;
         target.atmosphere.aerosolDensity = settings->aerosolDensity;
         target.atmosphere.sunRadianceScale = settings->sunRadianceScale;
+        target.atmosphere.groundBackgroundColor = settings->groundBackgroundColor;
 
         //写入浓雾参数
         target.atmosphere.denseFog.enabled = settings->denseFogEnabled != 0;

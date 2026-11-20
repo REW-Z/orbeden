@@ -4,7 +4,7 @@
 #include "Profiler/Profiler.h"
 #include "Rendering/GeometryExpander.h"
 #include "Rendering/GpuResourceManager.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Particles/ParticleSimulationSystem.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
@@ -226,7 +226,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
         matrix4x4 emitterWorld = transform ? transform->GetWorldMatrix() : matrix4x4();
         quaternion emitterRotation = GetRotation(emitterWorld);
         //局部空间的尺寸与拖尾宽度都是发射器局部单位，提交渲染前乘发射器世界尺度
-        float32 emitterBasis = local ? RenderMath::GetMaximumBasisLength(emitterWorld) : 1.0f;
+        float32 emitterBasis = local ? Orbeden::Math::GetMaximumBasisLength(emitterWorld) : 1.0f;
 
         for (const ParticleRecord& particle : state.particles)
         {
@@ -251,16 +251,16 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
             record.owner = source->GetEnsId();
             record.birthId = particle.birthId;
             //局部模拟在这里一次换算到世界空间，之后的相机阶段不再读发射器矩阵
-            record.worldPosition = local ? RenderMath::TransformPoint(emitterWorld, particle.position) : particle.position;
-            record.worldRotation = local ? RenderMath::Mul(emitterRotation, particle.rotation) : particle.rotation;
+            record.worldPosition = local ? Orbeden::Math::TransformPoint(emitterWorld, particle.position) : particle.position;
+            record.worldRotation = local ? Orbeden::Math::Mul(emitterRotation, particle.rotation) : particle.rotation;
             record.size = size;
             record.angle = particle.angle;
             record.linearColor = linearColor;
             record.uvRect = ComputeUvRect(settings.rendering.tilesX, settings.rendering.tilesY,
                 settings.rendering.animationCycles, particle.startFrame, normalizedAge);
             //Mesh 粒子的世界矩阵：angle 初值已经进入 rotation，这里只补上增量旋转
-            record.worldModel = RenderMath::TRS(record.worldPosition,
-                RenderMath::Mul(record.worldRotation, RenderMath::RotationZ(particle.angle - particle.startAngle)),
+            record.worldModel = Orbeden::Math::TRS(record.worldPosition,
+                Orbeden::Math::Mul(record.worldRotation, Orbeden::Math::RotationZ(particle.angle - particle.startAngle)),
                 { size, size, size });
             record.mesh = source->mesh;
             record.materials = source->materials;
@@ -275,7 +275,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
             if (record.renderMode == ParticleRenderMode::Mesh && record.mesh.Get())
             {
                 const bounds3& localBounds = record.mesh.Get()->GetLocalBounds();
-                record.worldBounds = localBounds.valid ? RenderMath::TransformBounds(record.worldModel, localBounds) : bounds3();
+                record.worldBounds = localBounds.valid ? Orbeden::Math::TransformBounds(record.worldModel, localBounds) : bounds3();
             }
             else
             {
@@ -314,7 +314,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
                 uint32 slot = (trail.head + capacity - trail.count + index) % capacity;
                 const ParticleTrailPoint& point = state.trailPoints[trail.pointStart + slot];
                 ParticleTrailPointSnapshot& target = record.points[index];
-                target.position = local ? RenderMath::TransformPoint(emitterWorld, point.position) : point.position;
+                target.position = local ? Orbeden::Math::TransformPoint(emitterWorld, point.position) : point.position;
                 target.width = point.width * emitterBasis;
                 target.linearColor = point.linearColor;
                 target.length = point.accumulatedLength;
@@ -347,21 +347,21 @@ void ParticleRenderer::AppendCameraItems(const ParticleFrameSnapshot& snapshot, 
     trailSegments.clear();
 
     //相机基向量：右手系下 backward 指向观察者，四边形正面朝 +Z
-    vector3 right = RenderMath::Normalize({ camera.worldMatrix.m[0], camera.worldMatrix.m[1], camera.worldMatrix.m[2] });
+    vector3 right = Orbeden::Math::Normalize({ camera.worldMatrix.m[0], camera.worldMatrix.m[1], camera.worldMatrix.m[2] });
     vector3 up = { camera.worldMatrix.m[4], camera.worldMatrix.m[5], camera.worldMatrix.m[6] };
     //正交化，避免非均匀缩放的父级把手柄带歪
-    float32 upProjection = RenderMath::Dot(up, right);
-    up = RenderMath::Normalize({ up.x - right.x * upProjection, up.y - right.y * upProjection, up.z - right.z * upProjection });
-    vector3 backward = RenderMath::Cross(right, up);
+    float32 upProjection = Orbeden::Math::Dot(up, right);
+    up = Orbeden::Math::Normalize({ up.x - right.x * upProjection, up.y - right.y * upProjection, up.z - right.z * upProjection });
+    vector3 backward = Orbeden::Math::Cross(right, up);
 
     for (const ParticleRenderRecord& record : snapshot.particles)
     {
         if ((record.drawLayer & camera.drawLayerMask) == 0) continue;
-        if (record.worldBounds.valid && !RenderMath::Intersects(camera.viewFrustum, record.worldBounds)) continue;
+        if (record.worldBounds.valid && !Orbeden::Math::Intersects(camera.viewFrustum, record.worldBounds)) continue;
 
         vector3 toItem = { record.worldBounds.center.x - camera.position.x, record.worldBounds.center.y - camera.position.y,
             record.worldBounds.center.z - camera.position.z };
-        float32 cameraDistance = RenderMath::Dot(toItem, toItem);
+        float32 cameraDistance = Orbeden::Math::Dot(toItem, toItem);
 
         if (record.renderMode == ParticleRenderMode::Billboard)
         {
@@ -469,23 +469,23 @@ void ParticleRenderer::AppendCameraItems(const ParticleFrameSnapshot& snapshot, 
             //切线取相邻差，端点用唯一的那一段
             vector3 previous = index > 0 ? record.points[index - 1].position : startPoint.position;
             vector3 next = index + 2 < record.points.size() ? record.points[index + 2].position : endPoint.position;
-            vector3 tangent = RenderMath::Normalize({ next.x - previous.x, next.y - previous.y, next.z - previous.z });
-            if (RenderMath::Dot(tangent, tangent) <= 1.0e-12f) continue;
+            vector3 tangent = Orbeden::Math::Normalize({ next.x - previous.x, next.y - previous.y, next.z - previous.z });
+            if (Orbeden::Math::Dot(tangent, tangent) <= 1.0e-12f) continue;
 
             vector3 midpoint = { (startPoint.position.x + endPoint.position.x) * 0.5f,
                 (startPoint.position.y + endPoint.position.y) * 0.5f,
                 (startPoint.position.z + endPoint.position.z) * 0.5f };
-            vector3 viewDirection = RenderMath::Normalize({ camera.position.x - midpoint.x,
+            vector3 viewDirection = Orbeden::Math::Normalize({ camera.position.x - midpoint.x,
                 camera.position.y - midpoint.y, camera.position.z - midpoint.z });
-            vector3 side = RenderMath::Cross(tangent, viewDirection);
-            if (RenderMath::Dot(side, side) <= 1.0e-12f)
+            vector3 side = Orbeden::Math::Cross(tangent, viewDirection);
+            if (Orbeden::Math::Dot(side, side) <= 1.0e-12f)
             {
                 //视线与切线平行时退化，改用相机右向量投影到垂直切线的平面
-                float32 projection = RenderMath::Dot(right, tangent);
+                float32 projection = Orbeden::Math::Dot(right, tangent);
                 side = { right.x - tangent.x * projection, right.y - tangent.y * projection, right.z - tangent.z * projection };
-                if (RenderMath::Dot(side, side) <= 1.0e-12f) side = up;
+                if (Orbeden::Math::Dot(side, side) <= 1.0e-12f) side = up;
             }
-            side = RenderMath::Normalize(side);
+            side = Orbeden::Math::Normalize(side);
 
             ParticleTrailSegment segment;
             float32 startHalf = startPoint.width * 0.5f;
@@ -533,7 +533,7 @@ void ParticleRenderer::AppendCameraItems(const ParticleFrameSnapshot& snapshot, 
             vector3 segmentCenter = item.worldBounds.center;
             vector3 toSegment = { segmentCenter.x - camera.position.x, segmentCenter.y - camera.position.y,
                 segmentCenter.z - camera.position.z };
-            item.cameraDistance = RenderMath::Dot(toSegment, toSegment);
+            item.cameraDistance = Orbeden::Math::Dot(toSegment, toSegment);
             item.castShadows = false;
             item.receiveShadows = false;
             item.strategy = DrawStrategy::Auto;
@@ -553,7 +553,7 @@ void ParticleRenderer::AppendShadowItems(const ParticleFrameSnapshot& snapshot, 
     {
         if (record.renderMode != ParticleRenderMode::Mesh || !record.castShadows) continue;
         if ((record.drawLayer & camera.drawLayerMask) == 0) continue;
-        if (!record.worldBounds.valid || !RenderMath::Intersects(lightFrustum, record.worldBounds)) continue;
+        if (!record.worldBounds.valid || !Orbeden::Math::Intersects(lightFrustum, record.worldBounds)) continue;
 
         Mesh* mesh = record.mesh.Get();
         if (!mesh) continue;
@@ -767,13 +767,13 @@ void ParticleRenderer::ExpandBatch(const DrawBatch& batch, const List<DrawItem>&
             GpuExpandedVertex corners[4];
             for (uint32 corner = 0; corner < 4; ++corner)
             {
-                vector3 world = RenderMath::TransformPoint(item.model,
+                vector3 world = Orbeden::Math::TransformPoint(item.model,
                     { quadPositions[corner][0], quadPositions[corner][1], quadPositions[corner][2] });
                 corners[corner].position[0] = world.x;
                 corners[corner].position[1] = world.y;
                 corners[corner].position[2] = world.z;
                 //四边形法线朝观察者，展开顶点已经是世界空间
-                vector3 normal = RenderMath::Normalize({ item.model.m[8], item.model.m[9], item.model.m[10] });
+                vector3 normal = Orbeden::Math::Normalize({ item.model.m[8], item.model.m[9], item.model.m[10] });
                 corners[corner].normal[0] = normal.x;
                 corners[corner].normal[1] = normal.y;
                 corners[corner].normal[2] = normal.z;

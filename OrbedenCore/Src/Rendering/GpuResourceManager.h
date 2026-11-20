@@ -82,6 +82,7 @@ struct GpuShaderBindings
     int32 cameraColorSlot = -1;
     int32 cameraDepthSlot = -1;
     int32 environmentSlot = -1;
+    int32 atmosphereReflectionSlot = -1;
     int32 atmosphereRadianceSlot = -1;
     int32 atmosphereOpticalDepthSlot = -1;
     int32 atmosphereTransmittanceSlot = -1;

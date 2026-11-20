@@ -3,7 +3,7 @@
 #include "Memory/MemoryManager.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Transform.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Rendering/RenderSystem.h"
 #include "Physics/PhysicsSystem.h"
 #include "Profiler/Profiler.h"
@@ -1177,7 +1177,7 @@ void World::VisitEns(EnsVisitorFunction visitor, void* userData) const
 //整体转换世界根节点和物理状态
 void World::RebaseCoordinates(const quaternion& rotation, const vector3& translation)
 {
-    matrix4x4 matrix = RenderMath::TRS(translation, rotation, { 1, 1, 1 });
+    matrix4x4 matrix = Orbeden::Math::TRS(translation, rotation, { 1, 1, 1 });
     bool previous = runtimeActive;
     runtimeActive = false;
     {
@@ -1187,8 +1187,8 @@ void World::RebaseCoordinates(const quaternion& rotation, const vector3& transla
             ::Transform* transform = node.Transform();
             if (transform && transform->GetParent().IsNull())
             {
-                transform->SetLocalPosition(RenderMath::TransformPoint(matrix, transform->GetLocalPosition()));
-                transform->SetLocalRotation(RenderMath::Mul(rotation, transform->GetLocalRotation()));
+                transform->SetLocalPosition(Orbeden::Math::TransformPoint(matrix, transform->GetLocalPosition()));
+                transform->SetLocalRotation(Orbeden::Math::Mul(rotation, transform->GetLocalRotation()));
             }
         });
     }

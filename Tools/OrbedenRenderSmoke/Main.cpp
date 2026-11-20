@@ -3,7 +3,7 @@
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/ImGuiRenderer.h"
 #include "Rendering/OutputPass.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Gui/UIShaderSources.h"
 #include "ResourceManager/ResourceManager.h"
 #include "FileSystem/PathDefines.h"
@@ -240,14 +240,14 @@ void main(){vec4 sampleColor=texture(u_Texture,v_Uv);if(sampleColor.r*u_Color.a<
             backend.GetParameters().SetInt("u_Texture", 0);
             backend.GetParameters().SetColor("u_Color", {1.0f,0.2f,0.1f,1.0f});
             backend.BindTexture(0, whiteTexture);
-            backend.GetParameters().SetMatrix4("u_Model", RenderMath::Translation({-0.45f,0.0f,-0.5f}));
+            backend.GetParameters().SetMatrix4("u_Model", Orbeden::Math::Translation({-0.45f,0.0f,-0.5f}));
             backend.DrawIndexed(0, 3);
             if (frame % 2 == 0)
             {
                 for (vector3& position : positions) position.z = 0.2f;
                 Require(backend.UploadVertexBuffer(vertices, positions, sizeof(positions), sizeof(positions)), "Stream update failed.");
             }
-            backend.GetParameters().SetMatrix4("u_Model", RenderMath::Translation({0.45f,0.0f,0.5f}));
+            backend.GetParameters().SetMatrix4("u_Model", Orbeden::Math::Translation({0.45f,0.0f,0.5f}));
             backend.DrawIndexed(0, 3);
             if (frame % 2 == 0)
             {
@@ -255,7 +255,7 @@ void main(){vec4 sampleColor=texture(u_Texture,v_Uv);if(sampleColor.r*u_Color.a<
                 Require(backend.UploadVertexBuffer(vertices, positions, sizeof(positions), sizeof(positions)), "Stream restore failed.");
             }
             backend.BindTexture(0, blackTexture);
-            backend.GetParameters().SetMatrix4("u_Model", RenderMath::Translation({0.0f,0.0f,-0.9f}));
+            backend.GetParameters().SetMatrix4("u_Model", Orbeden::Math::Translation({0.0f,0.0f,-0.9f}));
             backend.DrawIndexed(0, 3);
             backend.EndPass();
             CheckDepth(backend, target, 35, 60, 0.25f);
@@ -291,10 +291,10 @@ void main(){vec4 sampleColor=texture(u_Texture,v_Uv);if(sampleColor.r*u_Color.a<
         backend.GetParameters().SetColor("u_Color", {1.0f,1.0f,1.0f,1.0f});
         backend.BindTexture(0, whiteTexture); backend.BindTexture(1, blackTexture);
         backend.GetParameters().SetInt("u_Texture", 0);
-        backend.GetParameters().SetMatrix4("u_Model", RenderMath::Translation({-0.45f,0.0f,-0.5f}));
+        backend.GetParameters().SetMatrix4("u_Model", Orbeden::Math::Translation({-0.45f,0.0f,-0.5f}));
         backend.DrawIndexed(0,3);
         backend.GetParameters().SetInt("u_Texture", 1);
-        backend.GetParameters().SetMatrix4("u_Model", RenderMath::Translation({0.45f,0.0f,0.5f}));
+        backend.GetParameters().SetMatrix4("u_Model", Orbeden::Math::Translation({0.45f,0.0f,0.5f}));
         backend.DrawIndexed(0,3); backend.EndPass();
         CheckDepth(backend,target,35,60,0.25f); CheckDepth(backend,target,93,60,1.0f);
         backend.WaitForIdle(); backend.WaitForIdle();
@@ -305,7 +305,7 @@ void main(){vec4 sampleColor=texture(u_Texture,v_Uv);if(sampleColor.r*u_Color.a<
         CheckDepth(backend,target,93,60,0.75f);
         backend.BeginPass(samplerPass);
         Require(backend.UploadTextureRegion(whiteTexture,0,0,1,1,4,black,4), "Sampled texture update failed.");
-        backend.GetParameters().SetMatrix4("u_Model", RenderMath::Translation({0.0f,0.0f,-0.9f}));
+        backend.GetParameters().SetMatrix4("u_Model", Orbeden::Math::Translation({0.0f,0.0f,-0.9f}));
         backend.DrawIndexed(0,3); backend.EndPass();
         CheckDepth(backend,target,64,60,1.0f);
         backend.BeginPass(samplerPass);

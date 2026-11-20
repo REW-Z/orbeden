@@ -26,10 +26,11 @@ internal static unsafe class GeneratedBindingCodecs
         Write_float32(writer, value.@metersPerWorldUnit);
         Write_float32(writer, value.@aerosolDensity);
         Write_float32(writer, value.@sunRadianceScale);
+        Write_color(writer, value.@groundBackgroundColor);
     }
     internal static global::Orbeden.AtmosphereSettings Read_AtmosphereSettings(ref NativeBindingReader reader)
     {
-        var block = reader.Block(sizeof(byte) + sizeof(uint) + sizeof(byte) + sizeof(uint) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(double) + sizeof(double) + sizeof(global::Orbeden.vector3) + sizeof(float) + sizeof(float) + sizeof(float));
+        var block = reader.Block(sizeof(byte) + sizeof(uint) + sizeof(byte) + sizeof(uint) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(double) + sizeof(double) + sizeof(global::Orbeden.vector3) + sizeof(float) + sizeof(float) + sizeof(float) + sizeof(global::Orbeden.color));
         ref byte cursor = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(block);
         global::Orbeden.AtmosphereSettings value = default;
         value.@fogEnabled = Unsafe.ReadUnaligned<byte>(ref cursor) != 0;
@@ -62,6 +63,8 @@ internal static unsafe class GeneratedBindingCodecs
         cursor = ref Unsafe.Add(ref cursor, sizeof(float));
         value.@sunRadianceScale = (float)Unsafe.ReadUnaligned<float>(ref cursor);
         cursor = ref Unsafe.Add(ref cursor, sizeof(float));
+        value.@groundBackgroundColor = (global::Orbeden.color)Unsafe.ReadUnaligned<global::Orbeden.color>(ref cursor);
+        cursor = ref Unsafe.Add(ref cursor, sizeof(global::Orbeden.color));
         return value;
     }
     internal static void Write_BlendMode(NativeBindingWriter writer, global::Orbeden.BlendMode value)
@@ -1494,7 +1497,7 @@ internal static class GeneratedBindingRegistration
     {
         NativeBindingRuntime.Register(typeof(global::Orbeden.Object), "Object", 11880064706505753351UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Component), "Component", 3730866753121215061UL, null);
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 1271523575787013593UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 17390094485895889474UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Font), "Font", 8904294447050588615UL, (ens, pointer) => new global::Orbeden.Font(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 11817979313244570025UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 10124473645180690159UL, (ens, pointer) => new global::Orbeden.Material(pointer));
@@ -1558,6 +1561,7 @@ public partial struct AtmosphereSettings
     public float @metersPerWorldUnit;
     public float @aerosolDensity;
     public float @sunRadianceScale;
+    public global::Orbeden.color @groundBackgroundColor;
 }
 }
 namespace Orbeden

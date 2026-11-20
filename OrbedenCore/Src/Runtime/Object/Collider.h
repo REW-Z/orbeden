@@ -6,6 +6,8 @@
 #include "Runtime/Object/Component.h"
 #include "Runtime/Object/Mesh.h"
 
+struct PreparedTriangleMesh;
+
 //碰撞体几何类型，仅用于原生物理和托管包装分派。
 enum class ColliderGeometryType : uint32
 {
@@ -186,7 +188,7 @@ private:
     ORBEDEN_BIND_IGNORE
     std::shared_ptr<ThreadOperation> cooking;
     ORBEDEN_BIND_IGNORE
-    std::shared_ptr<List<uint8>> cookedBytes;
+    std::shared_ptr<PreparedTriangleMesh> cookedMesh;
     ORBEDEN_BIND_IGNORE
     uint64 cookingVersion = 0;
     ORBEDEN_BIND_IGNORE

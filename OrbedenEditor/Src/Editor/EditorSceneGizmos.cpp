@@ -1,7 +1,7 @@
 #include "Editor/EditorSceneGizmos.h"
 #include "Editor/EditorScene.h"
 #include "Physics/PhysicsSystem.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/World.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
@@ -80,11 +80,11 @@ public:
     /// <summary>绘制任意平面上的圆弧。</summary>
     void Arc(const matrix4x4& pose, vector3 center, vector3 right, vector3 up, float32 radius, float32 from = 0, float32 to = 2 * Pi)
     {
-        vector3 previous = RenderMath::TransformPoint(pose, Offset(Offset(center, right, std::cos(from) * radius), up, std::sin(from) * radius));
+        vector3 previous = Orbeden::Math::TransformPoint(pose, Offset(Offset(center, right, std::cos(from) * radius), up, std::sin(from) * radius));
         for (int32 step = 1; step <= 48; ++step)
         {
             float32 angle = from + (to - from) * step / 48.0f;
-            vector3 point = RenderMath::TransformPoint(pose, Offset(Offset(center, right, std::cos(angle) * radius), up, std::sin(angle) * radius));
+            vector3 point = Orbeden::Math::TransformPoint(pose, Offset(Offset(center, right, std::cos(angle) * radius), up, std::sin(angle) * radius));
             Line(previous, point);
             previous = point;
         }
@@ -149,7 +149,7 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
         if (!active && !selected) return;
         //本 Ens 之后写的所有线段都归属它，拾取据此回推选中对象
         sink.owner = ens.GetId();
-        matrix4x4 rotation = RenderMath::Rotation(transform->GetWorldRotation());
+        matrix4x4 rotation = Orbeden::Math::Rotation(transform->GetWorldRotation());
         const float32* m = transform->GetWorldMatrix().m;
         vector3 scale{std::sqrt(m[0]*m[0]+m[1]*m[1]+m[2]*m[2]), std::sqrt(m[4]*m[4]+m[5]*m[5]+m[6]*m[6]), std::sqrt(m[8]*m[8]+m[9]*m[9]+m[10]*m[10])};
         for (Component* component : ens.GetComponents())
@@ -166,7 +166,7 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                 float32 size = 15.0f / pixels;
                 sink.ink = active && light->GetEnabled() ? IM_COL32(255, 213, 112, 245) : IM_COL32(150, 145, 120, 180);
                 sink.thickness = selected ? 1.8f : 1.3f;
-                matrix4x4 identity = RenderMath::TRS({}, {}, {1, 1, 1});
+                matrix4x4 identity = Orbeden::Math::TRS({}, {}, {1, 1, 1});
                 sink.Arc(identity, center, view.cameraRight, view.cameraUp, size * 0.5f);
                 for (int32 ray = 0; ray < 8; ++ray)
                 {
@@ -175,10 +175,10 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                     sink.Line(Offset(center, radial, size * 0.72f), Offset(center, radial, size));
                 }
                 //方向取自同一个 Ens 的 Transform 前向，与渲染侧生成光照快照的取法一致
-                vector3 direction = RenderMath::Normalize(
-                    RenderMath::TransformDirection(transform->GetWorldMatrix(), { 0.0f, 0.0f, -1.0f }));
-                if (RenderMath::Dot(direction, direction) < 0.5f) continue;
-                vector3 side = RenderMath::Normalize(RenderMath::Cross(direction, std::abs(direction.y) < 0.9f ? vector3{0,1,0} : vector3{1,0,0}));
+                vector3 direction = Orbeden::Math::Normalize(
+                    Orbeden::Math::TransformDirection(transform->GetWorldMatrix(), { 0.0f, 0.0f, -1.0f }));
+                if (Orbeden::Math::Dot(direction, direction) < 0.5f) continue;
+                vector3 side = Orbeden::Math::Normalize(Orbeden::Math::Cross(direction, std::abs(direction.y) < 0.9f ? vector3{0,1,0} : vector3{1,0,0}));
                 for (int32 ray = selected ? -1 : 0; ray <= (selected ? 1 : 0); ++ray)
                 {
                     vector3 start = Offset(center, side, ray * size * 0.6f);
@@ -228,9 +228,9 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                 vector3 farCorners[4];
                 for (int32 index = 0; index < 4; ++index)
                 {
-                    nearCorners[index] = RenderMath::TransformPoint(transform->GetWorldMatrix(),
+                    nearCorners[index] = Orbeden::Math::TransformPoint(transform->GetWorldMatrix(),
                         {(index & 1) ? nearHalfWidth : -nearHalfWidth, (index & 2) ? nearHalfHeight : -nearHalfHeight, -nearDisplay});
-                    farCorners[index] = RenderMath::TransformPoint(transform->GetWorldMatrix(),
+                    farCorners[index] = Orbeden::Math::TransformPoint(transform->GetWorldMatrix(),
                         {(index & 1) ? farHalfWidth : -farHalfWidth, (index & 2) ? farHalfHeight : -farHalfHeight, -depth});
                 }
                 //角点按位编号：index 与 index|bit 只差一位，连起来正好是矩形的四条边；
@@ -253,7 +253,7 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
             if (WheelCollider* wheel = component->Cast<WheelCollider>())
             {
                 bool wheelActive = active && wheel->enabled;
-                matrix4x4 wheelRotation = RenderMath::Rotation(transform->GetWorldRotation());
+                matrix4x4 wheelRotation = Orbeden::Math::Rotation(transform->GetWorldRotation());
                 const float32* matrix = transform->GetWorldMatrix().m;
                 float32 suspensionScale = std::sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]);
                 float32 radius = std::max(std::abs(wheel->wheelRadius) * suspensionScale, 0.001f);
@@ -263,31 +263,31 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                     ? std::clamp(wheel->GetCompression(), 0.0f, travel) : 0.0f;
 
                 //按车轮节点世界变换绘制悬挂
-                vector3 mount = RenderMath::TransformPoint(transform->GetWorldMatrix(), wheel->wheelOffset);
-                vector3 down = RenderMath::TransformDirection(wheelRotation, {0, -1, 0});
+                vector3 mount = Orbeden::Math::TransformPoint(transform->GetWorldMatrix(), wheel->wheelOffset);
+                vector3 down = Orbeden::Math::TransformDirection(wheelRotation, {0, -1, 0});
                 vector3 restCenter = Offset(mount, down, restLength);
                 vector3 compressedCenter = Offset(restCenter, down, -travel);
                 vector3 center = Offset(restCenter, down, -compression);
                 float32 halfAngle = wheel->steeringWheel ? wheel->steerAngle * Pi / 360.0f : 0.0f;
                 quaternion steering{0, std::sin(halfAngle), 0, std::cos(halfAngle)};
-                matrix4x4 pose = RenderMath::TRS(center,
-                    RenderMath::Mul(transform->GetWorldRotation(), steering), {1, 1, 1});
+                matrix4x4 pose = Orbeden::Math::TRS(center,
+                    Orbeden::Math::Mul(transform->GetWorldRotation(), steering), {1, 1, 1});
 
                 //绘制车轮圆环、直径与轮轴标记
                 sink.ink = wheelActive ? IM_COL32(90, 230, 135, selected ? 245 : 130) : IM_COL32(105, 155, 120, 140);
                 sink.thickness = selected ? 1.5f : 1.0f;
                 sink.Arc(pose, {}, {0, 0, 1}, {0, 1, 0}, radius);
-                sink.Line(RenderMath::TransformPoint(pose, {0, 0, -radius}),
-                    RenderMath::TransformPoint(pose, {0, 0, radius}));
+                sink.Line(Orbeden::Math::TransformPoint(pose, {0, 0, -radius}),
+                    Orbeden::Math::TransformPoint(pose, {0, 0, radius}));
                 float32 marker = radius * 0.2f;
-                sink.Line(RenderMath::TransformPoint(pose, {-marker, 0, 0}),
-                    RenderMath::TransformPoint(pose, {marker, 0, 0}));
+                sink.Line(Orbeden::Math::TransformPoint(pose, {-marker, 0, 0}),
+                    Orbeden::Math::TransformPoint(pose, {marker, 0, 0}));
 
                 //绘制悬挂连线与压缩行程端点
                 sink.Line(mount, center);
                 sink.ink = wheelActive ? IM_COL32(255, 180, 75, selected ? 245 : 130) : IM_COL32(155, 140, 110, 140);
                 sink.Line(restCenter, compressedCenter);
-                vector3 axle = RenderMath::TransformDirection(wheelRotation, {1, 0, 0});
+                vector3 axle = Orbeden::Math::TransformDirection(wheelRotation, {1, 0, 0});
                 for (vector3 endpoint : {restCenter, compressedCenter})
                     sink.Line(Offset(endpoint, axle, -marker), Offset(endpoint, axle, marker));
                 continue;
@@ -296,15 +296,15 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
             if (!collider) continue;
             sink.ink = active && collider->GetEnabled() ? IM_COL32(90, 230, 135, selected ? 245 : 130) : IM_COL32(105, 155, 120, 140);
             sink.thickness = selected ? 1.5f : 1.0f;
-            vector3 center = RenderMath::TransformPoint(rotation, {collider->GetCenter().x * scale.x, collider->GetCenter().y * scale.y, collider->GetCenter().z * scale.z});
+            vector3 center = Orbeden::Math::TransformPoint(rotation, {collider->GetCenter().x * scale.x, collider->GetCenter().y * scale.y, collider->GetCenter().z * scale.z});
             center = Offset(transform->GetWorldPosition(), center, 1);
-            matrix4x4 pose = RenderMath::TRS(center, transform->GetWorldRotation(), {1,1,1});
+            matrix4x4 pose = Orbeden::Math::TRS(center, transform->GetWorldRotation(), {1,1,1});
             if (BoxCollider* box = collider->Cast<BoxCollider>())
             {
                 vector3 extent{std::max(std::abs(box->GetHalfExtents().x * scale.x), 0.001f), std::max(std::abs(box->GetHalfExtents().y * scale.y), 0.001f), std::max(std::abs(box->GetHalfExtents().z * scale.z), 0.001f)};
                 vector3 corners[8];
                 for (int32 index = 0; index < 8; ++index)
-                    corners[index] = RenderMath::TransformPoint(pose, {(index&1)?extent.x:-extent.x, (index&2)?extent.y:-extent.y, (index&4)?extent.z:-extent.z});
+                    corners[index] = Orbeden::Math::TransformPoint(pose, {(index&1)?extent.x:-extent.x, (index&2)?extent.y:-extent.y, (index&4)?extent.z:-extent.z});
                 for (int32 index = 0; index < 8; ++index)
                     for (int32 bit : {1,2,4}) if (!(index & bit)) sink.Line(corners[index], corners[index | bit]);
             }
@@ -324,8 +324,8 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                     sink.Arc(pose, {0, sign * half, 0}, {1,0,0}, {0,0,1}, radius);
                     sink.Arc(pose, {0, sign * half, 0}, {1,0,0}, {0,sign,0}, radius, 0, Pi);
                     sink.Arc(pose, {0, sign * half, 0}, {0,0,1}, {0,sign,0}, radius, 0, Pi);
-                    sink.Line(RenderMath::TransformPoint(pose, {sign*radius,-half,0}), RenderMath::TransformPoint(pose, {sign*radius,half,0}));
-                    sink.Line(RenderMath::TransformPoint(pose, {0,-half,sign*radius}), RenderMath::TransformPoint(pose, {0,half,sign*radius}));
+                    sink.Line(Orbeden::Math::TransformPoint(pose, {sign*radius,-half,0}), Orbeden::Math::TransformPoint(pose, {sign*radius,half,0}));
+                    sink.Line(Orbeden::Math::TransformPoint(pose, {0,-half,sign*radius}), Orbeden::Math::TransformPoint(pose, {0,half,sign*radius}));
                 }
             }
             else
@@ -363,9 +363,9 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                             }
                     }
                 }
-                matrix4x4 meshPose = RenderMath::TRS(center, transform->GetWorldRotation(), scale);
+                matrix4x4 meshPose = Orbeden::Math::TRS(center, transform->GetWorldRotation(), scale);
                 for (usize index = 0; index + 1 < cached.lines.size() && sink.remaining > 0; index += 2)
-                    sink.Line(RenderMath::TransformPoint(meshPose,cached.lines[index]), RenderMath::TransformPoint(meshPose,cached.lines[index+1]));
+                    sink.Line(Orbeden::Math::TransformPoint(meshPose,cached.lines[index]), Orbeden::Math::TransformPoint(meshPose,cached.lines[index+1]));
             }
         }
     });

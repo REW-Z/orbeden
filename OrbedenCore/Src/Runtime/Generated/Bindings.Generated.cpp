@@ -307,10 +307,11 @@ void Write_AtmosphereSettings(NativeBindingWriter& writer, AtmosphereSettings co
     Write_float32(writer, value.metersPerWorldUnit);
     Write_float32(writer, value.aerosolDensity);
     Write_float32(writer, value.sunRadianceScale);
+    Write_color(writer, value.groundBackgroundColor);
 }
 AtmosphereSettings Read_AtmosphereSettings(NativeBindingReader& reader)
 {
-    auto block = reader.Block(1, sizeof(uint8) + sizeof(uint32) + sizeof(uint8) + sizeof(uint32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float64) + sizeof(float64) + sizeof(vector3) + sizeof(float32) + sizeof(float32) + sizeof(float32));
+    auto block = reader.Block(1, sizeof(uint8) + sizeof(uint32) + sizeof(uint8) + sizeof(uint32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(float64) + sizeof(float64) + sizeof(vector3) + sizeof(float32) + sizeof(float32) + sizeof(float32) + sizeof(color));
     const uint8* cursor = block.data();
     AtmosphereSettings value{};
     uint8 raw0;
@@ -373,6 +374,10 @@ AtmosphereSettings Read_AtmosphereSettings(NativeBindingReader& reader)
     std::memcpy(&raw14, cursor, sizeof(raw14));
     cursor += sizeof(raw14);
     value.sunRadianceScale = static_cast<float32>(raw14);
+    color raw15;
+    std::memcpy(&raw15, cursor, sizeof(raw15));
+    cursor += sizeof(raw15);
+    value.groundBackgroundColor = static_cast<color>(raw15);
     return value;
 }
 void Write_BlendMode(NativeBindingWriter& writer, BlendMode const& value)
@@ -7789,7 +7794,7 @@ void RegisterBindings_Orbeden()
     static void* functions_Component[] = { reinterpret_cast<void*>(&Call_Component_0) };
     NativeBindings::Register(Component::StaticType(), 3730866753121215061ULL, { functions_Component, 1 });
     static void* functions_Ens[] = { reinterpret_cast<void*>(&Call_Ens_0), reinterpret_cast<void*>(&Call_Ens_1), reinterpret_cast<void*>(&Call_Ens_2), reinterpret_cast<void*>(&Call_Ens_3), reinterpret_cast<void*>(&Call_Ens_4), reinterpret_cast<void*>(&Call_Ens_5) };
-    NativeBindings::Register(Ens::StaticType(), 1271523575787013593ULL, { functions_Ens, 6 });
+    NativeBindings::Register(Ens::StaticType(), 17390094485895889474ULL, { functions_Ens, 6 });
     static void* functions_Font[] = { reinterpret_cast<void*>(&Call_Font_0), reinterpret_cast<void*>(&Call_Font_1), reinterpret_cast<void*>(&Call_Font_2), reinterpret_cast<void*>(&Call_Font_3), reinterpret_cast<void*>(&Call_Font_4), reinterpret_cast<void*>(&Call_Font_5), reinterpret_cast<void*>(&Call_Font_6), reinterpret_cast<void*>(&Call_Font_7), reinterpret_cast<void*>(&Call_Font_8), reinterpret_cast<void*>(&Call_Font_9), reinterpret_cast<void*>(&Call_Font_10), reinterpret_cast<void*>(&Call_Font_11), reinterpret_cast<void*>(&Call_Font_12), reinterpret_cast<void*>(&Call_Font_13), reinterpret_cast<void*>(&Call_Font_14), reinterpret_cast<void*>(&Call_Font_15), reinterpret_cast<void*>(&Call_Font_16), reinterpret_cast<void*>(&Call_Font_17), reinterpret_cast<void*>(&Call_Font_18), reinterpret_cast<void*>(&Call_Font_19), reinterpret_cast<void*>(&Call_Font_20), reinterpret_cast<void*>(&Call_Font_21), reinterpret_cast<void*>(&Call_Font_22), reinterpret_cast<void*>(&Call_Font_23), reinterpret_cast<void*>(&Call_Font_24) };
     NativeBindings::Register(Font::StaticType(), 8904294447050588615ULL, { functions_Font, 25 });
     static void* functions_InstanceDrawList[] = { reinterpret_cast<void*>(&Call_InstanceDrawList_0), reinterpret_cast<void*>(&Call_InstanceDrawList_1), reinterpret_cast<void*>(&Call_InstanceDrawList_2), reinterpret_cast<void*>(&Call_InstanceDrawList_3), reinterpret_cast<void*>(&Call_InstanceDrawList_4), reinterpret_cast<void*>(&Call_InstanceDrawList_5) };

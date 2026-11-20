@@ -64,12 +64,11 @@ bool TriangleMeshCollider::PrepareMeshAsync()
     }
     auto positions = source->vertices;
     auto indices = source->indices;
-    auto bytes = std::make_shared<List<uint8>>();
     auto params = *physics->GetCookingParams();
-    cookingVersion = source->GetContentVersion();
-    cookingMeshId = source->GetObjectId();
-    cookedBytes = bytes;
-    cooking = std::make_shared<ThreadOperation>([positions = std::move(positions), indices = std::move(indices), bytes, params]
+    auto* insertion = &physics->GetPhysics()->getPhysicsInsertionCallback();
+    auto prepared = physics->CreatePreparedTriangleMesh();
+    auto operation = std::make_shared<ThreadOperation>(
+        [positions = std::move(positions), indices = std::move(indices), prepared, params, insertion]
     {
         physx::PxTriangleMeshDesc description;
         description.points.count = static_cast<physx::PxU32>(positions.size());
@@ -78,13 +77,18 @@ bool TriangleMeshCollider::PrepareMeshAsync()
         description.triangles.count = static_cast<physx::PxU32>(indices.size() / 3);
         description.triangles.stride = sizeof(uint32) * 3;
         description.triangles.data = indices.data();
-        physx::PxDefaultMemoryOutputStream output;
-        if (!PxCookTriangleMesh(params, description, output))
+        prepared->mesh.reset(PxCreateTriangleMesh(params, description, *insertion));
+        if (!prepared->mesh)
         {
             throw std::runtime_error("Triangle mesh cooking failed.");
         }
-        bytes->assign(output.getData(), output.getData() + output.getSize());
     });
+
+    //记录当前网格版本与后台结果
+    cookingVersion = source->GetContentVersion();
+    cookingMeshId = source->GetObjectId();
+    cookedMesh = std::move(prepared);
+    cooking = std::move(operation);
     return true;
 }
 
@@ -96,7 +100,7 @@ void TriangleMeshCollider::DiscardPreparedMesh()
         cooking->Cancel();
     }
     cooking.reset();
-    cookedBytes.reset();
+    cookedMesh.reset();
     cookingVersion = 0;
     cookingMeshId = 0;
 }
@@ -113,10 +117,10 @@ int32 TriangleMeshCollider::ApplyPreparedMesh()
         && source->GetContentVersion() == cookingVersion;
     if (success)
     {
-        success = PhysicsSystem::Current()->InstallTriangleMesh(*source, *cookedBytes);
+        PhysicsSystem* physics = PhysicsSystem::Current();
+        success = physics && physics->InstallTriangleMesh(*source, *cookedMesh);
     }
-    cooking.reset();
-    cookedBytes.reset();
+    DiscardPreparedMesh();
     return success ? 1 : -1;
 }
 

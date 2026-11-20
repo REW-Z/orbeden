@@ -3,6 +3,7 @@
 #include "Runtime/LayerSettings.h"
 #include "Runtime/World.h"
 #include "Runtime/ITransformListener.h"
+#include "Runtime/Coroutines/ThreadOperation.h"
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
@@ -11,7 +12,7 @@
 #include "Runtime/Object/HeightField.h"
 #include "Runtime/Object/RigidBody.h"
 #include "Runtime/Object/WheelCollider.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Transform.h"
@@ -37,6 +38,12 @@
 #include <unordered_set>
 
 using namespace physx;
+
+//释放未安装的三角网格
+void PreparedTriangleMesh::Release::operator()(PxTriangleMesh* mesh) const noexcept
+{
+    mesh->release();
+}
 
 namespace
 {
@@ -101,7 +108,11 @@ namespace
 
     PxVec3 ToPx(const vector3& value)
     {
-        return PxVec3(value.x, value.y, value.z);
+        PxVec3 result;
+        result.x = value.x;
+        result.y = value.y;
+        result.z = value.z;
+        return result;
     }
 
     vector3 FromPx(const PxVec3& value)
@@ -469,6 +480,7 @@ public:
     std::unordered_map<uint64, std::unique_ptr<ControllerRecord>> controllers;
     std::unordered_map<Mesh*, PxConvexMesh*> convexMeshes;
     std::unordered_map<Mesh*, PxTriangleMesh*> triangleMeshes;
+    List<std::weak_ptr<PreparedTriangleMesh>> preparedTriangleMeshes;
     List<PhysicsEvent> events;
 
     World* world = nullptr;
@@ -547,6 +559,20 @@ public:
 
     void Shutdown()
     {
+        //在 PhysX 退出前收尾后台烘焙并释放未安装的网格
+        if (!preparedTriangleMeshes.empty())
+        {
+            ThreadOperation::WaitAll();
+            for (const auto& weak : preparedTriangleMeshes)
+            {
+                if (auto prepared = weak.lock())
+                {
+                    prepared->mesh.reset();
+                }
+            }
+            preparedTriangleMeshes.clear();
+        }
+
         Object::RemoveDestroyListener(this);
         ResetWorld();
 
@@ -1067,7 +1093,7 @@ public:
                     inverseBody = PxTransform(ToPx(bodyTransform.GetWorldPosition()), ToPx(bodyTransform.GetWorldRotation())).getInverse();
                     inverseBodyReady = true;
                 }
-                vector3 center = RenderMath::TransformPoint(transform.GetWorldMatrix(), collider->GetCenter());
+                vector3 center = Orbeden::Math::TransformPoint(transform.GetWorldMatrix(), collider->GetCenter());
                 PxQuat rotation = ToPx(transform.GetWorldRotation());
                 if (collider->GetGeometryType() == ColliderGeometryType::Capsule)
                 {
@@ -2263,7 +2289,7 @@ public:
             quaternion rotation = transform->GetWorldRotation();
 
             //按车轮节点世界变换计算安装点与悬挂轴
-            vector3 mountWorld = RenderMath::TransformPoint(transform->GetWorldMatrix(), wheel->wheelOffset);
+            vector3 mountWorld = Orbeden::Math::TransformPoint(transform->GetWorldMatrix(), wheel->wheelOffset);
             vector3 direction = Rotate(rotation, { 0.0f, -1.0f, 0.0f });
             const float32* matrix = transform->GetWorldMatrix().m;
             float32 suspensionScale = std::sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5] + matrix[6] * matrix[6]);
@@ -2621,21 +2647,26 @@ bool PhysicsSystem::GetConvexWireframe(Mesh& mesh, List<vector3>& lines)
     return true;
 }
 
-//接收后台烘焙的三角网格
-bool PhysicsSystem::InstallTriangleMesh(Mesh& mesh, const List<uint8>& bytes)
+//登记后台烘焙的网格结果
+std::shared_ptr<PreparedTriangleMesh> PhysicsSystem::CreatePreparedTriangleMesh()
 {
-    if (!IsInitialized() || bytes.empty())
-    {
-        return false;
-    }
-    PxDefaultMemoryInputData input(bytes.data(), static_cast<PxU32>(bytes.size()));
-    PxTriangleMesh* cooked = impl->physics->createTriangleMesh(input);
-    if (!cooked)
+    auto prepared = std::make_shared<PreparedTriangleMesh>();
+    auto& results = impl->preparedTriangleMeshes;
+    std::erase_if(results, [](const auto& weak) { return weak.expired(); });
+    results.push_back(prepared);
+    return prepared;
+}
+
+//将后台创建的三角网格交给物理缓存
+bool PhysicsSystem::InstallTriangleMesh(Mesh& mesh, PreparedTriangleMesh& prepared)
+{
+    if (!IsInitialized() || !prepared.mesh)
     {
         return false;
     }
     impl->InvalidateCookedMeshes(mesh);
-    impl->triangleMeshes[&mesh] = cooked;
+    impl->triangleMeshes[&mesh] = prepared.mesh.get();
+    prepared.mesh.release();
     mesh.ClearDirty(MeshDirtyFlags::Physics);
     return true;
 }

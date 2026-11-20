@@ -705,12 +705,23 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
         ownedTextures.insert(colorTexture);
         glBindTexture(GL_TEXTURE_2D, colorTexture);
         GLint colorFilter = desc.linearColorFilter ? GL_LINEAR : GL_NEAREST;
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, colorFilter);
+        GLint minFilter = desc.colorMipmaps
+            ? (desc.linearColorFilter ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
+            : colorFilter;
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, colorFilter);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, ToRenderTargetFormat(desc.format), desc.width, desc.height, 0,
-            ToRenderTargetSourceFormat(desc.format), ToRenderTargetSourceType(desc.format), nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, desc.repeatColor ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, desc.repeatColor ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+        if (desc.colorMipmaps)
+        {
+            int32 levels = static_cast<int32>(std::log2(std::max(desc.width, desc.height))) + 1;
+            glTexStorage2D(GL_TEXTURE_2D, levels, ToRenderTargetFormat(desc.format), desc.width, desc.height);
+        }
+        else
+        {
+            glTexImage2D(GL_TEXTURE_2D, 0, ToRenderTargetFormat(desc.format), desc.width, desc.height, 0,
+                ToRenderTargetSourceFormat(desc.format), ToRenderTargetSourceType(desc.format), nullptr);
+        }
         glBindTexture(GL_TEXTURE_2D, 0);
         boundTexture2Ds[currentTextureSlot] = 0;
     }
@@ -782,6 +793,17 @@ void OpenGLRenderBackend::DeleteRenderTarget(GpuRenderTargetID id)
     }
 
     renderTargetFormats.erase(id.id);
+}
+
+//更新颜色附件的逐级缩小图
+void OpenGLRenderBackend::GenerateRenderTargetMipmaps(GpuRenderTargetID id)
+{
+    GpuTextureID texture = GetRenderTargetColorTexture(id);
+    if (!texture.IsValid()) return;
+    const uint32 previous = boundTexture2Ds[currentTextureSlot];
+    glBindTexture(GL_TEXTURE_2D, texture.id);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, previous);
 }
 
 GpuTextureID OpenGLRenderBackend::GetRenderTargetColorTexture(GpuRenderTargetID id) const

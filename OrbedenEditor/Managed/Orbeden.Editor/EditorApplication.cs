@@ -86,6 +86,7 @@ internal struct EditorWorldRenderSettingsAbi
     public uint FogDebugViewReserved;
     public float DenseFogReservedTail2;
     public vector3 UpDirection;
+    public color GroundBackgroundColor;
 }
 
 /// <summary>世界级大气设置，字段与原生 RenderSettings::atmosphere 一一对应。</summary>
@@ -107,6 +108,7 @@ internal struct WorldAtmosphereSettings
     public float FogScatteringScale;
     public float FogSunScatteringScale;
     public float FogTopFadeMeters;
+    public color GroundBackgroundColor;
 }
 
 internal enum EditorProjectField
@@ -169,6 +171,7 @@ public static unsafe class EditorApplication
             MetersPerWorldUnit = 1.0f,
             AerosolDensity = 1.0f,
             SunRadianceScale = 1.0f,
+            GroundBackgroundColor = new color { r = 0.08f, g = 0.12f, b = 0.16f, a = 1.0f },
         };
         if (api.GetWorldRenderSettings == null) return false;
 
@@ -196,6 +199,7 @@ public static unsafe class EditorApplication
             MetersPerWorldUnit = settings.MetersPerWorldUnit,
             AerosolDensity = settings.AerosolDensity,
             SunRadianceScale = settings.SunRadianceScale,
+            GroundBackgroundColor = settings.GroundBackgroundColor,
             DenseFogEnabled = settings.DenseFogEnabled != 0,
             DenseFogMode = settings.DenseFogMode,
             FogVisibilityMeters = settings.FogVisibilityMeters,
@@ -234,6 +238,7 @@ public static unsafe class EditorApplication
                 MetersPerWorldUnit = atmosphere.MetersPerWorldUnit,
                 AerosolDensity = atmosphere.AerosolDensity,
                 SunRadianceScale = atmosphere.SunRadianceScale,
+                GroundBackgroundColor = atmosphere.GroundBackgroundColor,
                 DenseFogEnabled = atmosphere.DenseFogEnabled ? 1u : 0u,
                 DenseFogMode = atmosphere.DenseFogMode,
                 FogVisibilityMeters = atmosphere.FogVisibilityMeters,
@@ -262,7 +267,8 @@ public static unsafe class EditorApplication
     /// <summary>校验环境设置载荷的尺寸与关键偏移；托管与原生布局不一致时立刻中止。</summary>
     private static void CheckRenderSettingsLayout()
     {
-        bool matches = Marshal.SizeOf<EditorWorldRenderSettingsAbi>() == 176
+        bool matches = Marshal.SizeOf<EditorWorldRenderSettingsAbi>() == 192
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.GroundBackgroundColor)).ToInt32() == 172
             && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.SkyMode)).ToInt32() == 64
             && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.PlanetRadiusMeters)).ToInt32() == 80
             && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.AltitudeMeters)).ToInt32() == 88

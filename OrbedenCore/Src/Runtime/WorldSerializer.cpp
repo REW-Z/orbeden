@@ -773,6 +773,8 @@ namespace
                 if (!ReadFloat32Attribute(token, "metersPerWorldUnit", atmosphere.metersPerWorldUnit)) return false;
                 if (!ReadFloat32Attribute(token, "aerosolDensity", atmosphere.aerosolDensity)) return false;
                 if (!ReadFloat32Attribute(token, "sunRadianceScale", atmosphere.sunRadianceScale)) return false;
+                const std::string& groundBackground = GetAttribute(token, "groundBackgroundColor");
+                if (!groundBackground.empty() && !Reflection::SetFromXmlValue(atmosphere.groundBackgroundColor, groundBackground)) return false;
 
                 //拒绝非正的单位比例
                 if (!(atmosphere.metersPerWorldUnit > 0.0f))
@@ -1034,6 +1036,7 @@ std::string WorldSerializer::CaptureWorld(const World& world)
         << "\" metersPerWorldUnit=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.metersPerWorldUnit))
         << "\" aerosolDensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.aerosolDensity))
         << "\" sunRadianceScale=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.sunRadianceScale))
+        << "\" groundBackgroundColor=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.groundBackgroundColor))
         << "\" />\n";
     world.ForEachEns([&output](Ens& ens)
         {

@@ -24,10 +24,10 @@ Orbeden 是一个游戏引擎项目。核心原生代码在 `OrbedenCore/`，托
 | 判据 | 本引擎取值 | 位置 |
 |---|---|---|
 | 相机眼空间朝向 | `-Z` | `EditorScene::GetForward` |
-| 透视投影 `m[11]` | `-1.0f`（即 `w = -z_eye`） | `RenderMath::Perspective` |
+| 透视投影 `m[11]` | `-1.0f`（即 `w = -z_eye`） | `Orbeden::Math::Perspective` |
 | 近/远平面 → NDC z | `-1 → +1` | 同上 |
 | 相机 GPU 深度 | 支持时为 `1 → 0`、`[0,1]` Reversed-Z；否则沿用普通深度 | `RenderCamera::gpuProjectionMatrix` |
-| 正交投影 `m[10]` | `-2 / depth` | `RenderMath::Orthographic` |
+| 正交投影 `m[10]` | `-2 / depth` | `Orbeden::Math::Orthographic` |
 | 正面绕序 | GL 默认 **CCW** | 全仓不调用 `glFrontFace` |
 
 `LookAt` 把 `-forward` 写进视图矩阵第三列，同时 `RenderCamera::viewMatrix = Inverse(worldMatrix)`。这两句是同一件事的两种写法，改一处必须改另一处。

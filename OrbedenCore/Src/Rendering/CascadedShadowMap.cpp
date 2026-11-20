@@ -1,7 +1,7 @@
 #include "Rendering/CascadedShadowMap.h"
 #include "Rendering/ParticleRenderer.h"
 #include "Rendering/StaticBatchCache.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/Math.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
@@ -62,12 +62,12 @@ bool CascadedShadowMap::CanReuseView(const RenderCamera& previous, const RenderC
         previous.nearPlane != current.nearPlane || previous.farPlane != current.farPlane ||
         std::memcmp(previous.projectionMatrix.m, current.projectionMatrix.m, sizeof(matrix4x4)) != 0) return false;
     vector3 offset{ previous.position.x-current.position.x, previous.position.y-current.position.y, previous.position.z-current.position.z };
-    if (RenderMath::Dot(offset, offset) > maxDistance * maxDistance) return false;
+    if (Orbeden::Math::Dot(offset, offset) > maxDistance * maxDistance) return false;
     for (int32 axis : {0, 2})
     {
         vector3 a{previous.worldMatrix.m[axis*4],previous.worldMatrix.m[axis*4+1],previous.worldMatrix.m[axis*4+2]};
         vector3 b{current.worldMatrix.m[axis*4],current.worldMatrix.m[axis*4+1],current.worldMatrix.m[axis*4+2]};
-        if (RenderMath::Dot(RenderMath::Normalize(a), RenderMath::Normalize(b)) < 0.95f) return false;
+        if (Orbeden::Math::Dot(Orbeden::Math::Normalize(a), Orbeden::Math::Normalize(b)) < 0.95f) return false;
     }
     float32 elapsed = current.elapsedTime - previous.elapsedTime;
     return elapsed >= 0.0f && elapsed <= 1.0f;
@@ -429,6 +429,6 @@ void CascadedShadowMap::CaptureDepth(const RenderCamera& camera)
         [&](const CameraHistory& history) { return history.camera.ens == camera.ens; });
     if (found == histories.end()) return;
     if (backend->SubmitDepthDistribution(found->query, camera.cameraDepthTexture,
-        RenderMath::Inverse(camera.gpuProjectionMatrix), camera.nearPlane, std::min(camera.farPlane, settings.distance), camera.reversedDepth))
+        Orbeden::Math::Inverse(camera.gpuProjectionMatrix), camera.nearPlane, std::min(camera.farPlane, settings.distance), camera.reversedDepth))
         found->submittedCamera = camera;
 }
