@@ -137,9 +137,14 @@ internal static class EditorPrefabDocuments
                 if (field != null) field.SetAttributeValue("value", (string?)previous.Attribute("value"));
                 else newTransform?.Add(new XElement(previous));
             }
-            if (!XNode.DeepEquals(instance, replacement)) changed = true;
+            if (XNode.DeepEquals(CreateComparableInstance(instance), CreateComparableInstance(replacement)))
+            {
+                continue;
+            }
+
             instance.ReplaceWith(replacement);
             binding.ObjectKeys = map;
+            changed = true;
         }
         WriteBindings(root, bindings);
         if (removed.Count != 0)
@@ -149,6 +154,39 @@ internal static class EditorPrefabDocuments
             changed = true;
         }
         return changed;
+    }
+
+    //统一实例比较时使用的 XML 属性顺序和缺省值
+    private static XElement CreateComparableInstance(XElement instance)
+    {
+        XElement comparable = new(instance);
+        foreach (XElement element in comparable.DescendantsAndSelf())
+        {
+            if (element.Name == "Ens")
+            {
+                element.SetAttributeValue("name", (string?)element.Attribute("name") ?? string.Empty);
+                element.SetAttributeValue("localActive", (string?)element.Attribute("localActive") is not ("false" or "0"));
+                element.SetAttributeValue("static", (string?)element.Attribute("static") is "true" or "1");
+                if (string.IsNullOrEmpty((string?)element.Attribute("layer")))
+                {
+                    element.SetAttributeValue("layer", "0");
+                }
+                element.SetAttributeValue("editorSelectable", (string?)element.Attribute("editorSelectable") is not ("false" or "0"));
+            }
+            else if (element.Name == "Component" && (string?)element.Attribute("type") == "StaticMeshRenderer")
+            {
+                XElement[] flags = element.Elements("Field").Where(field => (string?)field.Attribute("name") == "hasDrawParameters")
+                    .Take(2).ToArray();
+                if (flags.Length == 1 && (string?)flags[0].Attribute("value") is "false" or "0")
+                {
+                    flags[0].Remove();
+                }
+            }
+
+            element.ReplaceAttributes(element.Attributes().OrderBy(attribute => attribute.Name.ToString(), StringComparer.Ordinal));
+        }
+
+        return comparable;
     }
 
     //安全替换文档文件

@@ -19,9 +19,11 @@
 
 # 未排期  
 
-着色器生成器。
+着色器生成器。  
+物理引擎等待fetchResults。  
 
 # Todo
 
+加载world后为Dirty。  
 ProcessInput优化。  
-GPU Instancing 和 Texture2DArray+Index。
+GPU Instancing 和 Texture2DArray+Index。  

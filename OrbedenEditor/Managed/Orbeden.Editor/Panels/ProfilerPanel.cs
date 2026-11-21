@@ -776,14 +776,26 @@ internal sealed class ProfilerPanel : EditorPanel
                     $"{ToMilliseconds(timelinePan + (long)(visibleSpan * ratio)):F2}");
             }
 
-            //一次调用画在它所属深度的那一行
+            vector2 mouse = hovered ? NativeEditorGUI.GetMousePos() : default;
+            bool mouseInPlot = hovered && mouse.x >= plotLeft && mouse.x < plotLeft + plotWidth;
+            int hoveredEventIndex = -1;
+
+            //用同一个矩形绘制条形并判断悬停
             for (int index = 0; index < selectedFrameEventCount; index++)
             {
                 if (eventRight[index] < 0.0f) continue;
 
                 float rowTop = rowsTop + Math.Max(events[index].Depth, 0) * TimelineRowHeight;
-                rectCount = EditorRects.Append(rects, rectCount, eventLeft[index], rowTop + 1.0f, eventRight[index],
-                    rowTop + TimelineRowHeight - 1.0f, GetCategoryColor(events[index].Category));
+                float barTop = rowTop + 1.0f;
+                float barBottom = rowTop + TimelineRowHeight - 1.0f;
+                rectCount = EditorRects.Append(rects, rectCount, eventLeft[index], barTop, eventRight[index],
+                    barBottom, GetCategoryColor(events[index].Category));
+
+                if (mouseInPlot && mouse.x >= eventLeft[index] && mouse.x < eventRight[index]
+                    && mouse.y >= barTop && mouse.y < barBottom)
+                {
+                    hoveredEventIndex = index;
+                }
 
                 if (rectCount >= rects.Length) break;
             }
@@ -802,30 +814,13 @@ internal sealed class ProfilerPanel : EditorPanel
                     EditorTheme.Current.Text, GetName(events[index].NameId));
             }
 
-            if (!hovered) return;
+            if (hoveredEventIndex < 0) return;
 
-            //鼠标落在哪一层、哪一段时间上，直接反推
-            vector2 mouse = NativeEditorGUI.GetMousePos();
-            float hoverRatio = (mouse.x - plotLeft) / plotWidth;
-            if (hoverRatio < 0.0f || hoverRatio > 1.0f) return;
-
-            int hoveredDepth = (int)((mouse.y - rowsTop) / TimelineRowHeight);
-            if (hoveredDepth < 0 || hoveredDepth >= rowCount) return;
-
-            long hoveredTime = (long)(axis * hoverRatio);
-            for (int index = 0; index < selectedFrameEventCount; index++)
-            {
-                ProfileEvent profileEvent = events[index];
-                if (profileEvent.Depth != hoveredDepth) continue;
-                if (hoveredTime < profileEvent.StartMicroseconds) continue;
-                if (hoveredTime > profileEvent.StartMicroseconds + profileEvent.DurationMicroseconds) continue;
-
-                EditorGUI.SetTooltip($"{GetName(profileEvent.NameId)}\n"
-                    + $"This call {ToMilliseconds(profileEvent.DurationMicroseconds):F3} ms @ {ToMilliseconds(profileEvent.StartMicroseconds):F3} ms\n"
-                    + GetAggregateText(profileEvent.NodeId)
-                    + $"Depth {profileEvent.Depth}");
-                break;
-            }
+            ProfileEvent hoveredEvent = events[hoveredEventIndex];
+            EditorGUI.SetTooltip($"{GetName(hoveredEvent.NameId)}\n"
+                + $"This call {ToMilliseconds(hoveredEvent.DurationMicroseconds):F3} ms @ {ToMilliseconds(hoveredEvent.StartMicroseconds):F3} ms\n"
+                + GetAggregateText(hoveredEvent.NodeId)
+                + $"Depth {hoveredEvent.Depth}");
         }
         finally
         {
