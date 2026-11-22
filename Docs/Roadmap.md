@@ -24,6 +24,7 @@
 
 # Todo
 
-加载world后为Dirty。  
+多线程编译C++脚本。  
+
 ProcessInput优化。  
 GPU Instancing 和 Texture2DArray+Index。  

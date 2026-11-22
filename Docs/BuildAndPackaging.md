@@ -585,6 +585,10 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+#### 版本 136：游戏 C++ 并行编译
+
+游戏原生模块和 Windows x64 Player 默认使用 MSBuild 的 MultiToolTask 并行编译 C++ 文件。游戏源码的 `.obj` 按 `Content/` 下的相对目录存放，同名源码可同时编译。Editor 在手动构建或热刷新触发的全量重建成功后重载模块。需重建 Core 以发布共享 `Orbeden.Native.targets`，重建 Editor 并同步项目 SDK。发布时重新 Build Player。
+
 #### 版本 135：纹理硬件各向异性过滤
 
 `Texture2D.anisotropy` 设置硬件各向异性过滤倍数，默认 1，OpenGL 与 Vulkan 按设备上限限制。Vulkan 同时启用设备特性，并按采样倍数区分图像缓存。属性写入会刷新 GPU 纹理，C# 绑定由 MetaGen 生成。需重建 Core、托管 SDK、Editor 及游戏脚本并同步项目 SDK；无需重置 Builtin，无场景或资源格式迁移。发布包重新 Build Player。

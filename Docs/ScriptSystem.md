@@ -473,6 +473,8 @@ ABI 两端使用 Pack=8，结构顺序和函数槽位数必须同步。完整运
 
 游戏 C++ 构建步骤先运行 MetaGen 生成反射、字段访问器、动态与类型化方法 ABI thunk、生命周期 thunk，再由 MSBuild 编译游戏原生工程；不生成游戏专用 C# 包装或 Binding 注册。Editor 使用 DLL；Player 将游戏源码和反射生成代码编入目标。C# 项目使用 Core SDK；NativeAOT 导出薄层只提供固定阶段入口，游戏程序集需要保留反射访问的脚本构造函数和成员，动态功能遵循裁剪规则。
 
+游戏原生模块和 Windows x64 Player 使用 MSBuild 的文件级并行编译，MetaGen 在编译前完成，链接在编译后执行。Editor 等待构建完成后再重载游戏模块。
+
 ### Ens 的独立对象身份
 
 Ens 继承 Object；EnsId 仍是带版本的 World 内部句柄，不承担持久化身份。Ens 与 Transform 分别注册独立的 ObjectId 和稳定路径。C# 的 Ens 同样继承 Object，支持 Object 字段和 Ref<Ens> 原生字段引用。销毁 Ens 由 World 统一释放其组件及对象身份。旧文件共用的 ID 在读取时拆分：原 ID 留给 Ens，Transform 获得独立路径；既有 Transform/Object 引用按声明类型迁移，EnsId 引用继续指向 Ens。

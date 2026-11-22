@@ -13,6 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8B2F6D41-9C5A-4E7B-8A3D-1F6E2C9B7A50}</ProjectGuid>
     <RootNamespace>OrbedenGame</RootNamespace>
+    <MultiProcCL>true</MultiProcCL>
     <!--Player 工程位于 OrbedenGame/ 下，仓库根为上一级目录。-->
     <OrbedenEngineRoot Condition="'$(OrbedenEngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</OrbedenEngineRoot>
     <!--内容根：美术、音频、场景与代码脚本，内部结构完全自由。-->
@@ -69,7 +70,9 @@
   <ItemGroup>
     <ClCompile Include="Src\game_main.cpp" />
     <!--收集 RawContent 之外的游戏 C++ 源码；GameModule.cpp 由 Editor 模块工程编译。-->
-    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" Exclude="$(OrbedenContentRoot)\RawContent\**" />
+    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" Exclude="$(OrbedenContentRoot)\RawContent\**">
+      <ObjectFileName>$(IntDir)Content\%(RecursiveDir)</ObjectFileName>
+    </ClCompile>
     <!--游戏生成的 .cpp 与 Core 生成文件同名，使用独立 obj 目录避免冲突。-->
     <ClCompile Include="$(OrbedenProjectDir)\Build\Native\Generated\Reflection.Generated.cpp">
       <ObjectFileName>$(IntDir)GameGenerated\%(Filename).obj</ObjectFileName>

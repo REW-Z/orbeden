@@ -7,6 +7,10 @@
 
     导入位置必须在 Microsoft.Cpp.props 之后，才能压过工具集属性表里的默认值。
   -->
+  <PropertyGroup>
+    <!--由 MSBuild 并行调度各个源文件，支持不同的目标文件目录。-->
+    <MultiProcCL>true</MultiProcCL>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -21,8 +25,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <!--收集原始内容目录之外的 C++ 源文件-->
-    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" Exclude="$(OrbedenContentRoot)\RawContent\**" />
+    <!--收集 C++ 源文件，按内容目录隔离同名目标文件。-->
+    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" Exclude="$(OrbedenContentRoot)\RawContent\**">
+      <ObjectFileName>$(IntDir)Content\%(RecursiveDir)</ObjectFileName>
+    </ClCompile>
     <!--导出层由 SDK 提供、直接引用，不在项目内保留副本；生成文件要到构建期才产生，必须用字面路径列出。-->
     <ClCompile Include="$(OrbedenSdkRoot)\Shared\GameModule.cpp" />
     <ClCompile Include="$(OrbedenGeneratedDir)\Reflection.Generated.cpp" />
