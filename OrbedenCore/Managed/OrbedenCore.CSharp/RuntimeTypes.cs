@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using NumericsMatrix4x4 = System.Numerics.Matrix4x4;
 
 namespace Orbeden;
 
@@ -172,6 +174,19 @@ public unsafe struct matrix4x4
         float xy = x * y, xz = x * z, yz = y * z;
         float wx = w * x, wy = w * y, wz = w * z;
 
+#if !DEBUG
+        if (Vector128.IsHardwareAccelerated)
+        {
+            //按列缩放旋转基向量并写入平移
+            matrix4x4 scaled = default;
+            (Vector128.Create(1f - 2f * (yy + zz), 2f * (xy + wz), 2f * (xz - wy), 0f) * Vector128.Create(scale.x).WithElement(3, 1f)).Store(scaled.m);
+            (Vector128.Create(2f * (xy - wz), 1f - 2f * (xx + zz), 2f * (yz + wx), 0f) * Vector128.Create(scale.y).WithElement(3, 1f)).Store(scaled.m + 4);
+            (Vector128.Create(2f * (xz + wy), 2f * (yz - wx), 1f - 2f * (xx + yy), 0f) * Vector128.Create(scale.z).WithElement(3, 1f)).Store(scaled.m + 8);
+            Vector128.Create(translation.x, translation.y, translation.z, 1f).Store(scaled.m + 12);
+            return scaled;
+        }
+#endif
+
         matrix4x4 result = Identity;
         result.m[0] = (1.0f - 2.0f * (yy + zz)) * scale.x;
         result.m[1] = (2.0f * (xy + wz)) * scale.x;
@@ -271,6 +286,11 @@ public unsafe struct matrix4x4
     public static bool TryInvert(in matrix4x4 matrix, out matrix4x4 inverse)
     {
         inverse = matrix4x4.Identity;
+        if (Vector128.IsHardwareAccelerated)
+        {
+            return TryInvertSimd(matrix, out inverse);
+        }
+
         //按行主序的中间副本做余子式展开，写回时再转回列主序。
         Span<float> a = stackalloc float[16];
         for (int column = 0; column < 4; ++column)
@@ -321,6 +341,68 @@ public unsafe struct matrix4x4
             for (int row = 0; row < 4; ++row) inverse[column * 4 + row] = inv[row * 4 + column] * scale;
         }
         return true;
+    }
+
+    //并行计算伴随矩阵并按原有阈值判断是否可逆
+    private static bool TryInvertSimd(in matrix4x4 matrix, out matrix4x4 inverse)
+    {
+        fixed (float* columns = matrix.m)
+        {
+            Vector128<float> first = Vector128.Load(columns);
+            Vector128<float> second = Vector128.Load(columns + 4);
+            Vector128<float> third = Vector128.Load(columns + 8);
+            Vector128<float> fourth = Vector128.Load(columns + 12);
+            Vector128<float> evenSigns = Vector128.Create(0f, -0f, 0f, -0f);
+            Vector128<float> oddSigns = Vector128.Create(-0f, 0f, -0f, 0f);
+
+            Vector128<float> c0 = CalculateCofactors(second, third, fourth, evenSigns);
+            Vector128<float> c1 = CalculateCofactors(first, third, fourth, oddSigns);
+            Vector128<float> c2 = CalculateCofactors(first, second, fourth, evenSigns);
+            Vector128<float> c3 = CalculateCofactors(first, second, third, oddSigns);
+            float determinant = columns[0] * c0.ToScalar() + columns[4] * c1.ToScalar()
+                + columns[8] * c2.ToScalar() + columns[12] * c3.ToScalar();
+            if (!float.IsFinite(determinant) || MathF.Abs(determinant) < 1e-12f)
+            {
+                inverse = Identity;
+                return false;
+            }
+
+            //缩放余子式并转置回列主序
+            Vector128<float> scale = Vector128.Create(1.0f / determinant);
+            matrix4x4 result = default;
+            (c0 * scale).Store(result.m);
+            (c1 * scale).Store(result.m + 4);
+            (c2 * scale).Store(result.m + 8);
+            (c3 * scale).Store(result.m + 12);
+            NumericsMatrix4x4 rows = Unsafe.BitCast<matrix4x4, NumericsMatrix4x4>(result);
+            inverse = Unsafe.BitCast<NumericsMatrix4x4, matrix4x4>(NumericsMatrix4x4.Transpose(rows));
+            return true;
+        }
+    }
+
+    //保留标量乘积与累加顺序，同时计算四个余子式
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Vector128<float> CalculateCofactors(Vector128<float> first, Vector128<float> second, Vector128<float> third, Vector128<float> signs)
+    {
+        Vector128<int> low = Vector128.Create(1, 0, 0, 0);
+        Vector128<int> middle = Vector128.Create(2, 2, 1, 1);
+        Vector128<int> high = Vector128.Create(3, 3, 3, 2);
+        Vector128<float> a = Vector128.Shuffle(first, low);
+        Vector128<float> b = Vector128.Shuffle(first, middle);
+        Vector128<float> c = Vector128.Shuffle(first, high);
+        Vector128<float> d = Vector128.Shuffle(second, low);
+        Vector128<float> e = Vector128.Shuffle(second, middle);
+        Vector128<float> f = Vector128.Shuffle(second, high);
+        Vector128<float> g = Vector128.Shuffle(third, low);
+        Vector128<float> h = Vector128.Shuffle(third, middle);
+        Vector128<float> i = Vector128.Shuffle(third, high);
+
+        Vector128<float> result = (a ^ signs) * e * i;
+        result -= (a * h * f) ^ signs;
+        result -= (b * d * i) ^ signs;
+        result += (b * g * f) ^ signs;
+        result += (c * d * h) ^ signs;
+        return result - ((c * g * e) ^ signs);
     }
 
     /// <summary>按通用矩阵变换齐次点并做 w 归一；w 接近零时返回假。</summary>
