@@ -77,7 +77,7 @@ public sealed class UIClipSnapshot
             if (layer.mode == UIMaskMode.ImageAlpha && (layer.texture == null || !layer.texture.IsAlive)) return false;
             if (layer.rect.Width <= 0.0f || layer.rect.Height <= 0.0f) return false;
 
-            vector2 local = UIMatrix.TransformPoint(layer.inverse, canvasPoint);
+            vector2 local = matrix4x4.TransformPoint(layer.inverse, canvasPoint);
             if (layer.mode == UIMaskMode.Rectangle)
             {
                 if (!layer.rect.Contains(local)) return false;
@@ -258,8 +258,8 @@ public sealed class UIClipStack
     {
         if (node != null)
         {
-            layer.forward = UIMatrix.Compose(node);
-            layer.invertible = UIMatrix.TryInvertAffine(layer.forward, out layer.inverse);
+            layer.forward = matrix4x4.Compose(node);
+            layer.invertible = matrix4x4.TryInvertAffine(layer.forward, out layer.inverse);
         }
         PushLayer(layer);
     }

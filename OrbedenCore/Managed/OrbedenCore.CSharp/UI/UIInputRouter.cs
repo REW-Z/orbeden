@@ -526,8 +526,8 @@ public sealed class UIInputRouter
         if (node?.Layout == null) return false;
 
         UIRect rect = node.Layout.GetResolvedRect();
-        matrix4x4 toCanvas = UIMatrix.Compose(node);
-        center = UIMatrix.TransformPoint(toCanvas, rect.Center);
+        matrix4x4 toCanvas = matrix4x4.Compose(node);
+        center = matrix4x4.TransformPoint(toCanvas, rect.Center);
         return true;
     }
 

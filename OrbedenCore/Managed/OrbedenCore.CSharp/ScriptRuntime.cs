@@ -186,7 +186,10 @@ internal static class ScriptRuntime
     /// <summary>准备托管渲染阶段；不受暂停门控，编辑模式同样执行。</summary>
     public static void PrepareRender(float deltaTime)
     {
-        ThreadOperation.ProcessFinished();
+        using (new ProfileScope("Script/PrepareRender/ThreadOperation"u8))
+        {
+            ThreadOperation.ProcessFinished();
+        }
         ManagedFrameSystems.PrepareRender(deltaTime);
     }
 

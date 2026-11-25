@@ -102,17 +102,17 @@ public sealed class UIRaycaster
         if (record.visual is not UIVisual visual) return false;
 
         matrix4x4 viewProjection = matrix4x4.Multiply(view.projection, view.view);
-        if (!UIMatrix.TryInvert(viewProjection, out matrix4x4 inverseViewProjection)) return false;
+        if (!matrix4x4.TryInvert(viewProjection, out matrix4x4 inverseViewProjection)) return false;
         if (!TryWindowToNdc(view, input.position, out vector2 ndc, out vector2 pixel)) return false;
 
         //近平面与远平面各反投影一次，连成射线。
-        if (!UIMatrix.TryTransformHomogeneous(inverseViewProjection, new vector3(ndc.x, ndc.y, -1.0f), out vector3 near))
+        if (!matrix4x4.TryTransformHomogeneous(inverseViewProjection, new vector3(ndc.x, ndc.y, -1.0f), out vector3 near))
             return false;
-        if (!UIMatrix.TryTransformHomogeneous(inverseViewProjection, new vector3(ndc.x, ndc.y, 1.0f), out vector3 far))
+        if (!matrix4x4.TryTransformHomogeneous(inverseViewProjection, new vector3(ndc.x, ndc.y, 1.0f), out vector3 far))
             return false;
 
         vector3 direction = new(far.x - near.x, far.y - near.y, far.z - near.z);
-        matrix4x4 toWorld = UIMatrix.ComposeIncludingCanvas(node);
+        matrix4x4 toWorld = matrix4x4.ComposeIncludingCanvas(node);
         //图形位于自身局部 z=0 平面：法线是局部 Z 轴变换到世界后的方向。
         vector3 normal = new(toWorld[8], toWorld[9], toWorld[10]);
         float normalLength = MathF.Sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
@@ -130,11 +130,11 @@ public sealed class UIRaycaster
         if (!float.IsFinite(t) || t < 0.0f) return false;
 
         vector3 world = new(near.x + direction.x * t, near.y + direction.y * t, near.z + direction.z * t);
-        if (!UIMatrix.TryInvertAffine(toWorld, out matrix4x4 worldToLocal)) return false;
-        if (!UIMatrix.TryTransformHomogeneous(worldToLocal, world, out vector3 localPosition)) return false;
+        if (!matrix4x4.TryInvertAffine(toWorld, out matrix4x4 worldToLocal)) return false;
+        if (!matrix4x4.TryTransformHomogeneous(worldToLocal, world, out vector3 localPosition)) return false;
         vector2 local = new(localPosition.x, localPosition.y);
         if (!visual.Raycast(local)) return false;
-        vector2 canvasPoint = UIMatrix.TransformPoint(node.CanvasMatrix, local);
+        vector2 canvasPoint = matrix4x4.TransformPoint(node.CanvasMatrix, local);
         if (!record.clips.TestPoint(canvasPoint)) return false;
         //过滤器在世界空间命中也一样生效；坐标按画布空间换算到各节点局部。
         if (!CheckRaycastFilters(node, canvasPoint)) return false;
@@ -166,8 +166,8 @@ public sealed class UIRaycaster
             if (!ReferenceEquals(current, node))
             {
                 //父节点的局部空间：画布点经它自己的逆变换换进去。
-                if (!UIMatrix.TryInvertAffine(UIMatrix.Compose(current), out matrix4x4 inverse)) return false;
-                local = UIMatrix.TransformPoint(inverse, canvasPoint);
+                if (!matrix4x4.TryInvertAffine(matrix4x4.Compose(current), out matrix4x4 inverse)) return false;
+                local = matrix4x4.TransformPoint(inverse, canvasPoint);
             }
             if (!filter.IsRaycastLocationValid(local)) return false;
         }

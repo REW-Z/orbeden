@@ -32,6 +32,8 @@ public sealed class UIWorldContext : IManagedFrameSystem
     private readonly Dictionary<EnsId, UINode> nodes = [];
     private readonly List<Canvas> canvases = [];
     private readonly HashSet<UILayout> layoutDirty = [];
+    private readonly HashSet<UILayout> layoutPositionDirty = [];
+    private readonly HashSet<EnsId> clearedDerivedPositions = [];
     private readonly HashSet<UIElement> geometryDirty = [];
     private readonly List<UIElement> rebuildingGeometry = [];
     private readonly HashSet<UIElement> inputDirty = [];
@@ -280,8 +282,23 @@ public sealed class UIWorldContext : IManagedFrameSystem
     //批量提交派生位置；没有写入目标时解析结果仍然保留在组件上。
     internal void CommitDerivedPositions(List<UIDerivedPosition> positions)
     {
-        if (positions.Count == 0) return;
-        DerivedPositionSink?.ApplyDerivedPositions(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(positions));
+        if (positions.Count == 0 || DerivedPositionSink is not IUIDerivedPositionSink sink
+            || !sink.ApplyDerivedPositions(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(positions)))
+        {
+            return;
+        }
+
+        //确认先前被清除的位置已重新提交
+        if (clearedDerivedPositions.Count != 0)
+        {
+            foreach (UIDerivedPosition position in positions)
+            {
+                if (position.clear == 0)
+                {
+                    clearedDerivedPositions.Remove(position.ens);
+                }
+            }
+        }
     }
 
     /// <summary>附着世界：建立节点索引并接入帧阶段。</summary>
@@ -338,6 +355,8 @@ public sealed class UIWorldContext : IManagedFrameSystem
         defaultFontLoadAttempted = false;
         canvases.Clear();
         layoutDirty.Clear();
+        layoutPositionDirty.Clear();
+        clearedDerivedPositions.Clear();
         geometryDirty.Clear();
         inputDirty.Clear();
         pendingChanges.Clear();
@@ -464,39 +483,61 @@ public sealed class UIWorldContext : IManagedFrameSystem
     public void PrepareRender(float deltaTime)
     {
         if (!worldAttached) return;
-        ApplyPendingChanges();
-        RefreshDefaultCanvasViewports();
+        using (new ProfileScope("Script/PrepareRender/UI/ApplyChanges"u8))
+        {
+            ApplyPendingChanges();
+            RefreshDefaultCanvasViewports();
+        }
         //字形页在本帧重建期间被命中的一律固定，回收统一推迟到帧尾。
         FontAtlasCache.Shared.BeginFrame();
         //顺序固定：先结构、再布局，最后图形——几何依赖这一帧的解析矩形。
-        foreach (UINode node in nodes.Values)
-            UIGraphicRegistry.MarkInvalidatedGeometry(node, geometryDirty);
-        if (layoutDirty.Count != 0)
+        using (new ProfileScope("Script/PrepareRender/UI/Geometry"u8))
+        using (new ProfileScope("Script/PrepareRender/UI/Geometry/Check"u8))
         {
-            transformMatrixRevision = 0;
-        }
-        UILayoutRegistry.Rebuild(this, layoutDirty);
-
-        //按本帧轨道矩形更新滑块并应用驱动布局
-        foreach (UINode node in nodes.Values)
-        {
-            if (node.GetElement<Slider>() is Slider slider && slider.IsUIActive())
+            foreach (UINode node in nodes.Values)
             {
-                slider.DriveVisuals();
+                UIGraphicRegistry.MarkInvalidatedGeometry(node, geometryDirty);
             }
         }
-        if (layoutDirty.Count != 0)
+        using (new ProfileScope("Script/PrepareRender/UI/Layout"u8))
         {
-            transformMatrixRevision = 0;
-        }
-        UILayoutRegistry.Rebuild(this, layoutDirty);
+            if (layoutDirty.Count != 0 || layoutPositionDirty.Count != 0)
+            {
+                transformMatrixRevision = 0;
+                UILayoutRegistry.Rebuild(this, layoutDirty, layoutPositionDirty);
+            }
 
-        foreach (UINode node in nodes.Values)
-        {
-            (node.Visual as UIVisual)?.RefreshMeshModifiers();
-            UIGraphicRegistry.MarkResizedGeometry(node, geometryDirty);
+            //按本帧轨道矩形更新滑块并应用驱动布局
+            foreach (UINode node in nodes.Values)
+            {
+                if (node.GetElement<Slider>() is Slider slider && slider.IsUIActive())
+                {
+                    slider.DriveVisuals();
+                }
+            }
+            if (layoutDirty.Count != 0 || layoutPositionDirty.Count != 0)
+            {
+                transformMatrixRevision = 0;
+                UILayoutRegistry.Rebuild(this, layoutDirty, layoutPositionDirty);
+            }
         }
-        UIGraphicRegistry.Rebuild(geometryDirty, rebuildingGeometry);
+
+        using (new ProfileScope("Script/PrepareRender/UI/Geometry"u8))
+        {
+            using (new ProfileScope("Script/PrepareRender/UI/Geometry/Check"u8))
+            {
+                foreach (UINode node in nodes.Values)
+                {
+                    node.Visual?.RefreshMeshModifiers();
+                    UIGraphicRegistry.MarkResizedGeometry(node, geometryDirty);
+                }
+            }
+
+            using (new ProfileScope("Script/PrepareRender/UI/Geometry/Rebuild"u8))
+            {
+                UIGraphicRegistry.Rebuild(geometryDirty, rebuildingGeometry);
+            }
+        }
         //命中快照在图形重建后失效，由输入阶段读取。
         inputDirty.Clear();
 
@@ -513,28 +554,34 @@ public sealed class UIWorldContext : IManagedFrameSystem
     //构建并提交本帧。零尺寸视图直接跳过：既不出布局也不进命中快照。
     private void BuildFrame()
     {
-        ++frameCounter;
-        if (frameCounter == 0) frameCounter = 1;
-        frameBuilder.BeginFrame(frameCounter);
-
-        //刷新脏绘制状态供依赖收集与提交共用
-        foreach (UINode node in nodes.Values) (node.Visual as UIVisual)?.PrepareDrawStates();
-        OrderCanvases();
-        foreach (Canvas canvas in frameOrder)
+        using (new ProfileScope("Script/PrepareRender/UI/BuildCanvas"u8))
         {
-            if (suppressedCanvases.Contains(canvas)) continue;
+            ++frameCounter;
+            if (frameCounter == 0) frameCounter = 1;
+            frameBuilder.BeginFrame(frameCounter);
 
-            if (!TryResolveCanvasView(canvas, out UIView view)) continue;
-            frameBuilder.BuildCanvas(canvas, view);
+            //刷新脏绘制状态供依赖收集与提交共用
+            foreach (UINode node in nodes.Values) (node.Visual as UIVisual)?.PrepareDrawStates();
+            OrderCanvases();
+            foreach (Canvas canvas in frameOrder)
+            {
+                if (suppressedCanvases.Contains(canvas)) continue;
+
+                if (!TryResolveCanvasView(canvas, out UIView view)) continue;
+                frameBuilder.BuildCanvas(canvas, view);
+            }
+            //被抑制的离屏画布仍然提交一次空命令：输出必须每帧从透明黑开始。
+            foreach (Canvas canvas in suppressedCanvases)
+            {
+                if (canvas.GetRenderMode() != CanvasRenderMode.Offscreen) continue;
+                if (!TryResolveCanvasView(canvas, out UIView view)) continue;
+                frameBuilder.BuildEmptyCanvas(canvas, view);
+            }
         }
-        //被抑制的离屏画布仍然提交一次空命令：输出必须每帧从透明黑开始。
-        foreach (Canvas canvas in suppressedCanvases)
+        using (new ProfileScope("Script/PrepareRender/UI/SubmitCanvas"u8))
         {
-            if (canvas.GetRenderMode() != CanvasRenderMode.Offscreen) continue;
-            if (!TryResolveCanvasView(canvas, out UIView view)) continue;
-            frameBuilder.BuildEmptyCanvas(canvas, view);
+            frameBuilder.Submit();
         }
-        frameBuilder.Submit();
     }
 
     //每帧的画布顺序：离屏按输出纹理依赖拓扑排序（上游先画），其余按 sortOrder 跟在后面。
@@ -880,11 +927,22 @@ public sealed class UIWorldContext : IManagedFrameSystem
     /// <summary>清除一个 Ens 的派生位置覆盖，恢复作者位置；退出 UI、禁用与销毁时调用。</summary>
     public static void ClearDerivedPosition(EnsId ens)
     {
-        if (ens.IsNull || Current?.DerivedPositionSink is not IUIDerivedPositionSink sink) return;
+        UIWorldContext? context = Current;
+        if (ens.IsNull || context?.DerivedPositionSink is not IUIDerivedPositionSink sink)
+        {
+            return;
+        }
+
         Span<UIDerivedPosition> entry = stackalloc UIDerivedPosition[1];
         entry[0] = new UIDerivedPosition { ens = ens, clear = 1 };
-        sink.ApplyDerivedPositions(entry);
+        if (sink.ApplyDerivedPositions(entry) && context.nodes.ContainsKey(ens))
+        {
+            context.clearedDerivedPositions.Add(ens);
+        }
     }
+
+    //检查节点是否仍需重新提交派生位置
+    internal bool HasClearedDerivedPosition(EnsId ens) => clearedDerivedPositions.Count != 0 && clearedDerivedPositions.Contains(ens);
 
     /// <summary>标记布局脏；同一帧内的重复标记合并成一次重建。</summary>
     public static void MarkLayoutDirty(UILayout? layout)
@@ -895,6 +953,19 @@ public sealed class UIWorldContext : IManagedFrameSystem
             return;
         }
         context.layoutDirty.Add(layout);
+        context.transformMatrixRevision = 0;
+    }
+
+    //登记作者偏移变化
+    internal static void MarkLayoutPositionDirty(UILayout layout)
+    {
+        UIWorldContext? context = Current;
+        if (context == null)
+        {
+            return;
+        }
+
+        context.layoutPositionDirty.Add(layout);
         context.transformMatrixRevision = 0;
     }
 
@@ -1085,6 +1156,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
         }
         foreach (UINode node in nodes.Values) RelinkNode(node);
         foreach (UINode node in nodes.Values) ValidateNode(node);
+        clearedDerivedPositions.RemoveWhere(ens => !nodes.ContainsKey(ens));
     }
 
     //按 Ens 父级重新计算父子关系；最近的一个 UI 祖先才是 UI 父节点。

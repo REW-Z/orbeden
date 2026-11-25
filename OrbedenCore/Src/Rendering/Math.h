@@ -70,6 +70,9 @@ namespace Orbeden
         //计算本地包围盒
         static bounds3 CalculateBounds(const List<vector3>& points);
 
+        //从第一个顶点初始化网格包围盒
+        static bounds3 CalculateBounds(const List<vector3>& points, bool startAtFirstPoint);
+
         //变换包围盒
         static bounds3 TransformBounds(const matrix4x4& matrix, const bounds3& bounds);
 
@@ -78,5 +81,8 @@ namespace Orbeden
 
         //检测视锥与包围盒是否相交
         static bool Intersects(const frustum& viewFrustum, const bounds3& bounds);
+
+        //并行检测四个包围盒，返回对应的相交位
+        static uint32 IntersectsFour(const frustum& viewFrustum, const bounds3* const (&bounds)[4]);
     };
 }

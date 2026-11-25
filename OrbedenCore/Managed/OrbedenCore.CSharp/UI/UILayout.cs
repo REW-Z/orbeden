@@ -138,7 +138,7 @@ public class UILayout : Script, IManagedComponentLifecycle
         vector3 position = transform.localPosition;
         if (position.x == value.x && position.y == value.y) return;
         transform.localPosition = new vector3(value.x, value.y, position.z);
-        MarkLayoutDirty();
+        UIWorldContext.MarkLayoutPositionDirty(this);
     }
 
     //读取布局落点与 Transform 局部 Z

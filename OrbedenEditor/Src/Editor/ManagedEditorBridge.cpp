@@ -286,6 +286,7 @@ namespace
         void* copyProfilerGpuEvents = nullptr;
         void* getWorldEnsState = nullptr;
         void* readEnsHeader = nullptr;
+        void* restoreEnsReferences = nullptr;
     };
 
     #pragma pack(pop)
@@ -301,7 +302,7 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 197);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 198);
     static_assert(sizeof(ProfileFrameSummary) == 104);
     static_assert(offsetof(ProfileFrameSummary, drawCallCount) == 100);
     static_assert(sizeof(ProfileGpuEvent) == 24);
@@ -321,6 +322,7 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 194);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getWorldEnsState, 195);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, readEnsHeader, 196);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, restoreEnsReferences, 197);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -593,6 +595,23 @@ namespace
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         Ens* ens = editor ? editor->GetWorld().GetEns(root) : nullptr;
         return CopyUtf8(ens ? WorldSerializer::CaptureEns(*ens) : std::string(), buffer, capacity);
+    }
+
+    //在批量恢复子树后连接 Ens 引用
+    uint8 ORBEDEN_NATIVE_CALL RestoreManagedEnsReferences(void* context, const uint8* text, int32 length)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying())
+        {
+            return 0;
+        }
+        std::string error;
+        if (!WorldSerializer::RestoreEnsReferences(editor->GetWorld(), ReadUtf8(text, length), error))
+        {
+            Log::Error(error.c_str());
+            return 0;
+        }
+        return 1;
     }
 
     //读取已加载资源涉及的源文件 Key，条目以 '\0' 分隔写入缓冲区；返回总长度
@@ -2376,6 +2395,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.copyProfilerGpuEvents = reinterpret_cast<void*>(&EditorProfilerCopyGpuEvents);
     editorApi.getWorldEnsState = reinterpret_cast<void*>(&GetManagedWorldEnsState);
     editorApi.readEnsHeader = reinterpret_cast<void*>(&ReadManagedEnsHeader);
+    editorApi.restoreEnsReferences = reinterpret_cast<void*>(&RestoreManagedEnsReferences);
     editorApi.getMeshDynamicBatching = reinterpret_cast<void*>(&GetManagedMeshDynamicBatching);
     editorApi.setMeshDynamicBatching = reinterpret_cast<void*>(&SetManagedMeshDynamicBatching);
     editorApi.input.isKeyDown = reinterpret_cast<void*>(&EditorInputIsKeyDown);

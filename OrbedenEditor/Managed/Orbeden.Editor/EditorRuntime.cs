@@ -36,6 +36,7 @@ public static class EditorRuntime
         public delegate* unmanaged[Cdecl]<long, ProfileGpuEvent*, int, int> CopyProfilerGpuEvents;
         public delegate* unmanaged[Cdecl]<IntPtr, ulong*, ulong*, void> GetWorldEnsState;
         public delegate* unmanaged[Cdecl]<IntPtr, EnsId, ulong*, byte*, byte*, int, int> ReadEnsHeader;
+        public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte> RestoreEnsReferences;
     }
 
     //初始化失败原因的非托管副本，供原生侧读取。
@@ -61,7 +62,7 @@ public static class EditorRuntime
                 EditorConsole.Install();
                 EditorApplication.Initialize(default);
                 Gizmos.Initialize(default);
-                EditorAssetsNative.Initialize(default);
+                EditorAssetsNative.Initialize(default, null);
                 EditorAssetReimportNative.Initialize(default);
                 EditorInput.Initialize(default);
                 EditorNativeComponents.Initialize(default);
@@ -81,7 +82,7 @@ public static class EditorRuntime
             EditorApplication.Initialize(api.Application, api.GetMeshDynamicBatching, api.SetMeshDynamicBatching);
             EditorPropertyHistory.Clear();
             Gizmos.Initialize(api.Gizmo);
-            EditorAssetsNative.Initialize(api.Assets);
+            EditorAssetsNative.Initialize(api.Assets, api.RestoreEnsReferences);
             EditorAssetReimportNative.Initialize(api.Reimport);
             EditorInput.Initialize(api.Input);
             EditorNativeComponents.Initialize(api.Components, api.GetWorldEnsState, api.ReadEnsHeader);
@@ -597,9 +598,10 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
         ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
         ValidateFunctionTable<EditorInputNativeApi>(nameof(EditorInputNativeApi), 2);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 197);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 198);
         if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetWorldEnsState)).ToInt32() != 195 * IntPtr.Size
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.ReadEnsHeader)).ToInt32() != 196 * IntPtr.Size)
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.ReadEnsHeader)).ToInt32() != 196 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.RestoreEnsReferences)).ToInt32() != 197 * IntPtr.Size)
             throw new TypeLoadException("Editor Ens hierarchy ABI layout mismatch.");
         if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetMeshDynamicBatching)).ToInt32() != 192 * IntPtr.Size
             || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.SetMeshDynamicBatching)).ToInt32() != 193 * IntPtr.Size)

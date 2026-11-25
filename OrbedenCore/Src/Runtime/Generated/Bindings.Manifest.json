@@ -37069,6 +37069,36 @@
           ]
         },
         {
+          "Name": "CalculateBounds",
+          "Type": "bounds3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "points",
+              "Type": "const List\u003Cvector3\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "startAtFirstPoint",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "TransformBounds",
           "Type": "bounds3",
           "Access": "public",
@@ -37149,6 +37179,36 @@
             {
               "Name": "bounds",
               "Type": "const bounds3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "IntersectsFour",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "viewFrustum",
+              "Type": "const frustum\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "arg1",
+              "Type": "const bounds3*const(\u0026bounds)[4]",
               "DefaultValue": ""
             }
           ]
@@ -87735,6 +87795,41 @@
             {
               "Name": "parent",
               "Type": "EnsId",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "error",
+              "Type": "std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "RestoreEnsReferences",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "world",
+              "Type": "World\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "snapshot",
+              "Type": "const std::string\u0026",
               "DefaultValue": ""
             },
             {

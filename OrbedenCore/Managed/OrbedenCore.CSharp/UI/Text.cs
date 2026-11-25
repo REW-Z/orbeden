@@ -179,11 +179,15 @@ public class Text : UIVisual
             return true;
         }
 
+        bool pinPages = glyphPages.Count != 0 && IsUIActive();
         for (int index = 0; index < glyphPages.Count; ++index)
         {
             if (glyphPages[index].entry.PageGeneration == glyphPages[index].generation)
             {
-                if (IsUIActive()) FontAtlasCache.Shared.PinGlyph(glyphPages[index].entry);
+                if (pinPages)
+                {
+                    FontAtlasCache.Shared.PinGlyph(glyphPages[index].entry);
+                }
                 continue;
             }
             layout = null;
@@ -199,7 +203,6 @@ public class Text : UIVisual
     /// <summary>生成文本网格：按页分组提交四边形，缺字画四条矩形组成的方框。</summary>
     protected override void PopulateMesh(UIMeshBuilder mesh)
     {
-        glyphPages.Clear();
         UIRect rect = GetLayout()?.GetResolvedRect() ?? new UIRect(new vector2(0.0f, 0.0f), new vector2(0.0f, 0.0f));
         TextLayoutResult result = GetOrBuildLayout(rect.Width, mesh.ViewScale);
 
@@ -221,8 +224,10 @@ public class Text : UIVisual
         foreach (UITextGlyph glyph in result.glyphs)
         {
             if (!glyph.entry.HasPixels) continue;
+            Texture2D? texture = glyph.entry.Texture;
+            if (ContainsTexture(texture)) continue;
             glyphPages.Add((glyph.entry, glyph.entry.PageGeneration));
-            if (!ContainsTexture(glyph.entry.Texture)) pageOrder.Add(glyph.entry.Texture);
+            pageOrder.Add(texture);
         }
 
         for (int pageIndex = 0; pageIndex < pageOrder.Count; ++pageIndex)

@@ -1443,6 +1443,26 @@ Ens* WorldSerializer::CopyEns(World& world, const std::string& snapshot, EnsId p
     return RestoreWithNewIdentities(world, *document, parent, false, error);
 }
 
+//从子树快照恢复 Ens 引用
+bool WorldSerializer::RestoreEnsReferences(World& world, const std::string& snapshot, std::string& error)
+{
+    auto document = ParseDocument(snapshot, error);
+    if (!document || document->tokens.front().name != "Prefab")
+    {
+        if (error.empty())
+        {
+            error = "Expected Prefab snapshot.";
+        }
+        return false;
+    }
+    if (!ApplyEnsReferences(world, *document, {}))
+    {
+        error = "Cannot restore Ens references.";
+        return false;
+    }
+    return true;
+}
+
 //恢复完整子树快照并在失败时清理新增对象
 Ens* WorldSerializer::RestoreEns(World& world, const std::string& xml, EnsId parent, std::string& error)
 {

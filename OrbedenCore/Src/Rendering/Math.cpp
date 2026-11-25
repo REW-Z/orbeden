@@ -43,6 +43,29 @@ namespace
         float32 invLength = 1.0f / length;
         return { ScaleVector(plane.normal, invLength), plane.distance * invLength };
     }
+
+#if ORBEDEN_MATH_SSE2
+    //按原有三项乘积和加减顺序计算四个余子式
+    __m128 CalculateCofactors(__m128 first, __m128 second, __m128 third, __m128 signs)
+    {
+        const __m128 a = _mm_shuffle_ps(first, first, _MM_SHUFFLE(0, 0, 0, 1));
+        const __m128 b = _mm_shuffle_ps(first, first, _MM_SHUFFLE(1, 1, 2, 2));
+        const __m128 c = _mm_shuffle_ps(first, first, _MM_SHUFFLE(2, 3, 3, 3));
+        const __m128 d = _mm_shuffle_ps(second, second, _MM_SHUFFLE(0, 0, 0, 1));
+        const __m128 e = _mm_shuffle_ps(second, second, _MM_SHUFFLE(1, 1, 2, 2));
+        const __m128 f = _mm_shuffle_ps(second, second, _MM_SHUFFLE(2, 3, 3, 3));
+        const __m128 g = _mm_shuffle_ps(third, third, _MM_SHUFFLE(0, 0, 0, 1));
+        const __m128 h = _mm_shuffle_ps(third, third, _MM_SHUFFLE(1, 1, 2, 2));
+        const __m128 i = _mm_shuffle_ps(third, third, _MM_SHUFFLE(2, 3, 3, 3));
+
+        __m128 result = _mm_mul_ps(_mm_mul_ps(_mm_xor_ps(a, signs), e), i);
+        result = _mm_sub_ps(result, _mm_xor_ps(_mm_mul_ps(_mm_mul_ps(a, h), f), signs));
+        result = _mm_sub_ps(result, _mm_xor_ps(_mm_mul_ps(_mm_mul_ps(b, d), i), signs));
+        result = _mm_add_ps(result, _mm_xor_ps(_mm_mul_ps(_mm_mul_ps(b, g), f), signs));
+        result = _mm_add_ps(result, _mm_xor_ps(_mm_mul_ps(_mm_mul_ps(c, d), h), signs));
+        return _mm_sub_ps(result, _mm_xor_ps(_mm_mul_ps(_mm_mul_ps(c, g), e), signs));
+    }
+#endif
 }
 
 namespace Orbeden
@@ -305,6 +328,20 @@ namespace Orbeden
         matrix4x4 result;
         float32 inv[16];
 
+#if ORBEDEN_MATH_SSE2
+        //转置输入矩阵，按列计算伴随矩阵
+        __m128 row0 = _mm_loadu_ps(m);
+        __m128 row1 = _mm_loadu_ps(m + 4);
+        __m128 row2 = _mm_loadu_ps(m + 8);
+        __m128 row3 = _mm_loadu_ps(m + 12);
+        _MM_TRANSPOSE4_PS(row0, row1, row2, row3);
+        const __m128 evenSigns = _mm_setr_ps(0.0f, -0.0f, 0.0f, -0.0f);
+        const __m128 oddSigns = _mm_setr_ps(-0.0f, 0.0f, -0.0f, 0.0f);
+        _mm_storeu_ps(inv, CalculateCofactors(row1, row2, row3, evenSigns));
+        _mm_storeu_ps(inv + 4, CalculateCofactors(row0, row2, row3, oddSigns));
+        _mm_storeu_ps(inv + 8, CalculateCofactors(row0, row1, row3, evenSigns));
+        _mm_storeu_ps(inv + 12, CalculateCofactors(row0, row1, row2, oddSigns));
+#else
         inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] + m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
         inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] - m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10];
         inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] + m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9];
@@ -322,6 +359,8 @@ namespace Orbeden
         inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] - m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
         inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] + m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
 
+#endif
+
         //按行列式展开项的相对误差判断退化
         float32 determinant = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
         float32 determinantMagnitude = std::abs(m[0] * inv[0]) + std::abs(m[1] * inv[4])
@@ -329,10 +368,18 @@ namespace Orbeden
         if (std::abs(determinant) <= 0.000001f * determinantMagnitude) return matrix4x4();
 
         determinant = 1.0f / determinant;
+#if ORBEDEN_MATH_SSE2
+        const __m128 scale = _mm_set1_ps(determinant);
+        for (int index = 0; index < 16; index += 4)
+        {
+            _mm_storeu_ps(result.m + index, _mm_mul_ps(_mm_loadu_ps(inv + index), scale));
+        }
+#else
         for (int index = 0; index < 16; ++index)
         {
             result.m[index] = inv[index] * determinant;
         }
+#endif
 
         return result;
     }
@@ -395,6 +442,11 @@ namespace Orbeden
 
     bounds3 Math::CalculateBounds(const List<vector3>& points)
     {
+        return CalculateBounds(points, false);
+    }
+
+    bounds3 Math::CalculateBounds(const List<vector3>& points, bool startAtFirstPoint)
+    {
         if (points.empty()) return bounds3();
 
         vector3 minValue =
@@ -410,8 +462,33 @@ namespace Orbeden
             std::numeric_limits<float32>::lowest(),
         };
 
-        for (const vector3& point : points)
+        if (startAtFirstPoint)
         {
+            minValue = points.front();
+            maxValue = points.front();
+        }
+        usize first = startAtFirstPoint ? 1 : 0;
+
+#if ORBEDEN_MATH_SSE2
+        //并行归约三个坐标，保留旧值应对相等或无序比较
+        __m128 minimum = _mm_setr_ps(minValue.x, minValue.y, minValue.z, 0.0f);
+        __m128 maximum = _mm_setr_ps(maxValue.x, maxValue.y, maxValue.z, 0.0f);
+        for (usize index = first; index < points.size(); ++index)
+        {
+            const vector3& point = points[index];
+            const __m128 values = _mm_setr_ps(point.x, point.y, point.z, 0.0f);
+            minimum = _mm_min_ps(values, minimum);
+            maximum = _mm_max_ps(values, maximum);
+        }
+        alignas(16) float32 minimumLanes[4], maximumLanes[4];
+        _mm_store_ps(minimumLanes, minimum);
+        _mm_store_ps(maximumLanes, maximum);
+        minValue = { minimumLanes[0], minimumLanes[1], minimumLanes[2] };
+        maxValue = { maximumLanes[0], maximumLanes[1], maximumLanes[2] };
+#else
+        for (usize index = first; index < points.size(); ++index)
+        {
+            const vector3& point = points[index];
             minValue.x = std::min(minValue.x, point.x);
             minValue.y = std::min(minValue.y, point.y);
             minValue.z = std::min(minValue.z, point.z);
@@ -419,6 +496,7 @@ namespace Orbeden
             maxValue.y = std::max(maxValue.y, point.y);
             maxValue.z = std::max(maxValue.z, point.z);
         }
+#endif
 
         bounds3 result;
         result.center = ScaleVector(AddVector(minValue, maxValue), 0.5f);
@@ -433,9 +511,20 @@ namespace Orbeden
 
         bounds3 result;
         result.center = TransformPoint(matrix, bounds.center);
+#if ORBEDEN_MATH_SSE2
+        //按矩阵列并行计算三个包围盒半尺寸
+        const __m128 magnitudeMask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFFFFFF));
+        __m128 extents = _mm_mul_ps(_mm_and_ps(_mm_loadu_ps(matrix.m), magnitudeMask), _mm_set1_ps(bounds.extents.x));
+        extents = _mm_add_ps(extents, _mm_mul_ps(_mm_and_ps(_mm_loadu_ps(matrix.m + 4), magnitudeMask), _mm_set1_ps(bounds.extents.y)));
+        extents = _mm_add_ps(extents, _mm_mul_ps(_mm_and_ps(_mm_loadu_ps(matrix.m + 8), magnitudeMask), _mm_set1_ps(bounds.extents.z)));
+        alignas(16) float32 lanes[4];
+        _mm_store_ps(lanes, extents);
+        result.extents = { lanes[0], lanes[1], lanes[2] };
+#else
         result.extents.x = std::abs(matrix.m[0]) * bounds.extents.x + std::abs(matrix.m[4]) * bounds.extents.y + std::abs(matrix.m[8]) * bounds.extents.z;
         result.extents.y = std::abs(matrix.m[1]) * bounds.extents.x + std::abs(matrix.m[5]) * bounds.extents.y + std::abs(matrix.m[9]) * bounds.extents.z;
         result.extents.z = std::abs(matrix.m[2]) * bounds.extents.x + std::abs(matrix.m[6]) * bounds.extents.y + std::abs(matrix.m[10]) * bounds.extents.z;
+#endif
         result.valid = true;
         return result;
     }
@@ -469,5 +558,54 @@ namespace Orbeden
         }
 
         return true;
+    }
+
+    uint32 Math::IntersectsFour(const frustum& viewFrustum, const bounds3* const (&bounds)[4])
+    {
+        uint32 visible = 0;
+#if ORBEDEN_MATH_SSE2
+        //装载四个包围盒的中心和半尺寸
+        for (uint32 index = 0; index < 4; ++index)
+        {
+            if (bounds[index]->valid)
+            {
+                visible |= 1u << index;
+            }
+        }
+        const __m128 cx = _mm_setr_ps(bounds[0]->center.x, bounds[1]->center.x, bounds[2]->center.x, bounds[3]->center.x);
+        const __m128 cy = _mm_setr_ps(bounds[0]->center.y, bounds[1]->center.y, bounds[2]->center.y, bounds[3]->center.y);
+        const __m128 cz = _mm_setr_ps(bounds[0]->center.z, bounds[1]->center.z, bounds[2]->center.z, bounds[3]->center.z);
+        const __m128 ex = _mm_setr_ps(bounds[0]->extents.x, bounds[1]->extents.x, bounds[2]->extents.x, bounds[3]->extents.x);
+        const __m128 ey = _mm_setr_ps(bounds[0]->extents.y, bounds[1]->extents.y, bounds[2]->extents.y, bounds[3]->extents.y);
+        const __m128 ez = _mm_setr_ps(bounds[0]->extents.z, bounds[1]->extents.z, bounds[2]->extents.z, bounds[3]->extents.z);
+
+        //对四个包围盒使用同一平面并排除外部包围盒
+        for (const plane3& plane : viewFrustum.planes)
+        {
+            __m128 distance = _mm_mul_ps(_mm_set1_ps(plane.normal.x), cx);
+            distance = _mm_add_ps(distance, _mm_mul_ps(_mm_set1_ps(plane.normal.y), cy));
+            distance = _mm_add_ps(distance, _mm_mul_ps(_mm_set1_ps(plane.normal.z), cz));
+            distance = _mm_add_ps(distance, _mm_set1_ps(plane.distance));
+
+            __m128 radius = _mm_mul_ps(_mm_set1_ps(std::abs(plane.normal.x)), ex);
+            radius = _mm_add_ps(radius, _mm_mul_ps(_mm_set1_ps(std::abs(plane.normal.y)), ey));
+            radius = _mm_add_ps(radius, _mm_mul_ps(_mm_set1_ps(std::abs(plane.normal.z)), ez));
+            const __m128 outside = _mm_cmplt_ps(_mm_add_ps(distance, radius), _mm_setzero_ps());
+            visible &= ~static_cast<uint32>(_mm_movemask_ps(outside));
+            if (visible == 0)
+            {
+                break;
+            }
+        }
+#else
+        for (uint32 index = 0; index < 4; ++index)
+        {
+            if (Intersects(viewFrustum, *bounds[index]))
+            {
+                visible |= 1u << index;
+            }
+        }
+#endif
+        return visible;
     }
 }

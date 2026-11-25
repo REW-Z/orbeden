@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using MatrixKey = System.Numerics.Matrix4x4;
 
 namespace Orbeden;
 
@@ -33,6 +35,7 @@ public sealed class UIFrameBuilder
     private readonly List<uint> uploadIndices = [];
     private readonly List<ulong> removedMeshes = [];
     private readonly List<CanvasBatch> batches = [];
+    private readonly Dictionary<MatrixKey, int> matrixIndices = [];
     private readonly List<UINode?> traversal = [];
     private readonly List<UIHitRecord> pendingHits = [];
     private readonly List<UIHitRecord> presentedHits = [];
@@ -78,9 +81,12 @@ public sealed class UIFrameBuilder
         CanvasBatch? batch = BuildSubmission(canvas, view);
         if (batch == null) return;
         UINode root = batch.Root!;
-        //先普通内容、再弹层：两层各自做一次前序遍历，父图形先于子图形。
-        for (int layer = 0; layer <= 1; ++layer)
-            Traverse(root, layer, canvas, view.viewId, batch);
+        matrixIndices.Clear();
+        //先绘制普通内容，有弹层时再遍历一次
+        if (Traverse(root, 0, canvas, view.viewId, batch))
+        {
+            Traverse(root, 1, canvas, view.viewId, batch);
+        }
     }
 
     /// <summary>提交一块没有命令的画布；离屏输出靠它每帧清成透明。</summary>
@@ -182,7 +188,7 @@ public sealed class UIFrameBuilder
     {
         if (canvas.GetRenderMode() == CanvasRenderMode.WorldSpace) return root.WorldMatrix;
         if (editorMode && canvas.GetRenderMode() == CanvasRenderMode.Overlay) return root.ScenePreviewMatrix;
-        return UIMatrix.Ortho(0.0f, logicalSize.x, 0.0f, logicalSize.y);
+        return matrix4x4.Ortho(0.0f, logicalSize.x, 0.0f, logicalSize.y);
     }
 
     //取得一块可复用的画布批次，超出已有容量时新建。
@@ -204,8 +210,9 @@ public sealed class UIFrameBuilder
 
     //按层次前序遍历一棵子树；同一节点上的图形先于它的子节点。
     //带裁剪的节点在子节点之后补一个空标记，出栈时弹掉自己那一层。
-    private void Traverse(UINode root, int layer, Canvas canvas, ulong viewId, CanvasBatch batch)
+    private bool Traverse(UINode root, int layer, Canvas canvas, ulong viewId, CanvasBatch batch)
     {
+        bool hasPopup = false;
         traversal.Clear();
         traversal.Add(root);
         while (traversal.Count != 0)
@@ -241,11 +248,19 @@ public sealed class UIFrameBuilder
                 }
             }
 
-            if (node.Layer == layer) EmitNode(node, canvas, viewId, batch);
+            if (node.Layer == layer)
+            {
+                EmitNode(node, canvas, viewId, batch);
+            }
+            else if (node.Layer == 1)
+            {
+                hasPopup = true;
+            }
 
             //逆序入栈，出栈顺序才是原顺序。
             for (int index = node.Children.Count - 1; index >= 0; --index) traversal.Add(node.Children[index]);
         }
+        return hasPopup;
     }
 
     //输出一个节点上的图形：网格、矩阵与命中记录。
@@ -306,17 +321,18 @@ public sealed class UIFrameBuilder
     {
         if (!clips.TryPeekTop(out UIClipLayer layer)) return;
 
-        clipShape.Clear();
-        clipShape.SetTexture(layer.texture, UIMaterialKind.ImageStraight);
-        bool flipY = layer.texture != null && !layer.texture.IsRenderTarget();
-        clipShape.AddQuad(layer.rect, UIMeshBuilder.ToTextureUv(layer.uvMin, flipY),
-            UIMeshBuilder.ToTextureUv(layer.uvMax, flipY), new color(1.0f, 1.0f, 1.0f, 1.0f));
-        clipShape.Complete();
-
         UIGeometryCache.MeshKey key = new(context.ManagedGeneration, layer.ownerId,
             ClipFragmentBase + layer.slot);
-        bool changed = geometry.Acquire(key, layer.revision, frameId, out ulong meshId);
-        if (changed) AppendUpload(meshId, layer.revision, clipShape);
+        if (geometry.Acquire(key, layer.revision, frameId, out ulong meshId))
+        {
+            clipShape.Clear();
+            clipShape.SetTexture(layer.texture, UIMaterialKind.ImageStraight);
+            bool flipY = layer.texture != null && !layer.texture.IsRenderTarget();
+            clipShape.AddQuad(layer.rect, UIMeshBuilder.ToTextureUv(layer.uvMin, flipY),
+                UIMeshBuilder.ToTextureUv(layer.uvMax, flipY), new color(1.0f, 1.0f, 1.0f, 1.0f));
+            clipShape.Complete();
+            AppendUpload(meshId, layer.revision, clipShape);
+        }
 
         batch.Commands.Add(new UIDrawCommand
         {
@@ -329,7 +345,7 @@ public sealed class UIFrameBuilder
                 ? UIDrawCommandKind.PushImageAlpha
                 : UIDrawCommandKind.PushRectangle),
             firstIndex = 0,
-            indexCount = (uint)clipShape.Indices.Count,
+            indexCount = 6,
             distanceRange = 1.0f,
             threshold = layer.threshold,
             tint = new color(1.0f, 1.0f, 1.0f, 1.0f),
@@ -444,21 +460,41 @@ public sealed class UIFrameBuilder
     }
 
     //登记一个矩阵并返回它在画布数组里的下标；相同矩阵复用同一下标。
-    private static int AddMatrix(CanvasBatch batch, in matrix4x4 value)
+    private int AddMatrix(CanvasBatch batch, in matrix4x4 value)
     {
-        for (int index = 0; index < batch.Matrices.Count; ++index)
+        MatrixKey key = new(
+            value[0], value[1], value[2], value[3],
+            value[4], value[5], value[6], value[7],
+            value[8], value[9], value[10], value[11],
+            value[12], value[13], value[14], value[15]);
+        ref int index = ref CollectionsMarshal.GetValueRefOrAddDefault(matrixIndices, key, out bool existing);
+        if (existing && SameMatrix(batch.Matrices[index], value))
         {
-            if (SameMatrix(batch.Matrices[index], value)) return index;
+            return index;
         }
+
+        index = batch.Matrices.Count;
         batch.Matrices.Add(value);
-        return batch.Matrices.Count - 1;
+        return index;
     }
 
     private static bool SameTint(in color left, in color right) =>
         left.r == right.r && left.g == right.g && left.b == right.b && left.a == right.a;
 
-    private static bool SameMatrix(in matrix4x4 left, in matrix4x4 right)
+    private static unsafe bool SameMatrix(in matrix4x4 left, in matrix4x4 right)
     {
+        if (Vector128.IsHardwareAccelerated)
+        {
+            //按浮点比较四列，正负零相等且 NaN 不相等
+            fixed (float* a = left.m, b = right.m)
+            {
+                return Vector128.EqualsAll(Vector128.Load(a), Vector128.Load(b))
+                    && Vector128.EqualsAll(Vector128.Load(a + 4), Vector128.Load(b + 4))
+                    && Vector128.EqualsAll(Vector128.Load(a + 8), Vector128.Load(b + 8))
+                    && Vector128.EqualsAll(Vector128.Load(a + 12), Vector128.Load(b + 12));
+            }
+        }
+
         for (int index = 0; index < 16; ++index)
         {
             if (left[index] != right[index]) return false;

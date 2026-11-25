@@ -45,11 +45,13 @@ internal enum PrefabSource
 internal static unsafe class EditorAssetsNative
 {
     private static EditorAssetNativeApi api;
+    private static delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte> restoreEnsReferences;
 
     /// <summary>保存原生资源 API。</summary>
-    internal static void Initialize(EditorAssetNativeApi value)
+    internal static void Initialize(EditorAssetNativeApi value, delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte> restoreReferences)
     {
         api = value;
+        restoreEnsReferences = restoreReferences;
     }
 
     /// <summary>从导入缓存加载单个对象及其引用依赖。</summary>
@@ -94,10 +96,26 @@ internal static unsafe class EditorAssetsNative
         fixed (byte* pointer = bytes) return api.SaveMaterial(api.Context, objectId, pointer, bytes.Length) != 0;
     }
 
-    internal static string CaptureEns(EnsId root)
+    //在批量恢复子树后连接 Ens 引用
+    internal static void RestoreEnsReferences(string snapshot)
     {
-        //快照直接读原生字段表，先把运行时值刷回去，复制与 Prefab 才不会丢托管字段。
-        ScriptRuntimeRegistry.FlushHostFields();
+        byte[] bytes = InteropText.EncodeUtf8(EditorPrefabSession.PrepareSnapshot(snapshot));
+        fixed (byte* pointer = bytes)
+        {
+            if (restoreEnsReferences(api.Context, pointer, bytes.Length) == 0)
+            {
+                throw new InvalidOperationException("Cannot restore Ens references.");
+            }
+        }
+    }
+
+    internal static string CaptureEns(EnsId root, bool flushHostFields = true)
+    {
+        //将托管字段值写回原生字段表
+        if (flushHostFields)
+        {
+            ScriptRuntimeRegistry.FlushHostFields();
+        }
         int length = api.CaptureEns(api.Context, root, null, 0);
         byte[] bytes = new byte[length];
         fixed (byte* pointer = bytes) api.CaptureEns(api.Context, root, pointer, length);
@@ -105,10 +123,10 @@ internal static unsafe class EditorAssetsNative
     }
 
     //销毁子树中的全部对象
-    internal static bool DestroyEnsTree(EnsId root)
+    internal static bool DestroyEnsTree(EnsId root, string? snapshot = null)
     {
         if (!EditorPrefabSession.CanModify(Ens.FromId(root), EditorPrefabEditOperation.Delete)) return false;
-        string snapshot = CaptureEns(root);
+        snapshot ??= CaptureEns(root);
         if (api.DestroyEnsTree(api.Context, root) == 0) return false;
         EditorPrefabSession.RemoveBindings(snapshot);
         return true;

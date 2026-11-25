@@ -42,8 +42,8 @@ internal static class UICanvasSpace
     internal static bool TryCanvasToLocal(UINode node, vector2 canvasPoint, out vector2 localPoint)
     {
         localPoint = default;
-        if (!UIMatrix.TryInvertAffine(UIMatrix.Compose(node), out matrix4x4 inverse)) return false;
-        localPoint = UIMatrix.TransformPoint(inverse, canvasPoint);
+        if (!matrix4x4.TryInvertAffine(matrix4x4.Compose(node), out matrix4x4 inverse)) return false;
+        localPoint = matrix4x4.TransformPoint(inverse, canvasPoint);
         return true;
     }
 

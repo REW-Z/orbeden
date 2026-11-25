@@ -373,24 +373,21 @@ internal sealed class EnsPanel : EditorPanel
         EditorNativeComponents.SelectEns(clicked, true);
     }
 
-    //取得拖拽选择中的最外层节点并保持层级顺序
-    private List<Ens> GetMovingEns(Ens source)
+    //取得选择中的最外层节点并保持层级顺序
+    private List<Ens> GetSelectedRoots(HashSet<EnsId> ids)
     {
-        if (selectedIds.Count <= 1 || !selectedSet.Contains(source.Id))
-        {
-            return source.IsValid ? [source] : [];
-        }
-        List<Ens> moving = [];
-        foreach (EnsId id in selectedIds)
+        List<Ens> roots = [];
+        foreach (EnsId id in ids)
         {
             if (!rows.TryGetValue(id, out var row))
             {
                 continue;
             }
             bool nested = false;
-            for (EnsId ancestor = row.Parent; !ancestor.IsNull; ancestor = rows[ancestor].Parent)
+            for (EnsId ancestor = row.Parent; !ancestor.IsNull && rows.TryGetValue(ancestor, out var parentRow);
+                ancestor = parentRow.Parent)
             {
-                if (selectedSet.Contains(ancestor))
+                if (ids.Contains(ancestor))
                 {
                     nested = true;
                     break;
@@ -398,11 +395,11 @@ internal sealed class EnsPanel : EditorPanel
             }
             if (!nested)
             {
-                moving.Add(row.Ens);
+                roots.Add(row.Ens);
             }
         }
-        moving.Sort((left, right) => rows[left.Id].Order.CompareTo(rows[right.Id].Order));
-        return moving;
+        roots.Sort((left, right) => rows[left.Id].Order.CompareTo(rows[right.Id].Order));
+        return roots;
     }
 
     /// <summary>面板隐藏后不再持有选择。</summary>
@@ -415,12 +412,17 @@ internal sealed class EnsPanel : EditorPanel
         BeginRename(selectedEns);
     }
 
-    /// <summary>Delete 触发：删除当前选中的 Ens。</summary>
+    /// <summary>Delete 触发：批量删除当前选中的 Ens。</summary>
     public override void OnDeleteRequested()
     {
-        if (EditorApplication.IsPlaying) return;
-        //Ens 删除可撤销，所以不弹确认；Project 的资源删除进回收站且不可撤销，那边才确认
-        DeleteEns(Ens.FromId(selectedEns));
+        if (EditorApplication.IsPlaying)
+        {
+            return;
+        }
+
+        HashSet<EnsId> deletable = selectedIds.Where(id =>
+            EditorPrefabSession.CanModify(Ens.FromId(id), EditorPrefabEditOperation.Delete)).ToHashSet();
+        DeleteEns(GetSelectedRoots(deletable));
     }
 
     /// <summary>Ctrl+C 触发：把当前选中的 Ens 子树放进剪贴板。</summary>
@@ -583,7 +585,10 @@ internal sealed class EnsPanel : EditorPanel
         if (EditorGUI.MenuItem(target.IsValid ? $"Paste under {target.Name}" : "Paste",
             structure && EditorEnsClipboard.HasEntry)) PasteEns(target);
         if (EditorGUI.MenuItem("Toggle Active", header && target.IsValid)) ToggleActive(target);
-        if (EditorGUI.MenuItem("Delete", canModify && target.IsValid && EditorPrefabSession.CanModify(target, EditorPrefabEditOperation.Delete))) DeleteEns(target);
+        if (EditorGUI.MenuItem("Delete", canModify && target.IsValid && EditorPrefabSession.CanModify(target, EditorPrefabEditOperation.Delete)))
+        {
+            DeleteEns([target]);
+        }
         if (EditorPrefabSession.FindBinding(target) != null && EditorGUI.MenuItem("Unpack Prefab", canModify)) EditorPrefabSession.Unpack(target);
         EnsContextMenuRegistry.Draw(new EnsContext(target.Id, target.IsValid ? target.ResourceKey : string.Empty,
             target.IsValid ? target.Name : string.Empty, target.IsValid), EditorConsole.Error);
@@ -674,32 +679,106 @@ internal sealed class EnsPanel : EditorPanel
         EditorNativeComponents.SelectEns(copy.Id);
     }
 
-    //删除子树，撤销按快照放回原父节点
-    private static void DeleteEns(Ens ens)
+    //批量删除子树并记录一次撤销事务
+    private void DeleteEns(IReadOnlyList<Ens> roots)
     {
-        if (!ens.IsValid) return;
-        EnsId parent = ens.Transform.GetParent();
-        string parentKey = parent.IsNull ? string.Empty : Ens.FromId(parent).ResourceKey;
-        string snapshot = EditorAssetsNative.CaptureEns(ens.Id);
-        string key = ens.ResourceKey;
-        if (snapshot.Length == 0 || !EditorAssetsNative.DestroyEnsTree(ens.Id)) return;
+        if (roots.Count == 0)
+        {
+            return;
+        }
+
+        //记录所选节点的同级插入位置
+        Dictionary<EnsId, string> beforeKeys = [];
+        foreach (EnsId parent in roots.Where(ens => ens.IsValid).Select(ens => ens.Transform.GetParent()).Distinct())
+        {
+            if (!children.TryGetValue(parent, out List<Ens>? siblings))
+            {
+                continue;
+            }
+            for (int index = 0; index + 1 < siblings.Count; ++index)
+            {
+                beforeKeys[siblings[index].Id] = siblings[index + 1].ResourceKey;
+            }
+        }
+
+        //在删除前捕获全部子树快照
+        ScriptRuntimeRegistry.FlushHostFields();
+        List<(EnsId Id, string Key, string Parent, string Before, string Snapshot)> snapshots = [];
+        foreach (Ens ens in roots)
+        {
+            if (!ens.IsValid)
+            {
+                continue;
+            }
+            string snapshot = EditorAssetsNative.CaptureEns(ens.Id, flushHostFields: false);
+            if (snapshot.Length != 0)
+            {
+                Ens parent = Ens.FromId(ens.Transform.GetParent());
+                snapshots.Add((ens.Id, ens.ResourceKey, parent.IsValid ? parent.ResourceKey : string.Empty,
+                    beforeKeys.GetValueOrDefault(ens.Id, string.Empty), snapshot));
+            }
+        }
+
+        //记录实际删除的子树
+        List<(string Key, string Parent, string Before, string Snapshot)> deleted = [];
+        foreach (var item in snapshots)
+        {
+            if (EditorAssetsNative.DestroyEnsTree(item.Id, item.Snapshot))
+            {
+                deleted.Add((item.Key, item.Parent, item.Before, item.Snapshot));
+            }
+        }
+        if (deleted.Count == 0)
+        {
+            return;
+        }
+
         EditorPropertyHistory.PushAction("Delete Ens",
-            () => RestoreSnapshot(snapshot, parentKey),
             () =>
             {
-                Ens value = Ens.Find(key);
-                if (value.IsValid) EditorAssetsNative.DestroyEnsTree(value.Id);
+                //逆序恢复同级节点，再连接各子树之间的引用
+                for (int index = deleted.Count - 1; index >= 0; --index)
+                {
+                    var item = deleted[index];
+                    if (!Ens.Find(item.Key).IsValid)
+                    {
+                        RestoreSnapshot(item.Snapshot, item.Parent, item.Before);
+                    }
+                }
+                if (deleted.Count > 1)
+                {
+                    foreach (var item in deleted)
+                    {
+                        EditorAssetsNative.RestoreEnsReferences(item.Snapshot);
+                    }
+                }
+            },
+            () =>
+            {
+                foreach (var item in deleted)
+                {
+                    Ens ens = Ens.Find(item.Key);
+                    if (ens.IsValid && !EditorAssetsNative.DestroyEnsTree(ens.Id, item.Snapshot))
+                    {
+                        throw new InvalidOperationException("Cannot delete Ens subtree.");
+                    }
+                }
             });
     }
 
-    //按快照把子树放回指定父节点
-    private static void RestoreSnapshot(string snapshot, string parentKey)
+    //按快照把子树放回指定层级位置
+    private static void RestoreSnapshot(string snapshot, string parentKey, string beforeKey = "")
     {
         Ens parent = parentKey.Length == 0 ? Ens.Null : Ens.Find(parentKey);
-        if (parentKey.Length != 0 && !parent.IsValid)
+        Ens before = beforeKey.Length == 0 ? Ens.Null : Ens.Find(beforeKey);
+        if ((parentKey.Length != 0 && !parent.IsValid) || (beforeKey.Length != 0 && !before.IsValid))
+        {
             throw new InvalidOperationException("Ens hierarchy target no longer exists.");
-        if (!EditorAssetsNative.InstantiatePrefab(snapshot, PrefabSource.SnapshotIdentity, parent.Id, EnsId.Null).IsValid)
+        }
+        if (!EditorAssetsNative.InstantiatePrefab(snapshot, PrefabSource.SnapshotIdentity, parent.Id, before.Id).IsValid)
+        {
             throw new InvalidOperationException("Cannot restore Ens subtree.");
+        }
     }
 
     //判断目标位置并在释放后排队提交
@@ -723,7 +802,11 @@ internal sealed class EnsPanel : EditorPanel
             }
         }
         Ens source = kind == 1 ? Ens.Find(key) : Ens.Null;
-        List<Ens> moving = kind == 1 ? GetMovingEns(source) : [];
+        List<Ens> moving = [];
+        if (source.IsValid)
+        {
+            moving = selectedIds.Count > 1 && selectedSet.Contains(source.Id) ? GetSelectedRoots(selectedSet) : [source];
+        }
         bool prefab = key.EndsWith(".prefab", StringComparison.Ordinal);
         bool model = Path.GetExtension(key).ToLowerInvariant() is ".obj" or ".gltf" or ".glb";
         bool valid = !EditorApplication.IsPlaying && (kind == 2

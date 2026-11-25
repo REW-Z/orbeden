@@ -79,10 +79,10 @@ public sealed class UINode
     /// 节点到世界空间的矩阵：连画布节点自己的变换一起乘进去。
     /// 世界空间命中测试与编辑器手柄共用它，避免同一条链在两处算出不同的结果。
     /// </summary>
-    public matrix4x4 WorldMatrix => UIMatrix.ComposeIncludingCanvas(this);
+    public matrix4x4 WorldMatrix => matrix4x4.ComposeIncludingCanvas(this);
 
     /// <summary>节点到画布的矩阵；画布根使用单位矩阵。</summary>
-    public matrix4x4 CanvasMatrix => Canvas != null ? matrix4x4.Identity : UIMatrix.Compose(this);
+    public matrix4x4 CanvasMatrix => Canvas != null ? matrix4x4.Identity : matrix4x4.Compose(this);
 
     /// <summary>
     /// 画布在场景编辑预览中的世界矩阵；Overlay 按枢轴再居中一次（根逻辑矩形以 {0,0} 为左下角）。

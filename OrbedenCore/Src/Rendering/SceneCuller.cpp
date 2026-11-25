@@ -10,18 +10,10 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
     visibleSet.Clear();
     visibleSet.camera = camera;
 
-    //筛选可见渲染器
-    uint32 layerMask = camera.drawLayerMask;
-    for (StaticMeshRenderer* renderer : scene.renderers)
+    //记录可见渲染器及相机距离平方
+    auto addVisible = [&camera, &visibleSet](StaticMeshRenderer* renderer)
     {
-        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
-
         const StaticMeshRendererRenderState& state = renderer->renderState;
-        if (!state.mesh || !state.worldBounds.valid) continue;
-        if ((state.drawLayer & layerMask) == 0) continue;
-        if (!Orbeden::Math::Intersects(camera.viewFrustum, state.worldBounds)) continue;
-
-        //计算相机距离平方
         vector3 toItem =
         {
             state.worldPosition.x - camera.position.x,
@@ -34,5 +26,46 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
         visibleItem.renderer = renderer;
         visibleItem.cameraDistance = Orbeden::Math::Dot(toItem, toItem);
         visibleSet.visibleItems.push_back(visibleItem);
+    };
+
+    //每四个候选渲染器检测一次视锥
+    StaticMeshRenderer* candidates[4];
+    const bounds3* bounds[4];
+    uint32 count = 0;
+    uint32 layerMask = camera.drawLayerMask;
+    for (StaticMeshRenderer* renderer : scene.renderers)
+    {
+        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
+
+        const StaticMeshRendererRenderState& state = renderer->renderState;
+        if (!state.mesh || !state.worldBounds.valid) continue;
+        if ((state.drawLayer & layerMask) == 0) continue;
+
+        candidates[count] = renderer;
+        bounds[count] = &state.worldBounds;
+        ++count;
+        if (count != 4)
+        {
+            continue;
+        }
+
+        uint32 visible = Orbeden::Math::IntersectsFour(camera.viewFrustum, bounds);
+        for (uint32 index = 0; index < count; ++index)
+        {
+            if ((visible & (1u << index)) != 0)
+            {
+                addVisible(candidates[index]);
+            }
+        }
+        count = 0;
+    }
+
+    //检测末尾不足四个的候选渲染器
+    for (uint32 index = 0; index < count; ++index)
+    {
+        if (Orbeden::Math::Intersects(camera.viewFrustum, *bounds[index]))
+        {
+            addVisible(candidates[index]);
+        }
     }
 }

@@ -15,9 +15,28 @@ internal static class UILayoutRegistry
     private static readonly Dictionary<UINode, float> measuredHeights = [];
 
     /// <summary>重建受影响的布局子树，并批量提交派生位置。</summary>
-    internal static void Rebuild(UIWorldContext context, HashSet<UILayout> dirty)
+    internal static void Rebuild(UIWorldContext context, HashSet<UILayout> dirty, HashSet<UILayout> positionDirty)
     {
-        if (dirty.Count == 0) return;
+        //区分锚点平移与完整布局
+        List<UINode> positionNodes = [];
+        foreach (UILayout layout in positionDirty)
+        {
+            UINode? node = context.FindNode(layout.EnsId);
+            if (node == null || !ReferenceEquals(node.Layout, layout) || dirty.Contains(layout))
+            {
+                continue;
+            }
+
+            if (CanResolvePosition(context, node, layout))
+            {
+                positionNodes.Add(node);
+            }
+            else
+            {
+                dirty.Add(layout);
+            }
+        }
+        positionDirty.Clear();
 
         List<UINode> roots = Promote(context, dirty);
         dirty.Clear();
@@ -50,7 +69,30 @@ internal static class UILayoutRegistry
         }
 
         List<UIDerivedPosition> positions = [];
-        foreach (UINode root in roots) CollectPositions(root, positions);
+        foreach (UINode root in roots)
+        {
+            CollectPositions(root, positions);
+        }
+
+        //读取当前父矩形并更新移动节点的落点
+        foreach (UINode node in positionNodes)
+        {
+            UINode? ancestor = node;
+            while (ancestor != null && !roots.Contains(ancestor))
+            {
+                ancestor = ancestor.Parent;
+            }
+            if (ancestor != null)
+            {
+                continue;
+            }
+
+            UILayout layout = node.Layout!;
+            UIRect parentRect = node.Parent!.Layout!.GetResolvedRect();
+            layout.Resolve(parentRect.min, parentRect.size, out vector2 anchor);
+            layout.SetResolvedRect(layout.GetResolvedRect(), anchor);
+            CollectPosition(node, positions);
+        }
         context.CommitDerivedPositions(positions);
 
         measuredWidths.Clear();
@@ -61,6 +103,44 @@ internal static class UILayoutRegistry
     internal static void Clear(IEnumerable<UINode> nodes)
     {
         foreach (UINode node in nodes) node.Layout?.ClearResolvedRect();
+    }
+
+    //判断节点是否能单独更新锚点落点
+    private static bool CanResolvePosition(UIWorldContext context, UINode node, UILayout layout)
+    {
+        if (node.Canvas != null || !layout.HasResolvedRect || layout.HasDrivenRect || layout.HasDrivenOffset
+            || node.Parent?.Layout is not { HasResolvedRect: true })
+        {
+            return false;
+        }
+
+        for (UINode? current = node; current != null; current = current.Parent)
+        {
+            if (current.ConfigurationError.Length != 0 || current.GetElement<UILayoutGroup>() != null
+                || current.Layout is { } currentLayout && (currentLayout.GetFitWidth() || currentLayout.GetFitHeight()))
+            {
+                return false;
+            }
+        }
+        return CanReuseChildLayout(context, node);
+    }
+
+    //检查后代是否需要重新排列或重新提交派生位置
+    private static bool CanReuseChildLayout(UIWorldContext context, UINode node)
+    {
+        foreach (UINode child in node.Children)
+        {
+            if (child.Layout is not UILayout childLayout || child.ConfigurationError.Length != 0)
+            {
+                continue;
+            }
+            if (!childLayout.HasResolvedRect || child.GetElement<UILayoutGroup>() != null
+                || context.HasClearedDerivedPosition(child.Ens) || !CanReuseChildLayout(context, child))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     //把脏节点提升到依赖其测量的容器，并去掉已覆盖的后代
@@ -224,20 +304,23 @@ internal static class UILayoutRegistry
 
         if (node.Canvas == null)
         {
-            vector3 position = node.Layout.GetResolvedLocalPosition();
-            //屏幕画布根的逻辑矩形从 {0,0} 起算，而画布对象落在枢轴上：这段居中偏移要一起写进直接子节点的
-            //位置，子节点的世界矩阵才与场景预览里画出来的位置重合（WorldSpace 根矩形已按枢轴解析，不加）。
-            vector2 canvasOffset = node.Parent is UINode parent ? CanvasPivotOffset(parent) : default;
-            positions.Add(new UIDerivedPosition
-            {
-                ens = node.Ens,
-                position = new vector3(position.x + canvasOffset.x,
-                    position.y + canvasOffset.y, position.z),
-                clear = 0,
-            });
+            CollectPosition(node, positions);
         }
 
         foreach (UINode child in node.Children) CollectPositions(child, positions);
+    }
+
+    //收集节点落点并叠加屏幕画布的轴心偏移
+    private static void CollectPosition(UINode node, List<UIDerivedPosition> positions)
+    {
+        vector3 position = node.Layout!.GetResolvedLocalPosition();
+        vector2 canvasOffset = node.Parent is UINode parent ? CanvasPivotOffset(parent) : default;
+        positions.Add(new UIDerivedPosition
+        {
+            ens = node.Ens,
+            position = new vector3(position.x + canvasOffset.x, position.y + canvasOffset.y, position.z),
+            clear = 0,
+        });
     }
 
     //画布把根逻辑矩形摆到枢轴上的居中偏移；不是画布节点的父级返回零。

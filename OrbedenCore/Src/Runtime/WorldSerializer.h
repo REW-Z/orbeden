@@ -38,6 +38,9 @@ public:
     //恢复子树快照并保留稳定身份
     static Ens* RestoreEns(World& world, const std::string& snapshot, EnsId parent, std::string& error);
 
+    //从子树快照恢复 Ens 引用
+    static bool RestoreEnsReferences(World& world, const std::string& snapshot, std::string& error);
+
     //捕获组件全部持久化字段及其稳定身份。
     static std::string CaptureComponent(Component* component);
 
