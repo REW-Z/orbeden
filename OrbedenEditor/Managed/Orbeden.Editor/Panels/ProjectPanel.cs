@@ -103,6 +103,7 @@ internal sealed class ProjectPanel : EditorPanel
 
     private string contentRoot = string.Empty;
     private string currentDirectory = string.Empty;
+    private string? directoryShownInTree;
     private string? selectedEntryPath;
     private string? expandedGridSource;
     private readonly HashSet<string> selectedPaths = new(StringComparer.OrdinalIgnoreCase);
@@ -294,8 +295,7 @@ internal sealed class ProjectPanel : EditorPanel
         EditorGUI.BeginDisabled(atRoot);
         if (EditorGUI.Button("Up") && !atRoot)
         {
-            currentDirectory = Path.GetDirectoryName(currentDirectory) ?? EditorAssetCatalog.Instance.ContentRoot;
-            selectedPath = null;
+            NavigateToDirectory(Path.GetDirectoryName(currentDirectory) ?? EditorAssetCatalog.Instance.ContentRoot);
         }
         EditorGUI.EndDisabled();
 
@@ -335,8 +335,19 @@ internal sealed class ProjectPanel : EditorPanel
     {
         visibleDirectories.Clear();
         pendingDirectorySelection = null;
+        string root = EditorAssetCatalog.Instance.ContentRoot;
         bool visible = NativeEditorGUI.BeginChild("##project_directories", ref directoryWidth, resizable: true);
-        try { if (visible) DrawDirectory(EditorAssetCatalog.Instance.ContentRoot); }
+        try
+        {
+            if (visible)
+            {
+                string? revealDirectory = string.Equals(currentDirectory, directoryShownInTree, StringComparison.OrdinalIgnoreCase)
+                    ? null
+                    : currentDirectory;
+                directoryShownInTree = currentDirectory;
+                DrawDirectory(root, revealDirectory);
+            }
+        }
         finally { NativeEditorGUI.EndChild(); }
         pendingDirectorySelection?.Invoke();
         pendingDirectorySelection = null;
@@ -347,14 +358,26 @@ internal sealed class ProjectPanel : EditorPanel
         {
             if (visible)
             {
-                //内容根的项目内相对键算出来是个点，换成目录名，和目录树里的叫法一致
-                string location = EditorAssetCatalog.Instance.ToResourceKey(currentDirectory);
-                EditorGUI.Label(location.Length == 0 || location == "." ? GetDirectoryName(currentDirectory) : location);
+                DrawDirectoryBreadcrumbs(root);
                 DrawAssets(remainingWidth);
             }
         }
         finally { NativeEditorGUI.EndChild(); }
         DrawDirectoryDrop(currentDirectory);
+    }
+
+    //绘制内容目录的面包屑并跳转到点击的父目录
+    private void DrawDirectoryBreadcrumbs(string root)
+    {
+        string relativePath = Path.GetRelativePath(root, currentDirectory);
+        string location = relativePath == "." ? GetDirectoryName(root)
+            : GetDirectoryName(root) + "/" + relativePath.Replace(Path.DirectorySeparatorChar, '/');
+        int selectedDepth = NativeEditorGUI.Breadcrumbs(location);
+        if (selectedDepth >= 0)
+        {
+            string[] segments = relativePath.Split(Path.DirectorySeparatorChar);
+            NavigateToDirectory(Path.Combine(root, Path.Combine(segments[..selectedDepth])));
+        }
     }
 
     //接收目录移动或将 Ens 子树保存为预制体
@@ -394,21 +417,29 @@ internal sealed class ProjectPanel : EditorPanel
     }
 
     //递归绘制展开目录并排除生成目录与目录链接；forceExpand 来自上级的 Alt 展开，要求整棵子树一并展开
-    private void DrawDirectory(string path, bool forceExpand = false)
+    private void DrawDirectory(string path, string? revealDirectory, bool forceExpand = false)
     {
         if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return;
         visibleDirectories.Add(path);
         string name = GetDirectoryName(path);
         bool renaming = string.Equals(renamingEntry, path, StringComparison.OrdinalIgnoreCase) && RenamesInTree(path);
-        //Alt 折叠的待办在这里被消费一次：本次先把目录压回折叠，之后交回 ImGui 自己记状态
-        bool forceCollapse = !forceExpand && collapsedDirectories.Remove(path);
+        //展开目标目录的父级并消费 Alt 折叠的待办
+        bool revealTarget = string.Equals(path, revealDirectory, StringComparison.OrdinalIgnoreCase);
+        bool revealAncestor = revealDirectory != null && !revealTarget && ProjectAssetOperations.IsSameOrChild(revealDirectory, path);
+        bool forceOpen = forceExpand || revealAncestor;
+        bool forceCollapse = collapsedDirectories.Remove(path) && !forceOpen;
         //没有下级目录的叶子不该显示展开箭头
         //重命名时把名称让给输入框；隐藏标签后节点宽度仍是「箭头+标签」，输入框正好从原名称的位置开始
         int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : name) + "##directory_" + path,
             selectedPaths.Contains(path) || string.Equals(currentDirectory, path, StringComparison.OrdinalIgnoreCase),
             leaf: !HasSubDirectories(path),
-            forceOpen: forceExpand,
+            forceOpen: forceOpen,
             forceCollapse: forceCollapse);
+        if (revealTarget && (state & 256) != 0)
+        {
+            EditorGUI.SetScrollHereY(0.5f);
+            EditorApplication.RequestRepaint();
+        }
         if (renaming)
         {
             EditorGUI.SameLine();
@@ -422,6 +453,7 @@ internal sealed class ProjectPanel : EditorPanel
         if ((state & 64) != 0)
         {
             currentDirectory = path;
+            directoryShownInTree = path;
             int modifiers = NativeEditorGUI.SelectionModifiers;
             pendingDirectorySelection = () => SelectEntry(path, visibleDirectories, modifiers);
         }
@@ -438,7 +470,10 @@ internal sealed class ProjectPanel : EditorPanel
         {
             foreach (string directory in Directory.EnumerateDirectories(path).Order(StringComparer.OrdinalIgnoreCase))
             {
-                if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0) DrawDirectory(directory, expandSubtree);
+                if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0)
+                {
+                    DrawDirectory(directory, revealAncestor ? revealDirectory : null, expandSubtree);
+                }
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -674,7 +709,7 @@ internal sealed class ProjectPanel : EditorPanel
         if (!ProjectAssetOperations.MoveMany(sources, directory, out var moved, out status)) return false;
         foreach (var entry in moved)
             if (ProjectAssetOperations.IsSameOrChild(currentDirectory, entry.Source))
-                currentDirectory = Path.Combine(entry.Destination, Path.GetRelativePath(entry.Source, currentDirectory));
+                currentDirectory = Path.GetFullPath(Path.Combine(entry.Destination, Path.GetRelativePath(entry.Source, currentDirectory)));
         selectedPaths.Clear();
         foreach (var entry in moved) selectedPaths.Add(entry.Destination);
         selectedEntryPath = moved[^1].Destination;
@@ -824,7 +859,7 @@ internal sealed class ProjectPanel : EditorPanel
             {
                 //改的是目录时，当前目录可能就在它下面，跟着一起搬
                 if (Directory.Exists(target) && ProjectAssetOperations.IsSameOrChild(currentDirectory, entry))
-                    currentDirectory = Path.Combine(target, Path.GetRelativePath(entry, currentDirectory));
+                    currentDirectory = Path.GetFullPath(Path.Combine(target, Path.GetRelativePath(entry, currentDirectory)));
                 if (string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase)) selectedPath = target;
                 EndRename();
                 return;
@@ -1078,13 +1113,20 @@ internal sealed class ProjectPanel : EditorPanel
         if (succeeded) pendingOperation = PendingOperation.None;
     }
 
+    //切换当前目录并清除资源选择
+    private void NavigateToDirectory(string directory)
+    {
+        currentDirectory = directory;
+        selectedPath = null;
+        EditorApplication.RequestRepaint();
+    }
+
     //打开文件或进入文件夹。
     private void OpenEntry(string entry)
     {
         if (Directory.Exists(entry))
         {
-            currentDirectory = entry;
-            selectedPath = null;
+            NavigateToDirectory(entry);
             return;
         }
 

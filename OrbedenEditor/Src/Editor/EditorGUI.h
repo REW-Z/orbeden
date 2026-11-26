@@ -121,11 +121,12 @@ public:
     void* inputULong = nullptr;
     void* gameViewContext = nullptr;
     void* drawGameView = nullptr;
+    void* breadcrumbs = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 99);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 100);
 
 //Editor ImGui 绑定层
 class EditorGUI

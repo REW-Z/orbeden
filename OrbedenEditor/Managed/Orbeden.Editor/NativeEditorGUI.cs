@@ -110,6 +110,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, ulong*, byte> InputULong;
     public IntPtr GameViewContext;
     public delegate* unmanaged[Cdecl]<IntPtr, void> DrawGameView;
+    public delegate* unmanaged[Cdecl]<byte*, int, int> Breadcrumbs;
 }
 #pragma warning restore CS0649
 
@@ -161,6 +162,16 @@ internal static unsafe class NativeEditorGUI
     internal static int EndList() => api.EndList();
     private static EditorGuiNativeApi api;
     private static bool initialized;
+
+    //绘制面包屑并返回点击的路径层级
+    internal static int Breadcrumbs(string path)
+    {
+        byte[] bytes = InteropText.EncodeUtf8(path);
+        fixed (byte* pointer = bytes)
+        {
+            return api.Breadcrumbs(pointer, bytes.Length);
+        }
+    }
 
     //保存 EditorGUI 函数表
     internal static void Initialize(EditorGuiNativeApi value)

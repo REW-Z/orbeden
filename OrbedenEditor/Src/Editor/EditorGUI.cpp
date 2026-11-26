@@ -610,7 +610,8 @@ namespace
             | (ImGui::GetIO().KeyCtrl ? 4 : 0) | (doubleClicked ? 8 : 0)
             | (ImGui::GetIO().KeyAlt ? 16 : 0) | (toggled ? 32 : 0)
             | (!pickPressed && IsReleasedOnNodeLabel(options, leadingSpace) ? 64 : 0)
-            | (pickActivated ? 128 : 0) | (context.ActiveId == nodeItem.ID ? 512 : 0);
+            | (pickActivated ? 128 : 0) | (!ImGui::IsItemVisible() ? 256 : 0)
+            | (context.ActiveId == nodeItem.ID ? 512 : 0);
     }
 
     //绘制带层级栈的目录节点
@@ -722,6 +723,78 @@ namespace
         ImGui::PushTextWrapPos(0.0f);
         ImGui::TextUnformatted(begin, end);
         ImGui::PopTextWrapPos();
+    }
+
+    //绘制可换行的面包屑并返回点击的路径层级
+    int32 ORBEDEN_NATIVE_CALL EditorGuiBreadcrumbs(const uint8* text, int32 length)
+    {
+        std::string path = ReadUtf8Text(text, length);
+        std::string_view remaining = path;
+        float32 lineWidth = ImGui::GetContentRegionAvail().x;
+        float32 right = ImGui::GetCursorScreenPos().x + lineWidth;
+        float32 spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+        float32 separatorWidth = ImGui::CalcTextSize("/").x + spacing;
+        float32 ellipsisWidth = ImGui::CalcTextSize("...").x;
+        int32 selectedDepth = -1;
+
+        ImGui::PushID("##breadcrumbs");
+        for (int32 depth = 0; ; ++depth)
+        {
+            usize separator = remaining.find('/');
+            bool current = separator == std::string_view::npos;
+            std::string name(remaining.substr(0, separator));
+            float32 maxWidth = lineWidth - (depth > 0 ? separatorWidth : 0.0f);
+            std::string label = EllipsizeToWidth(name, std::max(maxWidth, ellipsisWidth));
+            ImVec2 size = ImGui::CalcTextSize(label.c_str());
+
+            //按目录段换行并保留分隔符
+            if (depth > 0)
+            {
+                if (ImGui::GetItemRectMax().x + spacing + separatorWidth + size.x <= right)
+                {
+                    ImGui::SameLine(0.0f, spacing);
+                }
+                ImGui::TextDisabled("/");
+                ImGui::SameLine(0.0f, spacing);
+            }
+
+            //绘制父目录链接或当前目录标签
+            if (current)
+            {
+                ImGui::TextUnformatted(label.c_str());
+            }
+            else
+            {
+                ImGui::PushID(depth);
+                if (ImGui::InvisibleButton("##directory", size, ImGuiButtonFlags_EnableNav))
+                {
+                    selectedDepth = depth;
+                }
+                ImGui::PopID();
+                bool hovered = ImGui::IsItemHovered();
+                if (hovered)
+                {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                }
+                ImVec2 min = ImGui::GetItemRectMin();
+                ImVec2 max = ImGui::GetItemRectMax();
+                ImU32 ink = ImGui::GetColorU32(hovered ? ImGuiCol_Text : ImGuiCol_TextLink);
+                ImDrawList* drawList = ImGui::GetWindowDrawList();
+                drawList->AddText(min, ink, label.c_str());
+                drawList->AddLineH(min.x, max.x, max.y, ink);
+            }
+            if (label != name)
+            {
+                ImGui::SetItemTooltip("%s", name.c_str());
+            }
+            if (current)
+            {
+                break;
+            }
+            remaining.remove_prefix(separator + 1);
+        }
+        ImGui::PopID();
+        return selectedDepth;
     }
 
     //绘制按钮
@@ -2448,6 +2521,7 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.beginSearchableCombo = reinterpret_cast<void*>(&EditorGuiBeginSearchableCombo);
     api.searchableComboItem = reinterpret_cast<void*>(&EditorGuiSearchableComboItem);
     api.getSelectionModifiers = reinterpret_cast<void*>(&EditorGuiGetSelectionModifiers);
+    api.breadcrumbs = reinterpret_cast<void*>(&EditorGuiBreadcrumbs);
     return api;
 }
 
