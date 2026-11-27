@@ -30,6 +30,8 @@ internal sealed class CppMember
     public string? PropertyName { get; set; }
     public string Buffer { get; set; } = "";
     public string Count { get; set; } = "";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool DirectBuffer { get; set; }
     public bool FixedArray { get; set; }
     public List<CppParameter> Parameters { get; set; } = [];
 }
@@ -194,7 +196,7 @@ internal static class CppDeclarations
     private static void ParseMembers(List<CppToken> tokens, int start, int end, CppType type, string[] lines, List<CppType> result)
     {
         string access = type.Kind == "struct" ? "public" : "private";
-        bool ignored = false, serialize = false, template = false;
+        bool ignored = false, serialize = false, template = false, directBuffer = false;
         string getter = "", setter = "", buffer = "", count = "", changed = "", propertyName = "";
         for (int index = start; index < end;)
         {
@@ -223,13 +225,13 @@ internal static class CppDeclarations
             }
             if (token is "ORBEDEN_BIND_IGNORE" or "ORBEDEN_SERIALIZE_FIELD")
             { ignored |= token == "ORBEDEN_BIND_IGNORE"; serialize |= token == "ORBEDEN_SERIALIZE_FIELD"; ++index; continue; }
-            if (token is "ORBEDEN_BIND_ACCESSORS" or "ORBEDEN_BIND_BUFFER")
+            if (token is "ORBEDEN_BIND_ACCESSORS" or "ORBEDEN_BIND_BUFFER" or "ORBEDEN_BIND_DIRECT_BUFFER")
             {
                 int close = Match(tokens, index + 1, "(", ")");
                 var values = Split(tokens.GetRange(index + 2, close - index - 2), ",").Select(Join).ToArray();
                 if (values.Length != 2) throw new InvalidDataException($"{type.File}:{tokens[index].Line}: {token} requires two arguments");
                 if (token == "ORBEDEN_BIND_ACCESSORS") { getter = values[0]; setter = values[1]; }
-                else { buffer = values[0]; count = values[1]; }
+                else { buffer = values[0]; count = values[1]; directBuffer = token == "ORBEDEN_BIND_DIRECT_BUFFER"; }
                 index = close + 1; continue;
             }
             if (token == "template")
@@ -263,6 +265,7 @@ internal static class CppDeclarations
                 {
                     member.Access = access; member.IgnoreBinding = ignored; member.Serialize = serialize;
                     member.Changed = changed; member.Getter = getter; member.Setter = setter; member.Buffer = buffer; member.Count = count; member.IsTemplate = template;
+                    member.DirectBuffer = directBuffer;
                     member.PropertyName = propertyName.Length == 0 ? null : propertyName;
                     member.Doc = DocAbove(lines, member.Line);
                     type.Members.Add(member);
@@ -270,7 +273,7 @@ internal static class CppDeclarations
             }
             if (body) index = Match(tokens, index, "{", "}");
             ++index;
-            ignored = serialize = template = false; getter = setter = buffer = count = changed = propertyName = "";
+            ignored = serialize = template = directBuffer = false; getter = setter = buffer = count = changed = propertyName = "";
         }
     }
 

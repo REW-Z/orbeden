@@ -242,7 +242,7 @@ Uniform 的 u_InstanceTint 默认显式绑定白色，u_InstanceUvRect 绑定 `(
 | 方法 | 精确行为 |
 |---|---|
 | `bool Configure(Mesh* mesh, uint32 subMeshIndex, Material* material, const InstanceDrawOptions& options)` | 验证非空资源、有效区间、单 Pass Standard、选项；失败保留旧配置；成功只替换配置，不清实例 |
-| `ORBEDEN_BIND_BUFFER(data,count) bool SetInstances(const MeshInstanceData* data, int32 count)` | count 范围 0..1,048,576；0 清列表；非零指针必须有效；全量验证有限数/非零 quaternion/非奇异 scale，归一化 quaternion；全部通过再复制，失败保留旧值 |
+| `ORBEDEN_BIND_DIRECT_BUFFER(data,count) bool SetInstances(const MeshInstanceData* data, int32 count)` | count 范围 0..1,048,576；0 清列表；非空缓冲原样复制。调用方提供有效变换和单位四元数 |
 | `int32 GetInstanceCount() const` | 返回实例数 |
 | `bool Submit()` | 查当前 RenderSystem 和调用对象所属 World；孤立对象采用 Application 当前 World；拒绝渲染读取期间调用、世界准备阶段、无后端/无实例能力；复制完整配置和实例到下一次 Render 的提交列表；返回是否接收 |
 | `void Clear()` | 清对象内实例，不撤回此前 Submit 快照 |

@@ -286,7 +286,8 @@ public:
     //复制实例及可选的着色参数到下一帧提交队列
     bool SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
         Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId,
-        std::span<const float32> drawParameters, std::optional<DrawQueue> drawQueue = std::nullopt, int32 drawSubQueue = 0);
+        std::span<const float32> drawParameters, std::optional<DrawQueue> drawQueue = std::nullopt, int32 drawSubQueue = 0,
+        bool unitRotations = false);
 
     /// <summary>读取本次 Render 使用的显式实例提交快照。</summary>
     const List<InstanceSubmission>& GetActiveInstanceSubmissions() const { return activeInstanceSubmissions; }

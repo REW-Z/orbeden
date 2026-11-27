@@ -77,6 +77,7 @@ public:
     //有指定队列的列表直接绑定实例缓冲
     std::optional<DrawQueue> drawQueue;
     int32 drawSubQueue = 0;
+    bool unitRotations = false;
     List<GpuMeshInstance> gpuInstances;
     bounds3 worldBounds;
 };

@@ -28360,6 +28360,7 @@
           "Setter": "",
           "Buffer": "data",
           "Count": "count",
+          "DirectBuffer": true,
           "FixedArray": false,
           "Parameters": [
             {
@@ -28781,6 +28782,25 @@
         {
           "Name": "drawSubQueue",
           "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "unitRotations",
+          "Type": "bool",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -36764,6 +36784,46 @@
             {
               "Name": "scale",
               "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "TRS",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "position",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "rotation",
+              "Type": "const quaternion\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "scale",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "unitRotation",
+              "Type": "bool",
               "DefaultValue": ""
             }
           ]
@@ -59455,6 +59515,11 @@
               "Name": "drawSubQueue",
               "Type": "int32",
               "DefaultValue": "0"
+            },
+            {
+              "Name": "unitRotations",
+              "Type": "bool",
+              "DefaultValue": "false"
             }
           ]
         },

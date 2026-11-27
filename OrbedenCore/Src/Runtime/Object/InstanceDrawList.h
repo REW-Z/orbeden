@@ -28,8 +28,8 @@ public:
     /// <summary>配置绘制目标并从材质初始化绘制队列；校验失败时保留旧配置。</summary>
     bool Configure(Mesh* targetMesh, uint32 targetSubMeshIndex, Material* targetMaterial, const InstanceDrawOptions& drawOptions);
 
-    /// <summary>替换实例数据，数量变化时清除旧着色参数，失败时保留旧值。</summary>
-    ORBEDEN_BIND_BUFFER(data, count)
+    /// <summary>原样复制实例数据。调用方提供有效变换及单位四元数，数量变化时清除旧着色参数。</summary>
+    ORBEDEN_BIND_DIRECT_BUFFER(data, count)
     bool SetInstances(const MeshInstanceData* data, int32 count);
 
     /// <summary>按实例顺序设置着色参数，每实例 32 个 float。空缓冲清除参数，失败时保留旧值。</summary>

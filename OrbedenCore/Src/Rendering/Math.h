@@ -43,6 +43,9 @@ namespace Orbeden
         //创建本地变换矩阵
         static matrix4x4 TRS(const vector3& position, const quaternion& rotation, const vector3& scale);
 
+        //按调用方提供的旋转状态创建本地变换矩阵
+        static matrix4x4 TRS(const vector3& position, const quaternion& rotation, const vector3& scale, bool unitRotation);
+
         //创建透视投影矩阵
         static matrix4x4 Perspective(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane);
 

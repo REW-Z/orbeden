@@ -649,7 +649,7 @@ void RenderSystem::PrepareDirectInstances()
         for (usize index = 0; index < submission.instances.size(); ++index)
         {
             const MeshInstanceData& source = submission.instances[index];
-            const matrix4x4 model = Orbeden::Math::TRS(source.position, source.rotation, source.scale);
+            const matrix4x4 model = Orbeden::Math::TRS(source.position, source.rotation, source.scale, submission.unitRotations);
             GpuMeshInstance instance;
             if (!BuildGpuMeshInstance(model, ColorSpace::SrgbToLinear(source.tint), source.uvRect, instance))
             {
@@ -743,7 +743,7 @@ bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& opti
 //按实例顺序保存变换和可选的着色参数
 bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
     Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId,
-    std::span<const float32> drawParameters, std::optional<DrawQueue> drawQueue, int32 drawSubQueue)
+    std::span<const float32> drawParameters, std::optional<DrawQueue> drawQueue, int32 drawSubQueue, bool unitRotations)
 {
     //渲染读取期间、世界准备阶段与不支持实例化的后端都拒绝接收
     if (readingDrawSubmissions || !initialized || !window) return false;
@@ -769,6 +769,7 @@ bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& opti
     submission.subMeshIndex = subMeshIndex;
     submission.drawQueue = drawQueue;
     submission.drawSubQueue = drawSubQueue;
+    submission.unitRotations = unitRotations;
     submission.instances.assign(instances.begin(), instances.end());
     if (!drawParameters.empty())
     {

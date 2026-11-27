@@ -2620,20 +2620,14 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_InstanceDrawList_3(int32 objectId, 
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_InstanceDrawList_4(int32 objectId, NativeBindingSlice data, int32 count, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_InstanceDrawList_4(int32 objectId, const MeshInstanceData* data, int32 count, uint8* result)
 {
     try
     {
         auto* instance = NativeBindings::Require<InstanceDrawList>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        NativeBindingReader reader_data(data);
-        int32 length_data = reader_data.Count();
-        if (length_data != count) return NativeBindingStatus::InvalidArgument;
-        std::vector<MeshInstanceData> decoded_data;
-        decoded_data.reserve(length_data);
-        for (int32 index = 0; index < length_data; ++index) decoded_data.push_back(Read_MeshInstanceData(reader_data));
-        reader_data.Complete();
-        *result = static_cast<uint8>(instance->SetInstances(decoded_data.data(), count));
+        if (count < 0 || (count != 0 && !data)) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->SetInstances(data, count));
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -7803,7 +7797,7 @@ void RegisterBindings_Orbeden()
     static void* functions_Font[] = { reinterpret_cast<void*>(&Call_Font_0), reinterpret_cast<void*>(&Call_Font_1), reinterpret_cast<void*>(&Call_Font_2), reinterpret_cast<void*>(&Call_Font_3), reinterpret_cast<void*>(&Call_Font_4), reinterpret_cast<void*>(&Call_Font_5), reinterpret_cast<void*>(&Call_Font_6), reinterpret_cast<void*>(&Call_Font_7), reinterpret_cast<void*>(&Call_Font_8), reinterpret_cast<void*>(&Call_Font_9), reinterpret_cast<void*>(&Call_Font_10), reinterpret_cast<void*>(&Call_Font_11), reinterpret_cast<void*>(&Call_Font_12), reinterpret_cast<void*>(&Call_Font_13), reinterpret_cast<void*>(&Call_Font_14), reinterpret_cast<void*>(&Call_Font_15), reinterpret_cast<void*>(&Call_Font_16), reinterpret_cast<void*>(&Call_Font_17), reinterpret_cast<void*>(&Call_Font_18), reinterpret_cast<void*>(&Call_Font_19), reinterpret_cast<void*>(&Call_Font_20), reinterpret_cast<void*>(&Call_Font_21), reinterpret_cast<void*>(&Call_Font_22), reinterpret_cast<void*>(&Call_Font_23), reinterpret_cast<void*>(&Call_Font_24) };
     NativeBindings::Register(Font::StaticType(), 8904294447050588615ULL, { functions_Font, 25 });
     static void* functions_InstanceDrawList[] = { reinterpret_cast<void*>(&Call_InstanceDrawList_0), reinterpret_cast<void*>(&Call_InstanceDrawList_1), reinterpret_cast<void*>(&Call_InstanceDrawList_2), reinterpret_cast<void*>(&Call_InstanceDrawList_3), reinterpret_cast<void*>(&Call_InstanceDrawList_4), reinterpret_cast<void*>(&Call_InstanceDrawList_5), reinterpret_cast<void*>(&Call_InstanceDrawList_6), reinterpret_cast<void*>(&Call_InstanceDrawList_7), reinterpret_cast<void*>(&Call_InstanceDrawList_8), reinterpret_cast<void*>(&Call_InstanceDrawList_9) };
-    NativeBindings::Register(InstanceDrawList::StaticType(), 16144163738336138175ULL, { functions_InstanceDrawList, 10 });
+    NativeBindings::Register(InstanceDrawList::StaticType(), 6325199909672712191ULL, { functions_InstanceDrawList, 10 });
     static void* functions_Material[] = { reinterpret_cast<void*>(&Call_Material_0), reinterpret_cast<void*>(&Call_Material_1), reinterpret_cast<void*>(&Call_Material_2), reinterpret_cast<void*>(&Call_Material_3), reinterpret_cast<void*>(&Call_Material_4), reinterpret_cast<void*>(&Call_Material_5), reinterpret_cast<void*>(&Call_Material_6), reinterpret_cast<void*>(&Call_Material_7), reinterpret_cast<void*>(&Call_Material_8), reinterpret_cast<void*>(&Call_Material_9), reinterpret_cast<void*>(&Call_Material_10), reinterpret_cast<void*>(&Call_Material_11), reinterpret_cast<void*>(&Call_Material_12), reinterpret_cast<void*>(&Call_Material_13), reinterpret_cast<void*>(&Call_Material_14), reinterpret_cast<void*>(&Call_Material_15), reinterpret_cast<void*>(&Call_Material_16), reinterpret_cast<void*>(&Call_Material_17), reinterpret_cast<void*>(&Call_Material_18), reinterpret_cast<void*>(&Call_Material_19), reinterpret_cast<void*>(&Call_Material_20), reinterpret_cast<void*>(&Call_Material_21), reinterpret_cast<void*>(&Call_Material_22), reinterpret_cast<void*>(&Call_Material_23), reinterpret_cast<void*>(&Call_Material_24), reinterpret_cast<void*>(&Call_Material_25), reinterpret_cast<void*>(&Call_Material_26), reinterpret_cast<void*>(&Call_Material_27), reinterpret_cast<void*>(&Call_Material_28), reinterpret_cast<void*>(&Call_Material_29), reinterpret_cast<void*>(&Call_Material_30), reinterpret_cast<void*>(&Call_Material_31), reinterpret_cast<void*>(&Call_Material_32), reinterpret_cast<void*>(&Call_Material_33), reinterpret_cast<void*>(&Call_Material_34), reinterpret_cast<void*>(&Call_Material_35) };
     NativeBindings::Register(Material::StaticType(), 10124473645180690159ULL, { functions_Material, 36 });
     static void* functions_Mesh[] = { reinterpret_cast<void*>(&Call_Mesh_0), reinterpret_cast<void*>(&Call_Mesh_1), reinterpret_cast<void*>(&Call_Mesh_2), reinterpret_cast<void*>(&Call_Mesh_3), reinterpret_cast<void*>(&Call_Mesh_4), reinterpret_cast<void*>(&Call_Mesh_5), reinterpret_cast<void*>(&Call_Mesh_6), reinterpret_cast<void*>(&Call_Mesh_7), reinterpret_cast<void*>(&Call_Mesh_8), reinterpret_cast<void*>(&Call_Mesh_9), reinterpret_cast<void*>(&Call_Mesh_10), reinterpret_cast<void*>(&Call_Mesh_11), reinterpret_cast<void*>(&Call_Mesh_12), reinterpret_cast<void*>(&Call_Mesh_13), reinterpret_cast<void*>(&Call_Mesh_14), reinterpret_cast<void*>(&Call_Mesh_15), reinterpret_cast<void*>(&Call_Mesh_16), reinterpret_cast<void*>(&Call_Mesh_17), reinterpret_cast<void*>(&Call_Mesh_18), reinterpret_cast<void*>(&Call_Mesh_19), reinterpret_cast<void*>(&Call_Mesh_20), reinterpret_cast<void*>(&Call_Mesh_21), reinterpret_cast<void*>(&Call_Mesh_22), reinterpret_cast<void*>(&Call_Mesh_23), reinterpret_cast<void*>(&Call_Mesh_24), reinterpret_cast<void*>(&Call_Mesh_25), reinterpret_cast<void*>(&Call_Mesh_26), reinterpret_cast<void*>(&Call_Mesh_27), reinterpret_cast<void*>(&Call_Mesh_28), reinterpret_cast<void*>(&Call_Mesh_29) };

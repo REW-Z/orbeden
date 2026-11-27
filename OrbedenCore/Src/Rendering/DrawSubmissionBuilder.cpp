@@ -365,7 +365,7 @@ void DrawSubmissionBuilder::BuildCameraItems(const RenderScene& scene, const Vis
                 for (usize index = 0; index < submission.instances.size(); ++index)
                 {
                     const MeshInstanceData& instance = submission.instances[index];
-                    matrix4x4 model = Orbeden::Math::TRS(instance.position, instance.rotation, instance.scale);
+                    matrix4x4 model = Orbeden::Math::TRS(instance.position, instance.rotation, instance.scale, submission.unitRotations);
                     if (!IsFiniteMatrix(model)) continue;
 
                     DrawItem item;
@@ -687,7 +687,7 @@ void DrawSubmissionBuilder::CollectShadowCandidates(const RenderScene& scene, st
         for (usize index = 0; index < submission.instances.size(); ++index)
         {
             const MeshInstanceData& instance = submission.instances[index];
-            matrix4x4 model = Orbeden::Math::TRS(instance.position, instance.rotation, instance.scale);
+            matrix4x4 model = Orbeden::Math::TRS(instance.position, instance.rotation, instance.scale, submission.unitRotations);
             if (!IsFiniteMatrix(model)) continue;
 
             bounds3 worldBounds = localBounds.valid ? Orbeden::Math::TransformBounds(model, localBounds) : bounds3();

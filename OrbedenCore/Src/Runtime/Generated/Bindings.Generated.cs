@@ -1519,7 +1519,7 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.Component), "Component", 3730866753121215061UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 17390094485895889474UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Font), "Font", 8904294447050588615UL, (ens, pointer) => new global::Orbeden.Font(pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 16144163738336138175UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 6325199909672712191UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 10124473645180690159UL, (ens, pointer) => new global::Orbeden.Material(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Mesh), "Mesh", 10408349486667592532UL, (ens, pointer) => new global::Orbeden.Mesh(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Shader), "Shader", 15080754076493160853UL, (ens, pointer) => new global::Orbeden.Shader(pointer));
@@ -2678,15 +2678,11 @@ public unsafe partial class InstanceDrawList : global::Orbeden.Object
     }
     public bool @SetInstances(ReadOnlySpan<global::Orbeden.MeshInstanceData> @data)
     {
-        var writer_data = new NativeBindingWriter();
-        writer_data.Scalar(@data.Length);
-        foreach (var item in @data) global::Orbeden.GeneratedBindingCodecs.Write_MeshInstanceData(writer_data, item);
-        byte[] bytes_data = writer_data.ToArray();
-        fixed (byte* pointer_data = bytes_data)
+        fixed (global::Orbeden.MeshInstanceData* pointer_data = @data)
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 4, this);
-        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_data, bytes_data.Length), @data.Length, &result));
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.MeshInstanceData*, int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 4, this);
+        NativeBindingRuntime.Check(callback(InstanceId, pointer_data, @data.Length, &result));
         return result != 0;
         }
     }

@@ -8,6 +8,8 @@
 #define ORBEDEN_BIND_PROPERTY(NAME)
 //把方法的指针参数与长度参数映射为一个托管 Span。
 #define ORBEDEN_BIND_BUFFER(DATA, COUNT)
+//直接传递由调用方固定的连续缓冲，使用前校验 C++ 与 C# 元素布局
+#define ORBEDEN_BIND_DIRECT_BUFFER(DATA, COUNT)
 
 //字段写入后显式执行通知；同时供反射和 Binding 使用。
 #define ORBEDEN_BIND_CHANGED(CALLBACK)

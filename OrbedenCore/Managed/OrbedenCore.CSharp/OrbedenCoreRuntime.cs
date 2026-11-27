@@ -176,6 +176,14 @@ public static unsafe class OrbedenCoreRuntime
         ValidateSize<quaternion>(nameof(quaternion), 16);
         ValidateSize<color>(nameof(color), 16);
         ValidateSize<MeshInstanceData>(nameof(MeshInstanceData), 72);
+        if (Marshal.OffsetOf<MeshInstanceData>(nameof(MeshInstanceData.position)).ToInt32() != 0
+            || Marshal.OffsetOf<MeshInstanceData>(nameof(MeshInstanceData.rotation)).ToInt32() != 12
+            || Marshal.OffsetOf<MeshInstanceData>(nameof(MeshInstanceData.scale)).ToInt32() != 28
+            || Marshal.OffsetOf<MeshInstanceData>(nameof(MeshInstanceData.tint)).ToInt32() != 40
+            || Marshal.OffsetOf<MeshInstanceData>(nameof(MeshInstanceData.uvRect)).ToInt32() != 56)
+        {
+            throw new TypeLoadException("MeshInstanceData ABI layout mismatch.");
+        }
 
         ValidateFunctionTable<WorldBindApi>(nameof(WorldBindApi), 7);
         ValidateFunctionTable<PathDefinesBindApi>(nameof(PathDefinesBindApi), 2);

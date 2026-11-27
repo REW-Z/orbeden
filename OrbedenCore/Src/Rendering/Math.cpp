@@ -66,6 +66,46 @@ namespace
         return _mm_sub_ps(result, _mm_xor_ps(_mm_mul_ps(_mm_mul_ps(c, g), e), signs));
     }
 #endif
+
+    //将四元数转换为列主序旋转矩阵
+    matrix4x4 BuildRotationMatrix(const quaternion& q)
+    {
+#if ORBEDEN_MATH_SSE2
+        //并行计算对角项和成对的非对角项
+        const __m128 values = _mm_setr_ps(q.x, q.y, q.z, q.w);
+        const __m128 squares = _mm_mul_ps(values, values);
+        const __m128 left = _mm_shuffle_ps(squares, squares, _MM_SHUFFLE(3, 0, 0, 1));
+        const __m128 right = _mm_shuffle_ps(squares, squares, _MM_SHUFFLE(3, 1, 2, 2));
+        const __m128 pairs = _mm_mul_ps(_mm_shuffle_ps(values, values, _MM_SHUFFLE(3, 1, 0, 0)),
+            _mm_shuffle_ps(values, values, _MM_SHUFFLE(3, 2, 2, 1)));
+        const __m128 mixed = _mm_mul_ps(_mm_shuffle_ps(values, values, _MM_SHUFFLE(3, 3, 3, 3)),
+            _mm_shuffle_ps(values, values, _MM_SHUFFLE(3, 0, 1, 2)));
+        const __m128 two = _mm_set1_ps(2.0f);
+        float32 diagonal[4], positive[4], negative[4];
+        _mm_storeu_ps(diagonal, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(two, _mm_add_ps(left, right))));
+        _mm_storeu_ps(positive, _mm_mul_ps(two, _mm_add_ps(pairs, mixed)));
+        _mm_storeu_ps(negative, _mm_mul_ps(two, _mm_sub_ps(pairs, mixed)));
+#else
+        const float32 xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z;
+        const float32 xy = q.x * q.y, xz = q.x * q.z, yz = q.y * q.z;
+        const float32 wx = q.w * q.x, wy = q.w * q.y, wz = q.w * q.z;
+        const float32 diagonal[] = { 1.0f - 2.0f * (yy + zz), 1.0f - 2.0f * (xx + zz), 1.0f - 2.0f * (xx + yy) };
+        const float32 positive[] = { 2.0f * (xy + wz), 2.0f * (xz + wy), 2.0f * (yz + wx) };
+        const float32 negative[] = { 2.0f * (xy - wz), 2.0f * (xz - wy), 2.0f * (yz - wx) };
+#endif
+
+        matrix4x4 result;
+        result.m[0] = diagonal[0];
+        result.m[1] = positive[0];
+        result.m[2] = negative[1];
+        result.m[4] = negative[0];
+        result.m[5] = diagonal[1];
+        result.m[6] = positive[2];
+        result.m[8] = positive[1];
+        result.m[9] = negative[2];
+        result.m[10] = diagonal[2];
+        return result;
+    }
 }
 
 namespace Orbeden
@@ -189,29 +229,7 @@ namespace Orbeden
             q.w *= invLength;
         }
 
-        float32 xx = q.x * q.x;
-        float32 yy = q.y * q.y;
-        float32 zz = q.z * q.z;
-        float32 xy = q.x * q.y;
-        float32 xz = q.x * q.z;
-        float32 yz = q.y * q.z;
-        float32 wx = q.w * q.x;
-        float32 wy = q.w * q.y;
-        float32 wz = q.w * q.z;
-
-        matrix4x4 result;
-        result.m[0] = 1.0f - 2.0f * (yy + zz);
-        result.m[1] = 2.0f * (xy + wz);
-        result.m[2] = 2.0f * (xz - wy);
-
-        result.m[4] = 2.0f * (xy - wz);
-        result.m[5] = 1.0f - 2.0f * (xx + zz);
-        result.m[6] = 2.0f * (yz + wx);
-
-        result.m[8] = 2.0f * (xz + wy);
-        result.m[9] = 2.0f * (yz - wx);
-        result.m[10] = 1.0f - 2.0f * (xx + yy);
-        return result;
+        return BuildRotationMatrix(q);
     }
 
     matrix4x4 Math::Scale(const vector3& value)
@@ -225,8 +243,13 @@ namespace Orbeden
 
     matrix4x4 Math::TRS(const vector3& position, const quaternion& rotation, const vector3& scale)
     {
+        return TRS(position, rotation, scale, false);
+    }
+
+    matrix4x4 Math::TRS(const vector3& position, const quaternion& rotation, const vector3& scale, bool unitRotation)
+    {
         //缩放旋转矩阵的三个基向量
-        matrix4x4 result = Rotation(rotation);
+        matrix4x4 result = unitRotation ? BuildRotationMatrix(rotation) : Rotation(rotation);
 #if ORBEDEN_MATH_SSE2
         _mm_storeu_ps(result.m, _mm_mul_ps(_mm_loadu_ps(result.m), _mm_set1_ps(scale.x)));
         _mm_storeu_ps(result.m + 4, _mm_mul_ps(_mm_loadu_ps(result.m + 4), _mm_set1_ps(scale.y)));

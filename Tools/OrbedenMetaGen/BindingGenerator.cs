@@ -66,7 +66,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
                 throw new InvalidDataException($"{type.File}:{overload.Line}: {type.QualifiedName}.{overload.Name}: overloads with default arguments produce the same managed signature; remove or reorder the defaults");
             }
             calls.Add(type, entries);
-            string schema = (type.IsHandle ? "Bindings-Handle-v1|" : "Bindings-v1|") + type.QualifiedName + "|" + type.BaseName + "|" + string.Join("|", entries.Select(call => call.Operation + ":" + call.Name + ":" + DescribeValue(call.Result, []) + ":" + call.Member.IsStatic + ":" + call.Member.IsConst + ":" + call.Member.Changed + ":" + call.Member.Getter + ":" + call.Member.Setter + (call.Member.PropertyName == null ? "" : ":property=" + call.Member.PropertyName) + ":" + call.Member.Buffer + ":" + call.Member.Count + ":" + string.Join(",", call.Parameters.Select(parameter => parameter.Parameter.Type + "=" + parameter.Parameter.DefaultValue + ":" + DescribeValue(parameter.Value, [])))));
+            string schema = (type.IsHandle ? "Bindings-Handle-v1|" : "Bindings-v1|") + type.QualifiedName + "|" + type.BaseName + "|" + string.Join("|", entries.Select(call => call.Operation + ":" + call.Name + ":" + DescribeValue(call.Result, []) + ":" + call.Member.IsStatic + ":" + call.Member.IsConst + ":" + call.Member.Changed + ":" + call.Member.Getter + ":" + call.Member.Setter + (call.Member.PropertyName == null ? "" : ":property=" + call.Member.PropertyName) + ":" + call.Member.Buffer + ":" + call.Member.Count + (call.Member.DirectBuffer ? ":direct-buffer-v1" : "") + ":" + string.Join(",", call.Parameters.Select(parameter => parameter.Parameter.Type + "=" + parameter.Parameter.DefaultValue + ":" + DescribeValue(parameter.Value, [])))));
             signatures.Add(type, BitConverter.ToUInt64(SHA256.HashData(InteropText.EncodeUtf8(schema))));
         }
         foreach ((CppType type, List<BindingCall> entries) in calls)
@@ -301,7 +301,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
     {
         List<string> signature = [type.IsHandle ? "uint64 objectId" : "int32 objectId"];
         foreach (var parameter in call.Parameters)
-            signature.Add(parameter.Parameter.Name == call.Member.Buffer && !parameter.Value.IsEncoded ? $"const {parameter.Value.Cpp}* {parameter.Parameter.Name}" : $"{parameter.Value.WireCpp} {parameter.Parameter.Name}");
+            signature.Add(parameter.Parameter.Name == call.Member.Buffer && (call.Member.DirectBuffer || !parameter.Value.IsEncoded) ? $"const {parameter.Value.Cpp}* {parameter.Parameter.Name}" : $"{parameter.Value.WireCpp} {parameter.Parameter.Name}");
         if (call.Result.Cpp != "void") signature.Add($"{(call.Result.IsEncoded ? "NativeBindingBuffer" : call.Result.WireCpp)}* result");
         output.AppendLine($"NativeBindingStatus ORBEDEN_NATIVE_CALL Call_{Symbol(type)}_{index}({string.Join(", ", signature)})\n{{\n    try\n    {{");
         if (!call.Member.IsStatic)
@@ -318,7 +318,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
             BindingValue value = parameter.Value;
             if (name == call.Member.Buffer)
             {
-                if (value.Kind == "record")
+                if (value.Kind == "record" && !call.Member.DirectBuffer)
                 {
                     output.AppendLine($"        NativeBindingReader reader_{name}({name});\n        int32 length_{name} = reader_{name}.Count();\n        if (length_{name} != {call.Member.Count}) return NativeBindingStatus::InvalidArgument;\n        std::vector<{value.Cpp}> decoded_{name};\n        decoded_{name}.reserve(length_{name});\n        for (int32 index = 0; index < length_{name}; ++index) decoded_{name}.push_back(Read_{value.Key}(reader_{name}));\n        reader_{name}.Complete();");
                     arguments.Add($"decoded_{name}.data()");
@@ -558,7 +558,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
             if (name == call.Member.Count) { wireTypes.Add(value.WireManaged); arguments.Add("@" + call.Member.Buffer + ".Length"); continue; }
             if (name == call.Member.Buffer)
             {
-                if (value.Kind == "record")
+                if (value.Kind == "record" && !call.Member.DirectBuffer)
                 {
                     output.AppendLine($"        var writer_{name} = new NativeBindingWriter();\n        writer_{name}.Scalar(@{name}.Length);\n        foreach (var item in @{name}) {codecs}.Write_{value.Key}(writer_{name}, item);\n        byte[] bytes_{name} = writer_{name}.ToArray();\n        fixed (byte* pointer_{name} = bytes_{name})\n        {{");
                     wireTypes.Add("NativeBindingSlice");

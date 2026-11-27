@@ -69,31 +69,11 @@ bool InstanceDrawList::SetInstances(const MeshInstanceData* data, int32 count)
         return true;
     }
 
-    //先全量校验再复制，失败时不改动旧数据
-    for (int32 index = 0; index < count; ++index)
-    {
-        if (!data[index].IsValid())
-        {
-            return false;
-        }
-    }
-
     const bool countChanged = instances.size() != static_cast<usize>(count);
     instances.assign(data, data + count);
     if (countChanged)
     {
         drawParameters.clear();
-    }
-    //四元数在此归一化，之后的转换与提交都按单位四元数处理
-    for (MeshInstanceData& instance : instances)
-    {
-        float32 length = std::sqrt(instance.rotation.x * instance.rotation.x + instance.rotation.y * instance.rotation.y +
-            instance.rotation.z * instance.rotation.z + instance.rotation.w * instance.rotation.w);
-        float32 inverse = 1.0f / length;
-        instance.rotation.x *= inverse;
-        instance.rotation.y *= inverse;
-        instance.rotation.z *= inverse;
-        instance.rotation.w *= inverse;
     }
 
     return true;
@@ -135,7 +115,7 @@ bool InstanceDrawList::Submit()
     if (!owner || owner->IsPreparing()) return false;
 
     return renderSystem->SubmitInstances(*owner, options, mesh.Get(), subMeshIndex, material.Get(), instances,
-        GetObjectId(), drawParameters, drawQueue, drawSubQueue);
+        GetObjectId(), drawParameters, drawQueue, drawSubQueue, true);
 }
 
 //清空对象内实例
